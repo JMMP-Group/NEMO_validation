@@ -29,7 +29,7 @@ def write_ds_to_file(ds, fn, **kwargs):
     ds.to_netcdf(fn, **kwargs)
     
     
-def analyse_ts_regional(fn_stats, fn_nemo_domain, fn_out, 
+def analyse_regional(fn_stats, fn_nemo_domain, fn_out, 
                        regional_masks=[], region_names=[]):
                        
     '''
@@ -151,7 +151,7 @@ def analyse_ts_regional(fn_stats, fn_nemo_domain, fn_out,
     # Write to file    
     write_ds_to_file(ds_mean, fn_out)
 
-class analyse_ts_hourly_en4():
+class analyse_and_extract():
     
     def __init__(self, fn_nemo_data, fn_nemo_domain, fn_en4, fn_out, 
                  surface_def=2, bottom_def=10,
@@ -392,29 +392,46 @@ class analyse_ts_hourly_en4():
         # Write to file
         write_ds_to_file(ds_out, fn_out)
         
-class en4_stats_radius_means():
-    def __init__(self, fn_profile_stats, fn_out, grid_lon, grid_lat, 
+class radius_means():
+    def __init__(self, fn_stats, fn_out, grid_lon, grid_lat, 
                  radius=10):
+                 
+        '''
+        For a set of specified longitudes and latitudes, will calculate the mean of all
+        statistics within a specified radius. This will have a smoothing effect on 
+        profile data (horizontal smoothing).
         
-        stats_profile = xr.open_mfdataset(fn_profile_stats, chunks={'profile':10000})
+        INPUTS
+         fn_stats (str)  : Absolute path to statistics/extracted data file
+         fn_out (str)    : Absolute path to desired output file
+         grid_lon (array): 1D array containing longitude values of grid
+         grid_lat (array): 1D array contain latitude values of grid
+         radius (float)  : Radius over which to average in km
+        '''
+        
+        # Open stats file
+        stats_profile = xr.open_mfdataset(fn_stats, chunks={'profile':10000})
+        
+        # Define some seasonal lists
         seasons = ['Annual','DJF','MAM','JJA','SON']
         n_seasons = len(seasons)
         
+        # Define grid and stack
         lon2, lat2 = np.meshgrid(grid_lon, grid_lat)
-        
         lon = lon2.flatten()
         lat = lat2.flatten()
         
+        # Define output arrays
         sst_err = np.zeros((n_seasons,len(lon)))
         sss_err = np.zeros((n_seasons,len(lon)))
         sst_N = np.zeros((n_seasons,len(lon)))
         sss_N = np.zeros((n_seasons,len(lon)))
-        
         sbt_err = np.zeros((n_seasons,len(lon)))
         sbs_err = np.zeros((n_seasons,len(lon)))
         sbt_N = np.zeros((n_seasons,len(lon)))
         sbs_N = np.zeros((n_seasons,len(lon)))
         
+        # Loop over each season and average into radii
         for season in range(1,5):
             ind_season = stats_profile.season_ind == season
             tmp = stats_profile.isel(profile=ind_season)
@@ -431,6 +448,7 @@ class en4_stats_radius_means():
             ind = gu.subset_indices_by_distance_BT(tmp.longitude, tmp.latitude, 
                                                 lon, lat, radius=radius)
             
+            # Surface variables
             tem = [tmp.sst_err.isel(profile=ii).values for ii in ind]
             sal = [tmp.sss_err.isel(profile=ii).values for ii in ind]
             sst_err[season] = [np.nanmean(temii) for temii in tem]
@@ -438,6 +456,7 @@ class en4_stats_radius_means():
             sst_N[season] = [np.sum( ~np.isnan(temii) ) for temii in tem]
             sss_N[season] = [np.sum( ~np.isnan(salii) ) for salii in sal]
             
+            # Bottom variables
             tem = [tmp.sbt_err.isel(profile=ii).values for ii in ind]
             sal = [tmp.sbs_err.isel(profile=ii).values for ii in ind]
             sbt_err[season] = [np.nanmean(temii) for temii in tem]
@@ -445,6 +464,7 @@ class en4_stats_radius_means():
             sbt_N[season] = [np.sum( ~np.isnan(temii) ) for temii in tem]
             sbs_N[season] = [np.sum( ~np.isnan(salii) ) for salii in sal]
                 
+        # Place analysis into dataset and write to output file
         ds = xr.Dataset(coords = dict(
                             longitude = ('location',lon),
                             latitude = ('location', lat),
