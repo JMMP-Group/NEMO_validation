@@ -47,10 +47,12 @@ from dask.diagnostics import ProgressBar
 ##########################################################################################
  
 def write_ds_to_file(ds, fn, **kwargs):
-	''' Simple netcdf writing routine which checks if file already exists first '''
-        if os.path.exists(fn):
-            os.remove(fn)
-        ds.to_netcdf(fn, **kwargs)
+    ''' 
+    Simple netcdf writing routine which checks if file already exists first 
+    '''
+    if os.path.exists(fn):
+        os.remove(fn)
+    ds.to_netcdf(fn, **kwargs)
 
 def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
                         regional_masks=[], region_names=[]):
