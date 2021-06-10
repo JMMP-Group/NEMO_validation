@@ -103,8 +103,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     ds = ds_ext[['mod_tem','obs_tem','mod_sal','obs_sal','obs_z', 'nn_ind_x', 'nn_ind_y']].astype('float32')
     ds.load()
     
-    bathy_pts = bath[ds.nn_ind_y.values, ds.nn_ind_x.values]
-    is_in_region = [mm[ds.nn_ind_y.values, ds.nn_ind_x.values] for mm in regional_masks]
+    bathy_pts = bath[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)]
+    is_in_region = [mm[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)] for mm in regional_masks]
     is_in_region = np.array(is_in_region, dtype=bool)
     
     ds_interp = xr.Dataset(coords = dict(
@@ -223,7 +223,12 @@ def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     try:   
         nemo = coast.NEMO(fn_nemo_data, fn_nemo_domain, chunks={'time_counter':1})
         dom = xr.open_dataset(fn_nemo_domain) 
-        nemo.dataset['landmask'] = (('y_dim','x_dim'), nemo.dataset.bottom_level==0)
+        if 'bottom_level' in nemo.dataset:
+            nemo.dataset['landmask'] = (('y_dim','x_dim'), nemo.dataset.bottom_level==0)
+        else:
+            nemo.dataset['landmask'] = (('y_dim','x_dim'), nemo.dataset.mbathy==0)
+            nemo.dataset['bottom_level'] = (('y_dim', 'x_dim'), nemo.dataset.mbathy.squeeze())
+            
         nemo.dataset['bathymetry'] = (('y_dim', 'x_dim'), dom.hbatt[0] )
         nemo = nemo.dataset[['temperature','salinity', 'e3t','depth_0', 'landmask','bathymetry', 'bottom_level']]
         nemo = nemo.rename({'temperature':'tem','salinity':'sal'})
@@ -262,12 +267,9 @@ def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     en4_time = en4.time.values
     time_max = pd.to_datetime( max(mod_time) ) + relativedelta(hours=12)
     time_min = pd.to_datetime( min(mod_time) ) - relativedelta(hours=12)
-    print(time_min)
-    print(time_max)
     ind = np.logical_and( en4_time >= time_min, en4_time <= time_max )
     print(np.sum(ind))
     en4 = en4.isel(profile=ind)
-    print(en4)
     en4.load()
     print('4) EN4 subsetted to model time period.', flush=True)
     
@@ -356,8 +358,9 @@ def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
             continue
         
         # Use bottom_level to mask dry depths
-        bl = mod_profile.bottom_level.squeeze().values
-        mod_profile = mod_profile.isel(z_dim=range(0,bl))
+        if 'bottom_level' in mod_profile:
+            bl = mod_profile.bottom_level.squeeze().values
+            mod_profile = mod_profile.isel(z_dim=range(0,bl))
         
         # Interpolate model to obs depths using a linear interp
         # If interpolation fails for some or any reason, skip to next iteration
