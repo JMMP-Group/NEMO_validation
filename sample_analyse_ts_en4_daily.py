@@ -33,13 +33,13 @@ import sys
 import os
 
 # CHANGE: SET THIS TO BE THE MODEL VALIDATION CODE DIRECTORY
-os.chdir('/home/users/dbyrne/code/mv2/')
+os.chdir('/home/users/dbyrne/code/NEMO_validation/')
 
 # CHANGE: IF USING A DEVELOPMENT VERSION OF COAST UNCOMMENT THIS LINE
 sys.path.append('/home/users/dbyrne/code/COAsT')
 
 import glob
-from analyse_ts_monthly_en4 import analyse_ts_per_file
+from validate_ts_en4_daily_means import analyse_ts_per_file
 import os.path
 import coast 
 from dateutil.relativedelta import *
