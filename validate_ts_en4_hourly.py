@@ -14,9 +14,9 @@ import os.path
 from datetime import datetime, timedelta
 
 def get_season_index(dt):
-	''' return array of season indices for a given list of datetimes '''
+    ''' return array of season indices for a given list of datetimes '''
     month_season_dict = {1:1, 2:1, 3:2, 4:2, 5:2, 6:3,
-                     7:3, 8:3, 9:4, 10:4, 11:4, 12:1}
+    7:3, 8:3, 9:4, 10:4, 11:4, 12:1}
     dt = pd.to_datetime(dt)
     month_index = dt.month
     season_index = [month_season_dict[mm] for mm in month_index]
@@ -54,8 +54,9 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
 	# Load stats file
     ds_stats.load()
     
+    bathymetry=False 
     # Were bottom errors calculated?
-    if 'sbt_mae' in ds_stats.keys():
+    if 'sbt_err' in ds_stats.keys():
         bathymetry=True
     
     # Some old version of files contain season dimensions, which caused problems.
@@ -105,6 +106,8 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
         ds_mean['sbt_mae'] = (['region','season'], reg_array.copy())
         ds_mean['sbs_mae'] = (['region','season'], reg_array.copy())                                          
     
+    season_indices = {'DJF':0, 'JJA':1, 'MAM':2, 'SON':3}
+ 
     # Loop over regions. For each, group into seasons and average.
     # Place into ds_mean dataset.
     for reg in range(0,n_regions):
@@ -113,22 +116,26 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
         ds_reg_group = ds_reg.groupby('time.season')
         ds_reg_mean = ds_reg_group.mean(dim = 'profile', skipna=True).compute()
         
-        ds_mean['sst_me'][reg, :4]  = ds_reg_mean.sst_err.values
-        ds_mean['sss_me'][reg, :4]  = ds_reg_mean.sss_err.values
-        ds_mean['sst_mae'][reg, :4] = ds_reg_mean.sst_abs_err.values
-        ds_mean['sss_mae'][reg, :4] = ds_reg_mean.sss_abs_err.values
-        ds_mean['sst_crps2_mean'][reg, :4] = ds_reg_mean.sst_crps2.values
-        ds_mean['sss_crps2_mean'][reg, :4] = ds_reg_mean.sss_crps2.values
-        ds_mean['sst_crps4_mean'][reg, :4] = ds_reg_mean.sst_crps4.values
-        ds_mean['sss_crps4_mean'][reg, :4] = ds_reg_mean.sss_crps4.values
-        ds_mean['sst_crps6_mean'][reg, :4] = ds_reg_mean.sst_crps6.values
-        ds_mean['sss_crps6_mean'][reg, :4] = ds_reg_mean.sss_crps6.values
+        s_in_mean = ds_reg_mean.season.values
+        s_ind = np.array([season_indices[ss] for ss in s_in_mean], dtype=int)
+
+        print(s_ind)    
+        ds_mean['sst_me'][reg, s_ind]  = ds_reg_mean.sst_err.values
+        ds_mean['sss_me'][reg, s_ind]  = ds_reg_mean.sss_err.values
+        ds_mean['sst_mae'][reg, s_ind] = ds_reg_mean.sst_abs_err.values
+        ds_mean['sss_mae'][reg, s_ind] = ds_reg_mean.sss_abs_err.values
+        ds_mean['sst_crps2_mean'][reg, s_ind] = ds_reg_mean.sst_crps2.values
+        ds_mean['sss_crps2_mean'][reg, s_ind] = ds_reg_mean.sss_crps2.values
+        ds_mean['sst_crps4_mean'][reg, s_ind] = ds_reg_mean.sst_crps4.values
+        ds_mean['sss_crps4_mean'][reg, s_ind] = ds_reg_mean.sss_crps4.values
+        ds_mean['sst_crps6_mean'][reg, s_ind] = ds_reg_mean.sst_crps6.values
+        ds_mean['sss_crps6_mean'][reg, s_ind] = ds_reg_mean.sss_crps6.values
         
         if bathymetry:
-            ds_mean['sbt_me'][reg, :4]  = ds_reg_mean.sbt_err.values
-            ds_mean['sbs_me'][reg, :4]  = ds_reg_mean.sbs_err.values
-            ds_mean['sbt_mae'][reg, :4] = ds_reg_mean.sbt_abs_err.values
-            ds_mean['sbs_mae'][reg, :4] = ds_reg_mean.sbs_abs_err.values
+            ds_mean['sbt_me'][reg, s_ind]  = ds_reg_mean.sbt_err.values
+            ds_mean['sbs_me'][reg, s_ind]  = ds_reg_mean.sbs_err.values
+            ds_mean['sbt_mae'][reg, s_ind] = ds_reg_mean.sbt_abs_err.values
+            ds_mean['sbs_mae'][reg, s_ind] = ds_reg_mean.sbs_abs_err.values
         
         ds_reg_mean = ds_reg.mean(dim='profile', skipna=True).compute()
         ds_mean['sst_me'][reg, 4]  = ds_reg_mean.sst_err.values
@@ -174,7 +181,11 @@ class analyse_and_extract():
         
         # Open NEMO data files and define some arrays
         nemo = coast.NEMO(fn_nemo_data, fn_nemo_domain, multiple=True, chunks=nemo_chunks)
-        nemo_mask = nemo.dataset.bottom_level == 0
+        if 'bottom_level' in nemo.dataset:
+            nemo_mask = nemo.dataset.bottom_level == 0
+        else:
+            dom = xr.open_dataset(fn_nemo_domain)
+            nemo_mask = dom.mbathy.squeeze() == 0
         nemo.dataset = nemo.dataset.rename({'t_dim':'time'})
         if bathymetry is not None:
             nemo.dataset = nemo.dataset[['votemper_top','vosaline_top',
@@ -387,7 +398,6 @@ class analyse_and_extract():
             ds['sbs_abs_err'] = (['profile'], sbs_ae)                                 
             
         ds_out = ds
-        ds_out['is_in_region'] = (['region','profile'], is_in_region)
         
         # Write to file
         write_ds_to_file(ds_out, fn_out)

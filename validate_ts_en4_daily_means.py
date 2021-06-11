@@ -223,15 +223,25 @@ def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     try:   
         nemo = coast.NEMO(fn_nemo_data, fn_nemo_domain, chunks={'time_counter':1})
         dom = xr.open_dataset(fn_nemo_domain) 
+        print('a')
         if 'bottom_level' in nemo.dataset:
+            print('b')
             nemo.dataset['landmask'] = (('y_dim','x_dim'), nemo.dataset.bottom_level==0)
         else:
-            nemo.dataset['landmask'] = (('y_dim','x_dim'), nemo.dataset.mbathy==0)
-            nemo.dataset['bottom_level'] = (('y_dim', 'x_dim'), nemo.dataset.mbathy.squeeze())
-            
+            print('c')
+            nemo.dataset['landmask'] = (('y_dim','x_dim'), dom.mbathy.squeeze()==0)
+            print('c0')
+            nemo.dataset['bottom_level'] = (('y_dim', 'x_dim'), dom.mbathy.squeeze())
+        print('d')
         nemo.dataset['bathymetry'] = (('y_dim', 'x_dim'), dom.hbatt[0] )
-        nemo = nemo.dataset[['temperature','salinity', 'e3t','depth_0', 'landmask','bathymetry', 'bottom_level']]
+        print('e')
+        print(nemo.dataset.salinity)
+        print(nemo.dataset.temperature)
+        print(nemo.dataset.depth_0)
+        nemo = nemo.dataset[['temperature','salinity','depth_0', 'landmask','bathymetry', 'bottom_level']]
+        print('f')
         nemo = nemo.rename({'temperature':'tem','salinity':'sal'})
+        print('g')
         mod_time = nemo.time.values
         
     except:
