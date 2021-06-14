@@ -8,6 +8,7 @@ import coast.plot_util as pu
 import numpy as np
 import xarray as xr
 import os.path
+from dask.diagnostics import ProgressBar
 
 def write_ds_to_file(ds, fn, **kwargs):
     ''' 
@@ -15,17 +16,19 @@ def write_ds_to_file(ds, fn, **kwargs):
     '''
     if os.path.exists(fn):
         os.remove(fn)
-    ds.to_netcdf(fn, **kwargs)
+    with ProgressBar():
+        ds.to_netcdf(fn, **kwargs)
 
 def extract_transects_t(fn_nemo_data, fn_nemo_domain,
                       A_lon, A_lat, B_lon, B_lat,
                       dn_out, fn_out_pre = 'transect', transect_names=[]):
     
     nemo = coast.NEMO(fn_nemo_data, fn_nemo_domain, 
-                      grid_ref='t-grid', chunks={'time_counter':1}, multiple=True)
+                      grid_ref='t-grid', chunks={'time_counter':100}, multiple=True)
     n_transect = len(A_lon)
     
     for ii in range(n_transect):
+        print('Transect {0}/{1}'.format(ii, n_transect))
         tran = coast.Transect_t( nemo, (A_lon[ii], A_lat[ii]), (B_lon[ii], B_lat[ii]))
         
         ds = tran.data
