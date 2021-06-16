@@ -93,6 +93,8 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
                         sss_me = (["region", "season"],  reg_array.copy()),
                         sst_mae = (["region", "season"], reg_array.copy()),
                         sss_mae = (["region", "season"], reg_array.copy()),
+                        sst_estd = (["region", "season"],  reg_array.copy()),
+                        sss_estd = (["region", "season"],  reg_array.copy()),
                         sst_crps2_mean = (["region", "season"], reg_array.copy()),
                         sss_crps2_mean = (["region", "season"], reg_array.copy()),
                         sst_crps4_mean = (["region", "season"], reg_array.copy()),
@@ -103,6 +105,8 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
     if bathymetry:
         ds_mean['sbt_me'] = (['region','season'], reg_array.copy())
         ds_mean['sbs_me'] = (['region','season'], reg_array.copy())
+        ds_mean['sbt_estd'] = (['region','season'], reg_array.copy())
+        ds_mean['sbs_estd'] = (['region','season'], reg_array.copy())
         ds_mean['sbt_mae'] = (['region','season'], reg_array.copy())
         ds_mean['sbs_mae'] = (['region','season'], reg_array.copy())                                          
     
@@ -114,6 +118,8 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
         reg_ind = np.where( is_in_region[reg].astype(bool) )[0]
         ds_reg = ds_stats.isel(profile = reg_ind)
         ds_reg_group = ds_reg.groupby('time.season')
+        
+        # MEANS
         ds_reg_mean = ds_reg_group.mean(dim = 'profile', skipna=True).compute()
         
         s_in_mean = ds_reg_mean.season.values
@@ -154,6 +160,28 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
             ds_mean['sbs_me'][reg, 4]  = ds_reg_mean.sbs_err.values
             ds_mean['sbt_mae'][reg, 4] = ds_reg_mean.sbt_abs_err.values
             ds_mean['sbs_mae'][reg, 4] = ds_reg_mean.sbs_abs_err.values
+
+
+        # STD DEVIATIONS
+        ds_reg_std = ds_reg_group.std(dim = 'profile', skipna=True).compute()
+
+        s_in_std = ds_reg_std.season.values
+        s_ind = np.array([season_indices[ss] for ss in s_in_std], dtype=int)
+        
+        ds_mean['sst_estd'][reg, s_ind]  = ds_reg_std.sst_err.values
+        ds_mean['sss_estd'][reg, s_ind]  = ds_reg_std.sss_err.values
+
+        if bathymetry:
+            ds_mean['sbt_estd'][reg, s_ind]  = ds_reg_std.sbt_err.values
+            ds_mean['sbs_estd'][reg, s_ind]  = ds_reg_std.sbs_err.values
+
+        ds_reg_std = ds_reg.std(dim='profile', skipna=True).compute()
+        ds_mean['sst_estd'][reg, 4]  = ds_reg_std.sst_err.values
+        ds_mean['sss_estd'][reg, 4]  = ds_reg_std.sss_err.values
+
+        if bathymetry:
+            ds_mean['sbt_estd'][reg, 4]  = ds_reg_std.sbt_err.values
+            ds_mean['sbs_estd'][reg, 4]  = ds_reg_std.sbs_err.values
     
     # Write to file    
     write_ds_to_file(ds_mean, fn_out)
