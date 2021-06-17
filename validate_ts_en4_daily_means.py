@@ -218,6 +218,7 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     # Merge output dataset
     ds_interp = xr.merge((ds_interp, ds_reg_prof))
     ds_interp['is_in_region'] = (['region','profile'], is_in_region)
+    ds_interp['bad_flag'] = (['profile'], ds.bad_flag.values)
     
     ds_interp['start_date'] = start_date
     ds_interp['end_date'] = end_date
