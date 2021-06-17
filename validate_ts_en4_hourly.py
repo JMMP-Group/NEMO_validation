@@ -55,7 +55,7 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
 	# Load stats file
     ds_stats.load()
     
-        
+    print(ds_stats) 
     # Restrict time if required or define start and end dates
     if start_date is not None:
         t_ind = ds_stats.time >= start_date
@@ -69,6 +69,7 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
     else:
         end_date = max(ds_stats.time)
     
+    print(ds_stats)
     bathymetry=False 
     # Were bottom errors calculated?
     if 'sbt_err' in ds_stats.keys():
@@ -131,6 +132,10 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
     # Place into ds_mean dataset.
     for reg in range(0,n_regions):
         reg_ind = np.where( is_in_region[reg].astype(bool) )[0]
+        
+        if len(reg_ind)<1:
+            continue
+
         ds_reg = ds_stats.isel(profile = reg_ind)
         ds_reg_group = ds_reg.groupby('time.season')
         
@@ -281,8 +286,8 @@ class analyse_and_extract():
         # If so, add bad flag
         mod_lon = nemo.dataset.longitude.isel(x_dim = ind2D[0], y_dim=ind2D[1]).values
         mod_lat = nemo.dataset.latitude.isel(x_dim=ind2D[0], y_dim=ind2D[1]).values
-        obs_lon = en4.longitude.values
-        obs_lat = en4.latitude.values
+        obs_lon = en4.dataset.longitude.values
+        obs_lat = en4.dataset.latitude.values
         interp_dist = gu.calculate_haversine_distance( mod_lon, mod_lat, 
                                                        obs_lon, obs_lat )
         bad_ind = interp_dist > dist_crit
