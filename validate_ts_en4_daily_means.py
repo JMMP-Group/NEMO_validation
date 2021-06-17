@@ -471,6 +471,14 @@ def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     print(' >>>>>>>  File Written: ' + fn_out, flush=True)
     
     return 
+
+def concatenate_output_files(files, fn_out):
+    
+    fn_list = glob.glob(files)
+    ds_list = [xr.open_dataset(ff, chunks={'profile':10000}) for ff in fn_list]
+    ds_concat = xr.concat(ds_list, dim='profile')
+    write_ds_to_file(ds_concat, fn_out)
+    return
     
 ##########################################################################################
 ### PLOTTING ROUTINES
