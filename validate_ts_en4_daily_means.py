@@ -301,7 +301,6 @@ def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     time_max = pd.to_datetime( max(mod_time) ) + relativedelta(hours=12)
     time_min = pd.to_datetime( min(mod_time) ) - relativedelta(hours=12)
     ind = np.logical_and( en4_time >= time_min, en4_time <= time_max )
-    print(np.sum(ind))
     en4 = en4.isel(profile=ind)
     en4.load()
     print('4) EN4 subsetted to model time period.', flush=True)
