@@ -55,7 +55,8 @@ def write_ds_to_file(ds, fn, **kwargs):
     ds.to_netcdf(fn, **kwargs)
 
 def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
-                        regional_masks=[], region_names=[]):
+                        regional_masks=[], region_names=[],
+                        start_date = None, end_date = None):
     '''
     Routine for doing REGIONAL averaging of analysis files outputted using 
     analyse_ts_per_file(). INPUT is the output from the analysis and OUTPUT is a file 
@@ -103,6 +104,19 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     ds = ds_ext[['mod_tem','obs_tem','mod_sal','obs_sal','obs_z', 'nn_ind_x', 'nn_ind_y']].astype('float32')
     ds.load()
     
+    # Restrict time if required or define start and end dates
+    if start_date is not None:
+        t_ind = ds.time >= start_date
+        ds = ds.isel(time=t_ind)
+    else:
+        start_date = min(ds_stats.time)
+        
+    if end_date is not None:
+        t_ind = ds.time <= start_date
+        ds = ds.isel(time=t_ind)
+    else:
+        start_date = min(ds_stats.time)
+    
     bathy_pts = bath[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)]
     is_in_region = [mm[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)] for mm in regional_masks]
     is_in_region = np.array(is_in_region, dtype=bool)
@@ -141,6 +155,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     # Calculate errors with depth
     ds_interp['error_tem'] = (ds_interp.mod_tem - ds_interp.obs_tem).astype('float32')
     ds_interp['error_sal'] = (ds_interp.mod_sal - ds_interp.obs_sal).astype('float32')
+    ds_interp['abs_error_tem'] = np.abs( (ds_interp.mod_tem - ds_interp.obs_tem).astype('float32') )
+    ds_interp['abs_error_sal'] = np.abs( (ds_interp.mod_sal - ds_interp.obs_sal).astype('float32') )
     
     # Define dataset for regional averaging
     ds_reg_prof = xr.Dataset(coords = dict(
@@ -153,15 +169,21 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     ds_reg_prof['prof_obs_sal'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
     ds_reg_prof['prof_error_tem'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
     ds_reg_prof['prof_error_sal'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
+    ds_reg_prof['prof_abs_error_tem'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
+    ds_reg_prof['prof_abs_error_sal'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
     ds_reg_prof['mean_bathy'] = (['region','season'], np.zeros((n_regions, 5))*np.nan)
     
     season_str_dict = {'DJF':0,'JJA':1,'MAM':2,'SON':3}
+    
+    # Remove flagged points
+    bad_flag = ds.bad_flag.values
+    ds_interp_clean = ds_interp.isel(profile = ~bad_flag)
     
     # Loop over regional arrays. Assign mean to region and seasonal means
     for reg in range(0,n_regions):
     	# Do regional average for the correct seasons
         reg_ind = np.where( is_in_region[reg].astype(bool) )[0]
-        reg_tmp = ds_interp.isel(profile = reg_ind)
+        reg_tmp = ds_interp_clean.isel(profile = reg_ind)
         reg_tmp_group = reg_tmp.groupby('time.season')
         reg_tmp_mean = reg_tmp_group.mean(dim='profile', skipna=True).compute()
         season_str = reg_tmp_mean.season.values
@@ -173,6 +195,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
         ds_reg_prof['prof_obs_sal'][reg, season_ind] = reg_tmp_mean.obs_sal
         ds_reg_prof['prof_error_tem'][reg, season_ind] = reg_tmp_mean.error_tem
         ds_reg_prof['prof_error_sal'][reg, season_ind] = reg_tmp_mean.error_sal
+        ds_reg_prof['prof_abs_error_tem'][reg, season_ind] = reg_tmp_mean.error_tem
+        ds_reg_prof['prof_abs_error_sal'][reg, season_ind] = reg_tmp_mean.error_sal
         ds_reg_prof['mean_bathy'][reg, season_ind] = reg_tmp_mean.bathy
         
         # Do regional averaging across all seasons
@@ -184,6 +208,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
         ds_reg_prof['prof_obs_sal'][reg, 4] = reg_tmp_mean.obs_sal
         ds_reg_prof['prof_error_tem'][reg, 4] = reg_tmp_mean.error_tem
         ds_reg_prof['prof_error_sal'][reg, 4] = reg_tmp_mean.error_sal
+        ds_reg_prof['prof_abs_error_tem'][reg, 4] = reg_tmp_mean.error_tem
+        ds_reg_prof['prof_abs_error_sal'][reg, 4] = reg_tmp_mean.error_sal
         ds_reg_prof['mean_bathy'][reg, 4] = reg_tmp_mean.bathy
     
     # Drop bathy for some reason
@@ -192,6 +218,9 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     # Merge output dataset
     ds_interp = xr.merge((ds_interp, ds_reg_prof))
     ds_interp['is_in_region'] = (['region','profile'], is_in_region)
+    
+    ds_interp['start_date'] = start_date
+    ds_interp['end_date'] = end_date
     
     # Write output to file
     write_ds_to_file(ds_interp, fn_out)
@@ -225,23 +254,16 @@ def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
         dom = xr.open_dataset(fn_nemo_domain) 
         print('a')
         if 'bottom_level' in nemo.dataset:
-            print('b')
             nemo.dataset['landmask'] = (('y_dim','x_dim'), nemo.dataset.bottom_level==0)
         else:
-            print('c')
             nemo.dataset['landmask'] = (('y_dim','x_dim'), dom.mbathy.squeeze()==0)
-            print('c0')
             nemo.dataset['bottom_level'] = (('y_dim', 'x_dim'), dom.mbathy.squeeze())
-        print('d')
         nemo.dataset['bathymetry'] = (('y_dim', 'x_dim'), dom.hbatt[0] )
-        print('e')
         print(nemo.dataset.salinity)
         print(nemo.dataset.temperature)
         print(nemo.dataset.depth_0)
         nemo = nemo.dataset[['temperature','salinity','depth_0', 'landmask','bathymetry', 'bottom_level']]
-        print('f')
         nemo = nemo.rename({'temperature':'tem','salinity':'sal'})
-        print('g')
         mod_time = nemo.time.values
         
     except:

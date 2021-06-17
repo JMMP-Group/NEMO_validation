@@ -30,7 +30,8 @@ def write_ds_to_file(ds, fn, **kwargs):
     
     
 def analyse_regional(fn_stats, fn_nemo_domain, fn_out, 
-                       regional_masks=[], region_names=[]):
+                       regional_masks=[], region_names=[],
+                       start_date = None, end_date = None):
                        
     '''
     A routine for averaging the hourly analysis into regional subdomains.
@@ -53,6 +54,20 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
 
 	# Load stats file
     ds_stats.load()
+    
+        
+    # Restrict time if required or define start and end dates
+    if start_date is not None:
+        t_ind = ds_stats.time >= start_date
+        ds_stats = ds_stats.isel(time=t_ind)
+    else:
+        start_date = min(ds_stats.time)
+        
+    if end_date is not None:
+        t_ind = ds_stats.time <= start_date
+        ds_stats = ds_stats.isel(time=t_ind)
+    else:
+        end_date = max(ds_stats.time)
     
     bathymetry=False 
     # Were bottom errors calculated?
@@ -182,6 +197,9 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
         if bathymetry:
             ds_mean['sbt_estd'][reg, 4]  = ds_reg_std.sbt_err.values
             ds_mean['sbs_estd'][reg, 4]  = ds_reg_std.sbs_err.values
+    
+    ds_mean['start_date'] = start_date
+    ds_mean['end_date'] = end_date
     
     # Write to file    
     write_ds_to_file(ds_mean, fn_out)
