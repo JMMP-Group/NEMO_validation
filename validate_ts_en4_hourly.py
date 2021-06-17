@@ -58,16 +58,16 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
     print(ds_stats) 
     # Restrict time if required or define start and end dates
     if start_date is not None:
-        t_ind = ds_stats.time >= start_date
-        ds_stats = ds_stats.isel(time=t_ind)
+        t_ind = pd.to_datetime( ds_stats.time.values ) >= start_date
+        ds_stats = ds_stats.isel(profile=t_ind)
     else:
         start_date = min(ds_stats.time)
         
     if end_date is not None:
-        t_ind = ds_stats.time <= start_date
-        ds_stats = ds_stats.isel(time=t_ind)
+        t_ind = pd.to_datetime( ds_stats.time.values ) <= start_date
+        ds_stats = ds_stats.isel(profile=t_ind)
     else:
-        end_date = max(ds_stats.time)
+        start_date = min(ds_stats.time)
     
     print(ds_stats)
     bathymetry=False 

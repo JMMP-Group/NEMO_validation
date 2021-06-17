@@ -101,21 +101,22 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     n_profiles = ds_ext.dims['profile']
     
     # Load only those variables that we want for interpolating to reference depths.
-    ds = ds_ext[['mod_tem','obs_tem','mod_sal','obs_sal','obs_z', 'nn_ind_x', 'nn_ind_y']].astype('float32')
+    ds = ds_ext[['mod_tem','obs_tem','mod_sal','obs_sal','obs_z', 'nn_ind_x', 'nn_ind_y', 'bad_flag']].astype('float32')
     ds.load()
     
     # Restrict time if required or define start and end dates
+    print(ds)
     if start_date is not None:
-        t_ind = ds.time >= start_date
-        ds = ds.isel(time=t_ind)
+        t_ind = pd.to_datetime( ds.time.values ) >= start_date
+        ds = ds.isel(profile=t_ind)
     else:
-        start_date = min(ds_stats.time)
+        start_date = min(ds.time)
         
     if end_date is not None:
-        t_ind = ds.time <= start_date
-        ds = ds.isel(time=t_ind)
+        t_ind = pd.to_datetime( ds.time.values ) <= start_date
+        ds = ds.isel(profile=t_ind)
     else:
-        start_date = min(ds_stats.time)
+        start_date = min(ds.time)
     
     bathy_pts = bath[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)]
     is_in_region = [mm[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)] for mm in regional_masks]
@@ -177,12 +178,13 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     
     # Remove flagged points
     bad_flag = ds.bad_flag.values
-    ds_interp_clean = ds_interp.isel(profile = ~bad_flag)
+    ds_interp_clean = ds_interp.isel(profile = bad_flag == False)
+    is_in_region_clean = is_in_region[:, bad_flag == False]
     
     # Loop over regional arrays. Assign mean to region and seasonal means
     for reg in range(0,n_regions):
     	# Do regional average for the correct seasons
-        reg_ind = np.where( is_in_region[reg].astype(bool) )[0]
+        reg_ind = np.where( is_in_region_clean[reg].astype(bool) )[0]
         reg_tmp = ds_interp_clean.isel(profile = reg_ind)
         reg_tmp_group = reg_tmp.groupby('time.season')
         reg_tmp_mean = reg_tmp_group.mean(dim='profile', skipna=True).compute()
@@ -253,16 +255,12 @@ def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     try:   
         nemo = coast.NEMO(fn_nemo_data, fn_nemo_domain, chunks={'time_counter':1})
         dom = xr.open_dataset(fn_nemo_domain) 
-        print('a')
         if 'bottom_level' in nemo.dataset:
             nemo.dataset['landmask'] = (('y_dim','x_dim'), nemo.dataset.bottom_level==0)
         else:
             nemo.dataset['landmask'] = (('y_dim','x_dim'), dom.mbathy.squeeze()==0)
             nemo.dataset['bottom_level'] = (('y_dim', 'x_dim'), dom.mbathy.squeeze())
         nemo.dataset['bathymetry'] = (('y_dim', 'x_dim'), dom.hbatt[0] )
-        print(nemo.dataset.salinity)
-        print(nemo.dataset.temperature)
-        print(nemo.dataset.depth_0)
         nemo = nemo.dataset[['temperature','salinity','depth_0', 'landmask','bathymetry', 'bottom_level']]
         nemo = nemo.rename({'temperature':'tem','salinity':'sal'})
         mod_time = nemo.time.values
