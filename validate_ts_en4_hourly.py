@@ -209,7 +209,7 @@ class analyse_and_extract():
     def __init__(self, fn_nemo_data, fn_nemo_domain, fn_en4, fn_out, 
                  surface_def=2, bottom_def=10,
                  nemo_chunks={'time_counter':50},
-                 bathymetry = None):
+                 bathymetry = None, dist_crit=5):
                  
         ''' 
         Analysis of hourly model temperature and salinity output with EN4 profiles.
@@ -272,6 +272,21 @@ class analyse_and_extract():
         ind2D = gu.nearest_indices_2D(nemo.dataset.longitude, nemo.dataset.latitude, 
                                       en4.dataset.longitude, en4.dataset.latitude,
                                       mask=nemo_mask)
+        
+        # Vector of bools which save whether a datapoint is bad for some reason
+        n_prof = len(en4_time)
+        bad_flag = np.zeros(n_prof).astype(bool)
+        
+        # Determine if nearest points are further than dist crit away
+        # If so, add bad flag
+        mod_lon = nemo.dataset.longitude.isel(x_dim = ind2D[0], y_dim=ind2D[1]).values
+        mod_lat = nemo.dataset.latitude.isel(x_dim=ind2D[0], y_dim=ind2D[1]).values
+        obs_lon = en4.longitude.values
+        obs_lat = en4.latitude.values
+        interp_dist = gu.calculate_haversine_distance( mod_lon, mod_lat, 
+                                                       obs_lon, obs_lat )
+        bad_ind = interp_dist > dist_crit
+        bad_flag[bad_ind] = True
         
         # Estimate EN4 SST as mean of top levels
         surface_ind = en4.dataset.depth <= surface_def
@@ -444,6 +459,7 @@ class analyse_and_extract():
             ds['sbs_abs_err'] = (['profile'], sbs_ae)                                 
             
         ds_out = ds
+        ds_out['bad_flag'] = (['profile'], bad_flag)
         
         # Write to file
         write_ds_to_file(ds_out, fn_out)
