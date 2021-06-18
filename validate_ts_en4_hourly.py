@@ -485,6 +485,8 @@ class analyse_and_extract():
             
         ds_out = ds
         ds_out['bad_flag'] = (['profile'], bad_flag)
+        ds_out['start_date'] = start_date
+        ds_out['end_date'] = end_date
         
         # Write to file
         write_ds_to_file(ds_out, fn_out)
