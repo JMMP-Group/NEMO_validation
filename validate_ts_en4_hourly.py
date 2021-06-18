@@ -130,13 +130,18 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
  
     # Loop over regions. For each, group into seasons and average.
     # Place into ds_mean dataset.
+    
+    bad_flag = ds_stats.bad_flag.values
+    ds_stats_clean = ds_stats.isel(profile = bad_flag == False)
+    is_in_region_clean = is_in_region[:, bad_flag == False]
+    
     for reg in range(0,n_regions):
-        reg_ind = np.where( is_in_region[reg].astype(bool) )[0]
+        reg_ind = np.where( is_in_region_clean[reg].astype(bool) )[0]
         
         if len(reg_ind)<1:
             continue
 
-        ds_reg = ds_stats.isel(profile = reg_ind)
+        ds_reg = ds_stats_clean.isel(profile = reg_ind)
         ds_reg_group = ds_reg.groupby('time.season')
         
         # MEANS
@@ -205,6 +210,8 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
     
     ds_mean['start_date'] = start_date
     ds_mean['end_date'] = end_date
+    ds_mean['is_in_region'] = (['region', 'profile'], is_in_region)
+    ds_mean['bad_flag'] = (['profile'], ds_stats.bad_flag.values)
     
     # Write to file    
     write_ds_to_file(ds_mean, fn_out)
