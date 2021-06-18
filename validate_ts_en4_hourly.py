@@ -64,10 +64,10 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
         start_date = min(ds_stats.time)
         
     if end_date is not None:
-        t_ind = pd.to_datetime( ds_stats.time.values ) <= start_date
+        t_ind = pd.to_datetime( ds_stats.time.values ) <= end_date
         ds_stats = ds_stats.isel(profile=t_ind)
     else:
-        start_date = min(ds_stats.time)
+        end_date = min(ds_stats.time)
     
     bathymetry=False 
     # Were bottom errors calculated?
@@ -275,10 +275,10 @@ class analyse_and_extract():
             start_date = min(nemo.dataset.time)
             
         if end_date is not None:
-            t_ind = pd.to_datetime( nemo.dataset.time.values ) <= start_date
+            t_ind = pd.to_datetime( nemo.dataset.time.values ) <= end_date
             nemo.dataset = nemo.dataset.isel(time=t_ind)
         else:
-            start_date = min(nemo.dataset.time)
+            end_date = min(nemo.dataset.time)
         
         # Cut out obs inside model time window
         n_nemo_time = nemo.dataset.dims['time']
