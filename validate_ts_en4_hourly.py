@@ -69,7 +69,6 @@ def analyse_regional(fn_stats, fn_nemo_domain, fn_out,
     else:
         start_date = min(ds_stats.time)
     
-    print(ds_stats)
     bathymetry=False 
     # Were bottom errors calculated?
     if 'sbt_err' in ds_stats.keys():
@@ -221,7 +220,8 @@ class analyse_and_extract():
     def __init__(self, fn_nemo_data, fn_nemo_domain, fn_en4, fn_out, 
                  surface_def=2, bottom_def=10,
                  nemo_chunks={'time_counter':50},
-                 bathymetry = None, dist_crit=5):
+                 bathymetry = None, dist_crit=5,
+                 start_date = None, end_date = None):
                  
         ''' 
         Analysis of hourly model temperature and salinity output with EN4 profiles.
@@ -266,9 +266,22 @@ class analyse_and_extract():
                                                             latmin, latmax)[0]
         en4 = en4.isel(profile=ind)
         
+        # Restrict time if required or define start and end dates
+        nemo.dataset.time.load()
+        if start_date is not None:
+            t_ind = pd.to_datetime( nemo.dataset.time.values ) >= start_date
+            nemo.dataset = nemo.dataset.isel(profile=t_ind)
+        else:
+            start_date = min(nemo.dataset.time)
+            
+        if end_date is not None:
+            t_ind = pd.to_datetime( nemo.dataset.time.values ) <= start_date
+            nemo.dataset = nemo.dataset.isel(profile=t_ind)
+        else:
+            start_date = min(nemo.dataset.time)
+        
         # Cut out obs inside model time window
         n_nemo_time = nemo.dataset.dims['time']
-        nemo.dataset.time.load()
         en4.dataset.time.load()
         nemo_time = pd.to_datetime(nemo.dataset.time.values)
         en4_time = pd.to_datetime(en4.dataset.time.values)
