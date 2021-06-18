@@ -270,13 +270,13 @@ class analyse_and_extract():
         nemo.dataset.time.load()
         if start_date is not None:
             t_ind = pd.to_datetime( nemo.dataset.time.values ) >= start_date
-            nemo.dataset = nemo.dataset.isel(t_dim=t_ind)
+            nemo.dataset = nemo.dataset.isel(time=t_ind)
         else:
             start_date = min(nemo.dataset.time)
             
         if end_date is not None:
             t_ind = pd.to_datetime( nemo.dataset.time.values ) <= start_date
-            nemo.dataset = nemo.dataset.isel(t_dim=t_ind)
+            nemo.dataset = nemo.dataset.isel(time=t_ind)
         else:
             start_date = min(nemo.dataset.time)
         
