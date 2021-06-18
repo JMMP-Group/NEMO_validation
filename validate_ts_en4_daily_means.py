@@ -113,11 +113,13 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
         start_date = min(ds.time)
         
     if end_date is not None:
-        t_ind = pd.to_datetime( ds.time.values ) <= start_date
+        t_ind = pd.to_datetime( ds.time.values ) <= end_date
         ds = ds.isel(profile=t_ind)
     else:
-        start_date = min(ds.time)
-    
+        end_date = min(ds.time)
+   
+    n_profiles = ds.dims['profile']
+    print(ds) 
     bathy_pts = bath[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)]
     is_in_region = [mm[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)] for mm in regional_masks]
     is_in_region = np.array(is_in_region, dtype=bool)
@@ -185,6 +187,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     for reg in range(0,n_regions):
     	# Do regional average for the correct seasons
         reg_ind = np.where( is_in_region_clean[reg].astype(bool) )[0]
+        if len(reg_ind)<1:
+            continue
         reg_tmp = ds_interp_clean.isel(profile = reg_ind)
         reg_tmp_group = reg_tmp.groupby('time.season')
         reg_tmp_mean = reg_tmp_group.mean(dim='profile', skipna=True).compute()
