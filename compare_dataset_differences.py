@@ -128,13 +128,18 @@ def depth_averaged_difference_means(fn, fn_seasonal, depth_bins,
     nz = len(depth_bins)
     nbins = nz-1
     
+    bin_widths = [depth_bins[ii+1] - depth_bins[ii] for ii in np.arange(0,nbins)]
+    bin_mids = [depth_bins[ii] + .5*bin_widths[ii] for ii in np.arange(0,nbins)]
+    
     D = ds.depth_0.values
     
     # Average none seasonal data
     variables = list(ds.keys())
     ds_out = xr.Dataset(coords = dict(
                             longitude = (['y_dim', 'x_dim'], ds.longitude),
-                            latitude = (['y_dim', 'x_dim'], ds.latitude)))
+                            latitude = (['y_dim', 'x_dim'], ds.latitude),
+                            bin_mids = (['depth_bin'], bin_mids),
+                            bin_widths = (['depth_bin'], bin_widths)))
     for vv in variables:
         ds_out[vv] = (['depth_bin', 'y_dim', 'x_dim'], np.zeros((nbins, ny, nx)) * np.nan)
         
@@ -147,11 +152,15 @@ def depth_averaged_difference_means(fn, fn_seasonal, depth_bins,
             v_tmp[D_tmp] = np.nan
             ds_out[vv][dd-1] = np.nanmean(v_tmp, axis=0)
             
+    write_ds_to_file(ds_out, fn_out)
+            
     # Average seasonal data
     variables = list(ds_season.keys())
     ds_out_season = xr.Dataset(coords = dict(
                             longitude = (['y_dim', 'x_dim'], ds_season.longitude),
-                            latitude = (['y_dim', 'x_dim'], ds_season.latitude)))
+                            latitude = (['y_dim', 'x_dim'], ds_season.latitude),
+                            bin_mids = (['depth_bin'], bin_mids),
+                            bin_widths = (['depth_bin'], bin_widths)))
     for vv in variables:
         ds_out_season[vv] = (['depth_bin', 'y_dim', 'x_dim'], np.zeros((nbins, ny, nx)) * np.nan)
         
@@ -164,4 +173,6 @@ def depth_averaged_difference_means(fn, fn_seasonal, depth_bins,
             v_tmp[D_tmp] = np.nan
             ds_out_season[vv][dd-1] = np.nanmean(v_tmp, axis=0)
             
-    return ds_out, ds_out_season
+    write_ds_to_file(ds_out_season, fn_out_seasonal)
+    
+    return
