@@ -1,23 +1,29 @@
+import pandas as pd
 import xarray as xr
 import xarray.ufuncs as uf
 import sys
-sys.path.append('/Users/dbyrne/code/COAsT/')
+sys.path.append('/work/dbyrne/code/COAsT')
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os.path
 import coast.general_utils as gu
 import coast
+from dask.diagnostics import ProgressBar
 
-fn_nemo_data1 = "/Users/dbyrne/Projects/CO9_AMM15/data/nemo/20040103_shelftmb_grid_T.nc"
-fn_nemo_data2 = "/Users/dbyrne/Projects/CO9_AMM15/data/nemo/20040102_shelftmb_grid_T.nc"
-fn_nemo_domain = "/Users/dbyrne/Projects/CO9_AMM15/data/nemo/CO7_EXACT_CFG_FILE.nc"
-fn_out = "/Users/dbyrne/Projects/CO9_AMM15/data/test.nc"
-fn_out_seasonal = "/Users/dbyrne/Projects/CO9_AMM15/data/test_seasonal.nc"
+cfg1 = 'REF'
+cfg2 = 'LAMBDA'
 
-variables = ['ssh']
+fn_nemo_data1 = "/projectsa/NWSrivers/AMM7/{0}/25hourm.grid_T*".format(cfg1)
+fn_nemo_data2 = "/projectsa/NWSrivers/AMM7/{0}/25hourm.grid_T*".format(cfg1)
+fn_nemo_domain = "/projectsa/NWSrivers/AMM7/INPUTS/mesh_mask.nc"
+fn_out = "/projectsa/NWSrivers/AMM7/analysis/differences/diff_{0}_{1}.nc".format(cfg1, cfg2)
+fn_out_seasonal = "/projectsa/NWSrivers/AMM7/analysis/differences/diff_seasonal_{0}_{1}.nc".format(cfg1, cfg2)
 
+variables = ['temperature','salinity']
 
+start_date = datetime(2017,1,1) 
+end_date = datetime(2019,1,1)
 
 def write_ds_to_file(ds, fn, **kwargs):
     ''' 
@@ -25,14 +31,31 @@ def write_ds_to_file(ds, fn, **kwargs):
     '''
     if os.path.exists(fn):
         os.remove(fn)
-    ds.to_netcdf(fn, **kwargs)
+    with ProgressBar():
+        ds.to_netcdf(fn, **kwargs)
 
-nemo1 = coast.NEMO(fn_nemo_data1, fn_nemo_domain, chunks={'time_counter':100}).dataset
-nemo2 = coast.NEMO(fn_nemo_data2, fn_nemo_domain, chunks={'time_counter':100}).dataset
+print('Loading NEMO data', flush=True)
+nemo1 = coast.NEMO(fn_nemo_data1, fn_nemo_domain, multiple=True, chunks={'time_counter':100})
+nemo2 = coast.NEMO(fn_nemo_data2, fn_nemo_domain, multiple=True, chunks={'time_counter':100})
+
+nemo1 = nemo1.dataset
+nemo2 = nemo2.dataset
 
 nemo1 = nemo1[variables]
 nemo2 = nemo2[variables]
 
+print('Subsetting time', flush=True)
+nemo1_time = pd.to_datetime(nemo1.time.values)
+t_ind = np.logical_and(nemo1_time>=start_date, nemo1_time<=end_date)
+nemo1 = nemo1.isel(t_dim=t_ind)
+
+print('AAA')
+
+nemo2_time = pd.to_datetime(nemo2.time.values)
+t_ind = np.logical_and(nemo2_time>=start_date, nemo2_time<=end_date)
+nemo2 = nemo2.isel(t_dim=t_ind)
+
+print('Calculating Differences', flush=True)
 diff = nemo2 - nemo1
 diff['time'] = nemo1.time
 diff = diff.set_coords(['time'])
@@ -66,6 +89,7 @@ ds_out_season = xr.Dataset(coords = dict(
                         latitude = (['y_dim', 'x_dim'], nemo2.latitude),
                         season = (['season'], mean_diff_season.season)))
 
+print('Populating Output Dataset', flush = True)
 for vv in variables:
     ds_out[vv+'_mean_diff'] = mean_diff[vv]
     ds_out[vv+'_mean_abs_diff'] = mean_abs_diff[vv]
@@ -77,5 +101,6 @@ for vv in variables:
     ds_out_season[vv+'max_pos_diff'] = max_pos_diff_season[vv]
     ds_out_season[vv+'min_neg_diff'] = min_neg_diff_season[vv]
     
+print('Writing to file', flush = True)
 write_ds_to_file(ds_out, fn_out)
-write_ds_to_file(ds_out, fn_out_seasonal)
+write_ds_to_file(ds_out_season, fn_out_seasonal)
