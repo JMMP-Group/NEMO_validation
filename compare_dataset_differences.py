@@ -149,20 +149,23 @@ def depth_averaged_difference_means(fn, fn_seasonal, depth_bins,
         
         for vv in variables:
             v_tmp = ds[vv].values
-            v_tmp[D_tmp] = np.nan
-            ds_out[vv][dd-1] = np.nanmean(v_tmp, axis=0)
+            if len(v_tmp.shape)==3:
+               v_tmp[D_tmp] = np.nan
+               ds_out[vv][dd-1] = np.nanmean(v_tmp, axis=0)
             
     write_ds_to_file(ds_out, fn_out)
             
     # Average seasonal data
     variables = list(ds_season.keys())
+    n_season = ds_season.dims['season']
     ds_out_season = xr.Dataset(coords = dict(
                             longitude = (['y_dim', 'x_dim'], ds_season.longitude),
                             latitude = (['y_dim', 'x_dim'], ds_season.latitude),
                             bin_mids = (['depth_bin'], bin_mids),
-                            bin_widths = (['depth_bin'], bin_widths)))
+                            bin_widths = (['depth_bin'], bin_widths),
+                            season = (['season'], ds_season.season)))
     for vv in variables:
-        ds_out_season[vv] = (['depth_bin', 'y_dim', 'x_dim'], np.zeros((nbins, ny, nx)) * np.nan)
+        ds_out_season[vv] = (['season', 'depth_bin', 'y_dim', 'x_dim'], np.zeros((n_season, nbins, ny, nx)) * np.nan)
         
     for dd in np.arange(1,nbins):
         print(dd)
@@ -170,8 +173,9 @@ def depth_averaged_difference_means(fn, fn_seasonal, depth_bins,
         
         for vv in variables:
             v_tmp = ds_season[vv].values
-            v_tmp[D_tmp] = np.nan
-            ds_out_season[vv][dd-1] = np.nanmean(v_tmp, axis=0)
+            if len(v_tmp.shape)==4:
+                v_tmp[:,D_tmp] = np.nan
+                ds_out_season[vv][:,dd-1] = np.nanmean(v_tmp, axis=1)
             
     write_ds_to_file(ds_out_season, fn_out_seasonal)
     
