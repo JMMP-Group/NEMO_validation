@@ -37,7 +37,33 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
                 constit_to_save = ['M2','S2','K2','N2','K1','O1','P1','Q1'], 
                 semidiurnal_constit = ['M2','S2','K2','N2'],
                 diurnal_constit = ['K1','O1','P1','Q1'],
-                apply_ntr_filter = True, min_datapoints=744 ):
+                apply_ntr_filter = True ):
+    '''
+    Routine for analysis and comparison of model and observed SSH
+    This routine calculates:
+        1. Estimates of non-tidal residuals by subtracting an equivalent
+           harmonic analysis, i.e. the same time period, missing data,
+           constituent sets etc.
+        2. Saves some selected harmonic information. Harmonic analysis is done
+           using the utide package, with constituent sets based on the
+           Rayleigh criterion
+        3. NTR stats: MAE, RMSE, correlation, climatology
+        4. SSH stats: climatology
+        5. Tide stats: RMSE, MAE, correlation, climatology for semidiurnal
+           and diurnal frequency bands.
+        6. Threshold analysis of NTR. Sum of peaks, time, daily max, monthly
+           max over specified thresholds.
+    
+    INPUTS
+     fn_ext               : Filepath to extracted SSH from analyse_ssh
+     fn_out               : Filepath to desired output analysis file
+     thresholds           : Array of NTR thresholds for analysis
+     constit_to_save      : List of constituents to save amplitudes/phase
+     semidiurnal_constit  : List of constituents to include in semidiurnal band
+     diurnal_constit      : List of constituents to include in diurnal band
+     apply_ntr_filter     : If true, apply Savgol filter to non-tidal residuals
+                            before analysis.
+    '''
     
     ds_ssh = xr.open_dataset(fn_ext) 
     
@@ -248,7 +274,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
             ds_stats['thresh_monthlymax_obs'][pp, nn] = np.sum( ds_monthly_max.ntr_mod.values >= threshn)
             
     
-    # NTR: Seasonal Climatology
+    # Seasonal Climatology
     ntr_seasonal = ds_ntr.groupby('time.season')
     ntr_seasonal_std = ntr_seasonal.std(skipna=True)
     ntr_seasonal_mean = ntr_seasonal.mean(skipna=True)
@@ -270,6 +296,22 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
         ds_stats['ssh_std_mod'][:, ind] = ssh_seasonal_std.ssh_mod.sel(season=ss)
         ds_stats['ssh_std_obs'][:, ind] = ssh_seasonal_std.ssh_obs.sel(season=ss)
         sii+=1
+        
+    # Annual means and standard deviations
+    ntr_std = ds_ntr.std(dim='time', skipna=True)
+    ssh_std = ds_ssh.std(dim='time', skipna=True)
+    ntr_mean = ds_ntr.mean(dim='time', skipna=True)
+    
+    ds_stats['ntr_std_mod'][:, 4] = ntr_std.ntr_mod
+    ds_stats['ntr_std_obs'][:, 4] = ntr_std.ntr_obs
+    ds_stats['ntr_err_std'][:, 4] = ntr_std.ntr_err
+    
+    ds_stats['ntr_mae'][:, 4] = ntr_mean.ntr_abs_err
+    ds_stats['ntr_rmse'][:, 4] = np.nanmean( ntr_mean.ntr_square_err )
+    ds_stats['ntr_me'][:, 4] = ntr_mean.ntr_err
+    
+    ds_stats['ssh_std_mod'][:, 4] = ssh_std.ssh_mod
+    ds_stats['ssh_std_obs'][:, 4] = ssh_std.ssh_obs
     
     ds_stats = xr.merge((ds_ssh, ds_ntr, ds_stats, ds_tide))
     
@@ -279,16 +321,19 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_obs, fn_out,
                      chunks = {'time_counter':100}, dist_crit = 5):
                      
     '''
-    Routine for hourly analysis of NEMO SSH output. See Github wiki for more details.
+    Routine for extraction of model ssh at obs locations.
+    The tidegauge file should be a netcdf file with dimension
+    ('port', 'time') and variables 'ssh', 'time', 'longitude', 'latitude'.
+    All ports are expected to have data on a common frequency, so some
+    preprocessing of obs is required.
     
     INPUTS
      fn_nemo_data    : Absoltue path to NEMO data file(s)
      fn_nemo_domain  : Absolute path to NEMO domain file
      fn_obs          : Absolute path to Tidegauge data file
      fn_out          : Absolute path to output file
-     thresholds      : Array of floats describing NTR thresholds for analysis (m)
-     constit_to_save : List of strings for which constituents to save amp/phases
      chunks          : xarray chunking dictionary
+     dist_crit       : Distance (km) from obs point to reject nearest model point
     '''
     
     # Read NEMO data

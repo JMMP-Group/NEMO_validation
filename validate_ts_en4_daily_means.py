@@ -26,7 +26,6 @@ import coast
 import coast.general_utils as coastgu
 import coast.plot_util as pu
 import numpy as np
-import datetime as datetime
 import pandas as pd
 import gsw
 import xarray as xr
@@ -34,13 +33,11 @@ import sys
 import os
 import os.path
 import glob
-from dateutil.relativedelta import *
 import scipy.stats as spst
 import xarray.ufuncs as uf
 import matplotlib.pyplot as plt
-import multiprocessing as mp
-from scipy.signal import savgol_filter
 from dask.diagnostics import ProgressBar
+from dateutil.relativedelta import relativedelta
 
 ##########################################################################################
 ### Analysis ROUTINES
@@ -55,6 +52,7 @@ def write_ds_to_file(ds, fn, **kwargs):
     ds.to_netcdf(fn, **kwargs)
 
 def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
+                        ref_depth_method = 'bin',
                         regional_masks=[], region_names=[],
                         start_date = None, end_date = None):
     '''
@@ -78,6 +76,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
      Writes averages statistics to file.
      
     '''
+    # Cast inputs to numpy array
+    ref_depth = np.array(ref_depth)
     
     # Open dataset containing extracted profiles and statistics
     ds_ext = xr.open_mfdataset(fn_extracted, chunks={'profile':10000})
@@ -97,7 +97,6 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     
     # Get numbers for array sizes
     n_regions = len(regional_masks)
-    n_ref_depth = len(ref_depth)
     n_profiles = ds_ext.dims['profile']
     
     # Load only those variables that we want for interpolating to reference depths.
@@ -105,7 +104,6 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     ds.load()
     
     # Restrict time if required or define start and end dates
-    print(ds)
     if start_date is not None:
         t_ind = pd.to_datetime( ds.time.values ) >= start_date
         ds = ds.isel(profile=t_ind)
@@ -118,12 +116,21 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     else:
         end_date = min(ds.time)
    
+    # Update number of profiles
     n_profiles = ds.dims['profile']
-    print(ds) 
     bathy_pts = bath[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)]
     is_in_region = [mm[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)] for mm in regional_masks]
     is_in_region = np.array(is_in_region, dtype=bool)
     
+    #Figure out ref depths or bins to create interp array
+    if ref_depth_method == 'interp':
+        n_ref_depth = len(ref_depth)
+    if ref_depth_method == 'bin':
+        n_ref_depth = len(ref_depth) - 1
+        bin_widths = np.array( [ref_depth[ii+1] - ref_depth[ii] for ii in np.arange(0,n_ref_depth)] )
+        bin_mids = np.array( [ref_depth[ii] + .5*ref_depth[ii] for ii in np.arange(0,n_ref_depth)] )
+    
+    # Create dataset for interpolation
     ds_interp = xr.Dataset(coords = dict(
                                ref_depth = ('ref_depth', ref_depth),
                                longitude = ('profile', ds.longitude.values),
@@ -137,23 +144,46 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
                                obs_tem = (['profile','ref_depth'], np.zeros((n_profiles, n_ref_depth), dtype='float32')*np.nan),
                                obs_sal = (['profile','ref_depth'], np.zeros((n_profiles, n_ref_depth), dtype='float32')*np.nan)))
     
-    for pp in range(0, n_profiles):
-        prof = ds.isel(profile=pp).swap_dims({'level':'obs_z'}).dropna(dim='obs_z')
-        if prof.dims['obs_z']>1:
-            try:
-                print(pp)
-                prof_interp = prof.interp(obs_z = ref_depth)
-                dep_len = prof_interp.dims['obs_z']
-                ds_interp['mod_tem'][pp, :dep_len] = prof_interp.mod_tem.values
-                ds_interp['mod_sal'][pp, :dep_len] = prof_interp.mod_sal.values
-                ds_interp['obs_tem'][pp, :dep_len] = prof_interp.obs_tem.values
-                ds_interp['obs_sal'][pp, :dep_len] = prof_interp.obs_sal.values
-            except:
-                print('{0}^^'.format(pp))
+    # INTERP1 = interpolate the obs and model to reference depths from the
+    # OBS depths. Model already interpolated in extract routine.
+    if ref_depth_method=='interp':
+        for pp in range(0, n_profiles):
+            prof = ds.isel(profile=pp).swap_dims({'level':'obs_z'}).dropna(dim='obs_z')
+            if prof.dims['obs_z']>1:
+                try:
+                    print(pp)
+                    prof_interp = prof.interp(obs_z = ref_depth)
+                    dep_len = prof_interp.dims['obs_z']
+                    ds_interp['mod_tem'][pp, :dep_len] = prof_interp.mod_tem.values
+                    ds_interp['mod_sal'][pp, :dep_len] = prof_interp.mod_sal.values
+                    ds_interp['obs_tem'][pp, :dep_len] = prof_interp.obs_tem.values
+                    ds_interp['obs_sal'][pp, :dep_len] = prof_interp.obs_sal.values
+                except:
+                    print('{0}^^'.format(pp))
+                    ds_interp['bathy'][pp] = np.nan
+            else:
+                print('{0}**'.format(pp))
                 ds_interp['bathy'][pp] = np.nan
-        else:
-            print('{0}**'.format(pp))
-            ds_interp['bathy'][pp] = np.nan
+                
+    # BIN = Bin into depth bins rather than interpolate.
+    elif ref_depth_method=='bin':
+        for pp in range(0, n_profiles):
+            prof = ds.isel(profile=pp).swap_dims({'level':'obs_z'}).dropna(dim='obs_z')
+            if prof.dims['obs_z']>1:
+                try:
+                    print(pp)
+                    prof_interp = prof.interp(obs_z = ref_depth)
+                    dep_len = prof_interp.dims['obs_z']
+                    ds_interp['mod_tem'][pp, :dep_len] = prof_interp.mod_tem.values
+                    ds_interp['mod_sal'][pp, :dep_len] = prof_interp.mod_sal.values
+                    ds_interp['obs_tem'][pp, :dep_len] = prof_interp.obs_tem.values
+                    ds_interp['obs_sal'][pp, :dep_len] = prof_interp.obs_sal.values
+                except:
+                    print('{0}^^'.format(pp))
+                    ds_interp['bathy'][pp] = np.nan
+            else:
+                print('{0}**'.format(pp))
+                ds_interp['bathy'][pp] = np.nan
         
     # Calculate errors with depth
     ds_interp['error_tem'] = (ds_interp.mod_tem - ds_interp.obs_tem).astype('float32')
@@ -232,7 +262,7 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     # Write output to file
     write_ds_to_file(ds_interp, fn_out)
 
-def analyse_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,  
+def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,  
                         run_name = 'Undefined', surface_def=5, bottom_def=10, 
                         dist_crit=5, n_obs_levels=400, 
                         model_frequency='daily', instant_data=False):
