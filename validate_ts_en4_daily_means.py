@@ -35,6 +35,7 @@ import os.path
 import glob
 import scipy.stats as spst
 import xarray.ufuncs as uf
+import scipy.interpolate as interp
 import matplotlib.pyplot as plt
 from dask.diagnostics import ProgressBar
 from dateutil.relativedelta import relativedelta
@@ -52,7 +53,7 @@ def write_ds_to_file(ds, fn, **kwargs):
     ds.to_netcdf(fn, **kwargs)
 
 def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
-                        ref_depth_method = 'bin',
+                        ref_depth_method = 'interp',
                         regional_masks=[], region_names=[],
                         start_date = None, end_date = None):
     '''
@@ -118,6 +119,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
    
     # Update number of profiles
     n_profiles = ds.dims['profile']
+    
+    # Figure out which points lie in which region
     bathy_pts = bath[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)]
     is_in_region = [mm[ds.nn_ind_y.values.astype(int), ds.nn_ind_x.values.astype(int)] for mm in regional_masks]
     is_in_region = np.array(is_in_region, dtype=bool)
@@ -148,42 +151,28 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     # OBS depths. Model already interpolated in extract routine.
     if ref_depth_method=='interp':
         for pp in range(0, n_profiles):
-            prof = ds.isel(profile=pp).swap_dims({'level':'obs_z'}).dropna(dim='obs_z')
-            if prof.dims['obs_z']>1:
-                try:
-                    print(pp)
-                    prof_interp = prof.interp(obs_z = ref_depth)
-                    dep_len = prof_interp.dims['obs_z']
-                    ds_interp['mod_tem'][pp, :dep_len] = prof_interp.mod_tem.values
-                    ds_interp['mod_sal'][pp, :dep_len] = prof_interp.mod_sal.values
-                    ds_interp['obs_tem'][pp, :dep_len] = prof_interp.obs_tem.values
-                    ds_interp['obs_sal'][pp, :dep_len] = prof_interp.obs_sal.values
-                except:
-                    print('{0}^^'.format(pp))
-                    ds_interp['bathy'][pp] = np.nan
-            else:
-                print('{0}**'.format(pp))
-                ds_interp['bathy'][pp] = np.nan
+            print(pp)
+            prof = ds.isel(profile=pp)
+            
+            mask = np.isnan( prof.obs_sal )
+            prof['mod_sal'][mask] = np.nan
+            mask = np.isnan( prof.obs_tem )
+            prof['mod_tem'][mask] = np.nan
+            
+            depth0 = prof.obs_z.values
                 
-    # BIN = Bin into depth bins rather than interpolate.
+            f = interp.interp1d(depth0, prof.mod_tem.values, fill_value=np.nan, bounds_error=False)
+            ds_interp['mod_tem'][pp] = f( ref_depth )
+            f = interp.interp1d(depth0, prof.mod_sal.values, fill_value=np.nan, bounds_error=False)
+            ds_interp['mod_sal'][pp] = f( ref_depth )
+            f = interp.interp1d(depth0, prof.obs_tem.values, fill_value=np.nan, bounds_error=False)
+            ds_interp['obs_tem'][pp] = f( ref_depth )
+            f = interp.interp1d(depth0, prof.obs_sal.values, fill_value=np.nan, bounds_error=False)
+            ds_interp['obs_sal'][pp] = f( ref_depth )
+                
+    # BIN = Bin into depth bins rather than interpolate - NOT USED CURRENTLY
     elif ref_depth_method=='bin':
-        for pp in range(0, n_profiles):
-            prof = ds.isel(profile=pp).swap_dims({'level':'obs_z'}).dropna(dim='obs_z')
-            if prof.dims['obs_z']>1:
-                try:
-                    print(pp)
-                    prof_interp = prof.interp(obs_z = ref_depth)
-                    dep_len = prof_interp.dims['obs_z']
-                    ds_interp['mod_tem'][pp, :dep_len] = prof_interp.mod_tem.values
-                    ds_interp['mod_sal'][pp, :dep_len] = prof_interp.mod_sal.values
-                    ds_interp['obs_tem'][pp, :dep_len] = prof_interp.obs_tem.values
-                    ds_interp['obs_sal'][pp, :dep_len] = prof_interp.obs_sal.values
-                except:
-                    print('{0}^^'.format(pp))
-                    ds_interp['bathy'][pp] = np.nan
-            else:
-                print('{0}**'.format(pp))
-                ds_interp['bathy'][pp] = np.nan
+        raise NotImplementedError()
         
     # Calculate errors with depth
     ds_interp['error_tem'] = (ds_interp.mod_tem - ds_interp.obs_tem).astype('float32')
@@ -192,29 +181,32 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     ds_interp['abs_error_sal'] = np.abs( (ds_interp.mod_sal - ds_interp.obs_sal).astype('float32') )
     
     # Define dataset for regional averaging
+    empty_array = np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan
     ds_reg_prof = xr.Dataset(coords = dict(
-                                           region = ('region',region_names),
-                                           ref_depth = ('ref_depth', ref_depth),
-                                           season = ('season', ['DJF','JJA','MAM','SON','All'])))
-    ds_reg_prof['prof_mod_tem'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
-    ds_reg_prof['prof_mod_sal'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
-    ds_reg_prof['prof_obs_tem'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
-    ds_reg_prof['prof_obs_sal'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
-    ds_reg_prof['prof_error_tem'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
-    ds_reg_prof['prof_error_sal'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
-    ds_reg_prof['prof_abs_error_tem'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
-    ds_reg_prof['prof_abs_error_sal'] = (['region','season','ref_depth'], np.zeros((n_regions, 5, n_ref_depth), dtype='float32')*np.nan)
-    ds_reg_prof['mean_bathy'] = (['region','season'], np.zeros((n_regions, 5))*np.nan)
+                                region = ('region',region_names),
+                                ref_depth = ('ref_depth', ref_depth),
+                                season = ('season', ['DJF','JJA','MAM','SON','All'])),
+                             data_vars = dict(
+                                prof_mod_tem = (['region','season','ref_depth'], empty_array.copy()),
+                                prof_mod_sal = (['region','season','ref_depth'], empty_array.copy()),
+                                prof_obs_tem = (['region','season','ref_depth'], empty_array.copy()),
+                                prof_obs_sal = (['region','season','ref_depth'], empty_array.copy()),
+                                prof_error_tem = (['region','season','ref_depth'], empty_array.copy()),
+                                prof_error_sal = (['region','season','ref_depth'], empty_array.copy()),
+                                prof_abs_error_tem = (['region','season','ref_depth'], empty_array.copy()),
+                                prof_abs_error_sal = (['region','season','ref_depth'], empty_array.copy()),
+                                mean_bathy = (['region','season'], np.zeros((n_regions, 5))*np.nan)))
     
-    season_str_dict = {'DJF':0,'JJA':1,'MAM':2,'SON':3}
+    season_str_dict = {'DJF':0,'JJA':1,'MAM':2,'SON':3, 'All':4}
     
     # Remove flagged points
     bad_flag = ds.bad_flag.values
-    ds_interp_clean = ds_interp.isel(profile = bad_flag == False)
-    is_in_region_clean = is_in_region[:, bad_flag == False]
+    ds_interp_clean = ds_interp#.isel(profile = bad_flag == False)
+    is_in_region_clean = is_in_region#[:, bad_flag == False]
     
     # Loop over regional arrays. Assign mean to region and seasonal means
     for reg in range(0,n_regions):
+        print(reg)
     	# Do regional average for the correct seasons
         reg_ind = np.where( is_in_region_clean[reg].astype(bool) )[0]
         if len(reg_ind)<1:
@@ -371,7 +363,7 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
                           time=          (["profile"], en4.time.values),
                           level=         (['level'], np.arange(0,n_obs_levels)),
                           ex_longitude = (["profile"], mod_profiles.longitude.values),
-                          ex_latitude =  (["profile"], mod_profiles.longitude.values),
+                          ex_latitude =  (["profile"], mod_profiles.latitude.values),
                           ex_time =      (["profile"], mod_profiles.time.values),
                           ex_level =     (["ex_level"], np.arange(0, n_mod_levels))),
                       data_vars = dict(
@@ -394,7 +386,7 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
                           nn_ind_y = (["profile"], ind2D[1])))
 
 	# Vector of bools which save whether a datapoint is bad for some reason
-    bad_flag = np.zeros(n_prof).astype(bool)
+    interp_dist = np.zeros(n_prof).astype(bool)
     
     # Now loop over profiles and interpolate model onto obs.
     for prof in range(0,n_prof):
@@ -404,22 +396,13 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
         mod_profile = mod_profiles.isel(profile = prof)
         obs_profile = en4.isel(profile = prof)
         
-        # If the nearest neighbour interpolation is bad, then skip the 
-        # vertical interpolation -> keep profile as nans in monthly array
-        if all(np.isnan(mod_profile.tem)):
-            bad_flag[prof] = True
-            continue
-        
         # Check that model point is within threshold distance of obs
         # If not, skip vertical interpolation -> keep profile as nans
-        interp_dist = coastgu.calculate_haversine_distance(
+        interp_dist[prof] = coastgu.calculate_haversine_distance(
                                              obs_profile.longitude, 
                                              obs_profile.latitude, 
                                              mod_profile.longitude, 
                                              mod_profile.latitude)
-        if interp_dist > dist_crit:
-            bad_flag[prof] = True
-            continue
         
         # Use bottom_level to mask dry depths
         if 'bottom_level' in mod_profile:
@@ -434,7 +417,6 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
         try:
             mod_profile_int = mod_profile.interp(depth_0 = obs_profile.depth.values)
         except:
-            bad_flag[prof] = True
             continue
         
         # Calculate Density
@@ -481,7 +463,7 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     
     data['season'] = ('profile', season_save)
     data.attrs['run_name'] = run_name
-    data['bad_flag'] = ('profile', bad_flag)
+    data['interp_dist'] = ('profile', interp_dist)
     
     # Errors at all depths
     data["error_tem"] = (['profile','level'], data.mod_tem - data.obs_tem)
