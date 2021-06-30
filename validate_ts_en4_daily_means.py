@@ -1,21 +1,23 @@
 """
-@author: David Byrne (dbyrne@noc.ac.uk)
-v1.2 (10-03-2021)
-
 A set of routines for comparing daily mean model data with EN4 profile data. 
-The input NEMO data should be daily mean data in MONTHLY files, with all
-depths, and monthly EN4 data as downloaded from:
+
+The two main methods in this module are:
+    
+    1. extract_ts_per_file()
+    2. analyse_ts_regional()
+
+The first extracts model temperature and salinity profiles at the nearest 
+corresponding EN4 location. The second Averages this data, along with errors
+into regional and seasonal boxes. The second routine takes the output from
+the first.
+
+See docstrings of the routines for more information or the Github Wiki:
+    
+https://github.com/JMMP-Group/NEMO_validation
+
+EN4 Data:
 
 https://www.metoffice.gov.uk/hadobs/en4/
-
-This script will read in one month at a time. Filenames for the NEMO and EN4
-data are generated using the make_nemo_filename() and make_en4_filename()
-routines. It is worth checking these functions to make sure that they adhere
-to your filenames.
-
-See the Github Wiki for more information:
-
-https://github.com/JMMP-Group/NEMO_validation
         
 """
 # UNCOMMENT IF USING A DEVELOPMENT VERSION OF COAST
@@ -24,19 +26,15 @@ sys.path.append('/home/users/dbyrne/code/COAsT/')
 
 import coast
 import coast.general_utils as coastgu
-import coast.plot_util as pu
 import numpy as np
 import pandas as pd
-import gsw
 import xarray as xr
 import sys
 import os
 import os.path
 import glob
 import scipy.stats as spst
-import xarray.ufuncs as uf
 import scipy.interpolate as interp
-import matplotlib.pyplot as plt
 from dask.diagnostics import ProgressBar
 from dateutil.relativedelta import relativedelta
 
@@ -55,27 +53,70 @@ def write_ds_to_file(ds, fn, **kwargs):
 def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
                         ref_depth_method = 'interp',
                         regional_masks=[], region_names=[],
-                        start_date = None, end_date = None, dist_omit=5):
+                        start_date = None, end_date = None, dist_omit=100):
     '''
-    Routine for doing REGIONAL averaging of analysis files outputted using 
-    analyse_ts_per_file(). INPUT is the output from the analysis and OUTPUT is a file 
-    containing REGIONAL averaged statistics.
+    VERSION 1.3 (30/06/2021)
+    
+    Routine for doing REGIONAL and SEASONAL averaging of analysis files outputted using 
+    extract_ts_per_file(). INPUT is the output from the analysis and OUTPUT is a file 
+    containing REGIONAL averaged statistics. Multiple files can be provided
+    to this analysis but it will be quicker if concatenated beforehand.
 
     INPUTS:
-     fn_nemo_domain. (str)   : Absolute path to NEMO domain_cfg.nc
+     fn_nemo_domain. (str)   : Absolute path to NEMO domain_cfg.nc or mesh_mask.nc
+                               Used only for bathymetry
      fn_extracted    (str)   : Absolute path to single analysis file
      fn_out          (str)   : Absolute path to desired output file
      ref_depth.      (array) : 1D array describing the reference depths onto which model
                                and observations will be interpolated
+     ref_depth_method (str)  : 'interp' or 'bin'. If interp, then routine will
+                               interpolate both model and observed values from
+                               observation depths onto the common ref_depth. If
+                               bin, then ref_depth will be treated as the 
+                               boundaries of averaging bins. BIN CURRENTLY
+                               UNIMPLEMENTED. [default = 'interp']
      regional_masks. (list)  : List of 2D bool arrays describing averaging regions. Each 
                                array should have same shape as model domain. True 
                                indicates a model point within the defined region. Will 
                                always do a 'Whole Domain' region, even when undefined.
      region_names.   (list)  : List of strings. Names for each region in regional masks.
+                               To be saved in output file.
+     start_date (datetime)   : Start date for analysis
+     end_date (datetime)     : End date for analysis
+     dist_omit (float)       : Distance of nearest grid cell from observation
+                               at which to omit the datapoint from averaging (km)
                             
     OUTPUTS
-     Writes averages statistics to file.
-     
+     Writes averages statistics to file. netCDF file has dimensions:
+         profile   : Profile location dimension
+         ref_depth : Reference depth dimension
+                     If ref_depth_method == 'bin', then this will be bin
+                     midpoints.
+         region    : Regional dimension
+         season    : Season dimension
+     Data Variables:
+         mod_tem   : Model temperature on reference depths/bins
+         mod_sal   : Model salinity on reference depths/bins
+         obs_tem   : Observed temperature on reference depths/bins
+         obs_sal   : Observed salinity on reference depths/bins
+         error_tem : Temperature errors on reference depths
+         error_sal : Salinity errors on reference depths
+         abs_error_tem : Absolute temperature err on reference depths
+         abs_error_sal : Absolute salinity err on reference depths
+         prof_mod_tem  : Regional/seasonal averaged model temperatures
+         prof_mod_sal  : Regional/seasonal averaged model salinity
+         prof_obs_tem  : Regional/seasonal averaged observed temperature
+         prof_obs_sal  : Regional/seasonal averaged obs salinity
+         prof_error_tem     : Regional/seasonal averaged temperature error
+         prof_error_sal     : Regional/seasonal averaged salinity error
+         prof_abs_error_tem : Regional/seasonal averaged abs. temp. error
+         prof_abs_error_sal : Regional/seasonal averaged abs. sal. error
+         mean_bathy   : Mean model bathymetric depths for profiles used in each
+                        region/season
+         is_in_region : Boolean array. Described whether each profile is within
+                        each region
+         start_date   : Start date for analysis
+         end_date     : End date for analysis
     '''
     # Cast inputs to numpy array
     ref_depth = np.array(ref_depth)
@@ -101,7 +142,7 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     n_profiles = ds_ext.dims['profile']
     
     # Load only those variables that we want for interpolating to reference depths.
-    ds = ds_ext[['mod_tem','obs_tem','mod_sal','obs_sal','obs_z', 'nn_ind_x', 'nn_ind_y', 'bad_flag']].astype('float32')
+    ds = ds_ext[['mod_tem','obs_tem','mod_sal','obs_sal','obs_z', 'nn_ind_x', 'nn_ind_y', 'interp_dist']].astype('float32')
     ds.load()
     
     # Restrict time if required or define start and end dates
@@ -200,9 +241,9 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     season_str_dict = {'DJF':0,'JJA':1,'MAM':2,'SON':3, 'All':4}
     
     # Remove flagged points
-    bad_flag = ds.bad_flag.values
-    ds_interp_clean = ds_interp#.isel(profile = bad_flag == False)
-    is_in_region_clean = is_in_region#[:, bad_flag == False]
+    omit_flag = ds.interp_dist.values <= dist_omit
+    ds_interp_clean = ds_interp.isel(profile = omit_flag)
+    is_in_region_clean = is_in_region[:, omit_flag]
     
     # Loop over regional arrays. Assign mean to region and seasonal means
     for reg in range(0,n_regions):
@@ -255,24 +296,58 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     write_ds_to_file(ds_interp, fn_out)
 
 def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,  
-                        run_name = 'Undefined', surface_def=5, bottom_def=10):
+                        run_name = 'Undefined', z_interp = 'linear'):
     '''
+    VERSION 1.3 (30/06/2021)
+    
     Extracts and does some basic analysis and identification of model data at obs
-    locations, times and depths. Writes extracted data to file.
+    locations, times and depths. Writes extracted data to file. This routine
+    does the analysis per file, for example monthly files. Output can be
+    subsequently input to analyse_ts_regional. Data is extracted saved in two
+    forms: on the original model depth levels and interpolated onto the
+    observed depth levels.
+    
+    This routine can be used in a loop to loop over all files containing
+    daily or 25hourm data. Output files can be concatenated using a tools such
+    as ncks or the concatenate_output_files() routine in this module.
     
     INPUTS:
-     fn_nemo_data (str)   : Absolute filename to a monthly nemo file containing daily mean data.
+     fn_nemo_data (str)   : Absolute filename to a monthly nemo file containing 
+                            daily or 25hour mean data.
      fn_nemo_domain (str) : Absolute filepath to corresponding NEMO domain_cfg.nc
      fn_en4 (str)         : Absolute filepath to monthly EN4 profile data file.
      fn_out (str)         : Absolute filepath for desired output file.
      run_name (str)       : Name of run. [default='Undefined']
-     surface_def (float)  : Depth of surface for averaging surface variables [default=5m]
-     bottom_def (float)   : Distance from bottom for defining bottom variable averaging [default=10m]
-     dist_crit (float)    : Distance at which to omit datapoints if the resulting interpolated
-                            point is too far from obs point. [default=5km]
+                            Will be saved to output
+     z_interp (str)       : Type of scipy interpolation to use for depth interpolation
+                            [default = 'linear']
                             
     OUTPUTS:
-     Writes extracted data to file.
+     Writes extracted data to file. Extracted dataset has the dimensions:
+         ex_level : Model level for directly extracted data
+         level    : Observation level for interpolated model and EN4 data
+         profile  : Profile location
+     Output variables:
+         mod_tem       : Model temperature interpolated onto obs depths
+         obs_tem       : EN4 tempersture profiles
+         mod_sal       : Model salinity interpolated onto obs depths
+         obs_sal       : EN4 salinity profiles
+         obs_z         : EN4 depths
+         ex_mod_tem    : Model temperature profiles 
+         ex_mod_sal    : Model salinity profiles 
+         ex_depth      : Model depth at profiles
+         nn_ind_x      : Nearest neighbour x (column) indices
+         nn_ind_y      : Nearest neighbour y (row) indices
+         season        : Season indices -> 0 = DJF, 1=JJA, 2=MAM, 3=SON
+         interp_dist   : Distances from nearest model cell to EN4 locations
+         error_tem     : Model-EN4 temperature differences at observation depths
+         error_sal     : Model-EN4 salinity differences at observation depths
+         abs_error_tem : Model-EN4 abs. temperature differences at obs depths
+         abs_error_sal : Model-EN4 abs. salinity differences at obs depths
+         me_tem        : Mean temperature difference over each profile
+         me_sal        : Mean salinity difference over each profile
+         mae_tem       : Mean absolute temperature difference over each profile
+         mae_sal       : Mean absolute salinity difference over each profile
     '''
     
     # 1) Read NEMO, then extract desired variables
@@ -370,13 +445,13 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
                           obs_tem = (['profile','level'],  np.zeros((n_prof , n_obs_levels))*np.nan),
                           mod_sal = (['profile','level'],  np.zeros((n_prof , n_obs_levels))*np.nan),
                           obs_sal = (['profile','level'],  np.zeros((n_prof , n_obs_levels))*np.nan),
-                          mod_rho = (['profile','level'],  np.zeros((n_prof , n_obs_levels))*np.nan),
-                          obs_rho = (['profile','level'],  np.zeros((n_prof , n_obs_levels))*np.nan),
-                          mod_s0 =  (['profile', 'level'], np.zeros((n_prof , n_obs_levels))*np.nan),
-                          obs_s0 =  (['profile', 'level'], np.zeros((n_prof , n_obs_levels))*np.nan),
-                          mask_tem = (['profile','level'], np.zeros((n_prof , n_obs_levels))*np.nan),
-                          mask_sal = (['profile','level'], np.zeros((n_prof , n_obs_levels))*np.nan),
-                          mask_rho = (['profile','level'], np.zeros((n_prof , n_obs_levels))*np.nan),
+                          #mod_rho = (['profile','level'],  np.zeros((n_prof , n_obs_levels))*np.nan),
+                          #obs_rho = (['profile','level'],  np.zeros((n_prof , n_obs_levels))*np.nan),
+                          #mod_s0 =  (['profile', 'level'], np.zeros((n_prof , n_obs_levels))*np.nan),
+                          #obs_s0 =  (['profile', 'level'], np.zeros((n_prof , n_obs_levels))*np.nan),
+                          #mask_tem = (['profile','level'], np.zeros((n_prof , n_obs_levels))*np.nan),
+                          #mask_sal = (['profile','level'], np.zeros((n_prof , n_obs_levels))*np.nan),
+                          #mask_rho = (['profile','level'], np.zeros((n_prof , n_obs_levels))*np.nan),
                           obs_z =    (['profile','level'],    np.zeros((n_prof , n_obs_levels))*np.nan),
                           ex_mod_tem = (["profile", "ex_level"], mod_profiles.tem.values),
                           ex_mod_sal = (["profile", "ex_level"], mod_profiles.sal.values),
@@ -409,53 +484,58 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
             mod_profile = mod_profile.isel(z_dim=range(0,bl))
         
         # Interpolate model to obs depths using a linear interp
-        # If interpolation fails for some or any reason, skip to next iteration
-        obs_profile = obs_profile.rename({'z_dim':'depth'})
-        obs_profile = obs_profile.set_coords('depth')
-        mod_profile = mod_profile.rename({'z_dim':'depth_0'})
-        try:
-            mod_profile_int = mod_profile.interp(depth_0 = obs_profile.depth.values)
-        except:
-            continue
+        # If interpolation fails for some or any reason, skip to next iteration        
+        depth0 = mod_profile.depth_0.values
+        depthnew = obs_profile.depth.values
+                
+        f = interp.interp1d(depth0, prof.mod_tem.values, fill_value=np.nan, 
+                            bounds_error=False, kind = z_interp)
+        data['mod_tem'][prof] = f( depthnew )
+        f = interp.interp1d(depth0, prof.mod_sal.values, fill_value=np.nan, 
+                            bounds_error=False, kind = z_interp)
+        data['mod_sal'][prof] = f( depthnew )
+        f = interp.interp1d(depth0, prof.obs_tem.values, fill_value=np.nan, 
+                            bounds_error=False, kind = z_interp)
+        data['obs_tem'][prof] = f( depthnew )
+        f = interp.interp1d(depth0, prof.obs_sal.values, fill_value=np.nan, 
+                            bounds_error=False, kind = z_interp)
+        data['obs_sal'][prof] = f( depthnew )
         
-        # Calculate Density
-        ap_obs = gsw.p_from_z( -obs_profile.depth, obs_profile.latitude )
-        ap_mod = gsw.p_from_z( -obs_profile.depth, mod_profile_int.latitude )
-        # Absolute Salinity            
-        sa_obs = gsw.SA_from_SP( obs_profile.sal, ap_obs, 
-                                obs_profile.longitude, 
-                                obs_profile.latitude )
-        sa_mod = gsw.SA_from_SP( mod_profile_int.sal, ap_mod, 
-                                mod_profile_int.longitude, 
-                                mod_profile_int.latitude )
-        # Conservative Temperature
-        ct_obs = gsw.CT_from_pt( sa_obs, obs_profile.tem ) 
-        ct_mod = gsw.CT_from_pt( sa_mod, mod_profile_int.tem ) 
+        data['obs_z'][prof] = obs_profile.depth
         
-        # In-situ density
-        obs_rho = gsw.rho( sa_obs, ct_obs, ap_obs )
-        mod_rho = gsw.rho( sa_mod, ct_mod, ap_mod ) 
+        # # Calculate Density -- CURRENTLY NOT IMPLEMENTED ANYMORE
+        # ap_obs = gsw.p_from_z( -obs_profile.depth, obs_profile.latitude )
+        # ap_mod = gsw.p_from_z( -obs_profile.depth, mod_profile_int.latitude )
+        # # Absolute Salinity            
+        # sa_obs = gsw.SA_from_SP( obs_profile.sal, ap_obs, 
+        #                         obs_profile.longitude, 
+        #                         obs_profile.latitude )
+        # sa_mod = gsw.SA_from_SP( mod_profile_int.sal, ap_mod, 
+        #                         mod_profile_int.longitude, 
+        #                         mod_profile_int.latitude )
+        # # Conservative Temperature
+        # ct_obs = gsw.CT_from_pt( sa_obs, obs_profile.tem ) 
+        # ct_mod = gsw.CT_from_pt( sa_mod, mod_profile_int.tem ) 
         
-        # Potential Density
-        obs_s0 = gsw.sigma0(sa_obs, ct_obs)
-        mod_s0 = gsw.sigma0(sa_mod, ct_mod)
+        # # In-situ density
+        # obs_rho = gsw.rho( sa_obs, ct_obs, ap_obs )
+        # mod_rho = gsw.rho( sa_mod, ct_mod, ap_mod ) 
+        
+        # # Potential Density
+        # obs_s0 = gsw.sigma0(sa_obs, ct_obs)
+        # mod_s0 = gsw.sigma0(sa_mod, ct_mod)
         
         # Assign to main array
-        data['mod_tem'][prof] = mod_profile_int.tem.values
-        data['obs_tem'][prof] = obs_profile.tem.values
-        data['mod_sal'][prof] = mod_profile_int.sal.values
-        data['obs_sal'][prof] = obs_profile.sal.values
-        data['mod_rho'][prof] = mod_rho
-        data['obs_rho'][prof] = obs_rho
-        data['mod_s0'][prof] = mod_s0
-        data['obs_s0'][prof] = obs_s0
-        data['obs_z'][prof] = obs_profile.depth
+        #data['mod_rho'][prof] = mod_rho
+        #data['obs_rho'][prof] = obs_rho
+        #data['mod_s0'][prof] = mod_s0
+        #data['obs_s0'][prof] = obs_s0
         
     print(' Interpolated Profiles.', flush=True)
     
     # Define seasons as month numbers and identify datapoint seasons
-    month_season_dict = {1:1, 2:1, 3:2, 4:2, 5:2, 6:3,
-                         7:3, 8:3, 9:4, 10:4, 11:4, 12:1}
+    month_season_dict = {1:0, 2:0, 3:2, 4:2, 5:2, 6:1,
+                         7:1, 8:1, 9:3, 10:3, 11:3, 12:0}
     pd_time = pd.to_datetime(data.time.values)
     pd_month = pd_time.month
     season_save = [month_season_dict[ii] for ii in pd_month]
@@ -484,163 +564,14 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     write_ds_to_file(data, fn_out, mode='w', unlimited_dims='profile')
     
     print(' >>>>>>>  File Written: ' + fn_out, flush=True)
-    
-    return 
 
 def concatenate_output_files(files, fn_out):
-    
+    '''
+    Uses xarray to concatenate a list of glob of files into a new single
+    file.
+    '''
     fn_list = glob.glob(files)
     ds_list = [xr.open_dataset(ff, chunks={'profile':10000}) for ff in fn_list]
     ds_concat = xr.concat(ds_list, dim='profile')
     write_ds_to_file(ds_concat, fn_out)
     return
-    
-##########################################################################################
-### PLOTTING ROUTINES
-##########################################################################################
-
-class plot_ts_monthly_single_cfg():
-    
-    def __init__(self, fn_profile_stats, dn_out, run_name, file_type='.png'):
-
-        stats = xr.open_mfdataset(fn_profile_stats, chunks={})
-        
-        #Loop over seasons
-        seasons = ['All','DJF','MAM','JJA','SON']
-        lonmax = np.nanmax(stats.longitude)
-        lonmin = np.nanmin(stats.longitude)
-        latmax = np.nanmax(stats.latitude)
-        latmin = np.nanmin(stats.latitude)
-        lonbounds = [lonmin-1, lonmax+1]
-        latbounds = [latmin-1, latmax+1]
-        
-        for ss in range(0, 5):
-        
-            if ss>0:
-                ind_season = stats.season==ss
-                stats_tmp = stats.isel(profile=ind_season)    
-            else:
-                stats_tmp = stats
-        
-            # Surface TEMPERATURE
-            f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats_tmp.longitude, stats_tmp.latitude, c=stats_tmp.surf_error_tem, 
-                vmin=-1.5, vmax=1.5, linewidths=0, zorder=100, cmap='seismic',s=1)
-            f.colorbar(sca)
-            a.set_title('Monthly EN4 SST Anom. (degC) | {0} | {1} - EN4'.format(seasons[ss], run_name), fontsize=9)
-            fn_out = 'en4_surf_error_tem_{0}_{1}{2}'.format(seasons[ss], run_name, file_type)
-            fn_out = os.path.join(dn_out, fn_out)
-            f.savefig(fn_out)
-            
-            #Surface SALINITY
-            f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats_tmp.longitude, stats_tmp.latitude, c=stats_tmp.surf_error_sal, 
-                vmin=-1.5, vmax=1.5, linewidths=0, zorder=100, cmap='seismic', s=1)
-            f.colorbar(sca)
-            a.set_title('Monthly EN4 SSS Anom. (PSU) | {0} | {1} - EN4'.format(seasons[ss], run_name), fontsize=9)
-            fn_out = 'en4_surf_error_sal_{0}_{1}{2}'.format(seasons[ss], run_name, file_type)
-            fn_out = os.path.join(dn_out, fn_out)
-            f.savefig(fn_out)
-            
-            # Bottom TEMPERATURE
-            f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats_tmp.longitude, stats_tmp.latitude, c=stats_tmp.bott_error_tem, 
-                vmin=-1.5, vmax=1.5, linewidths=0, zorder=100, cmap='seismic', s=1)
-            f.colorbar(sca)
-            a.set_title('Monthly EN4 SBT Anom. (degC) | {0} | {1} - EN4'.format(seasons[ss], run_name), fontsize=9)
-            fn_out = 'en4_bott_error_tem_{0}_{1}{2}'.format(seasons[ss], run_name, file_type)
-            fn_out = os.path.join(dn_out, fn_out)
-            f.savefig(fn_out)
-            
-            # Bottom SALINITY
-            f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats_tmp.longitude, stats_tmp.latitude, c=stats_tmp.bott_error_sal, 
-                vmin=-1.5, vmax=1.5, linewidths=0, zorder=100, cmap='seismic', s=1)
-            f.colorbar(sca)
-            a.set_title('Monthly EN4 SBS Anom. (PSU) | {0} | {1} - EN4'.format(seasons[ss], run_name), fontsize=9)
-            fn_out = 'en4_bott_error_sal_{0}_{1}{2}'.format(seasons[ss], run_name, file_type)
-            fn_out = os.path.join(dn_out, fn_out)
-            f.savefig(fn_out)
-    
-    
-class plot_ts_monthly_multi_cfg():
-    def __init__(self, fn_regional_stats, dn_out, run_name, file_type='.png'):
-        
-        stats_list = [xr.open_dataset(ff, chunks={}) for ff in fn_regional_stats]
-    
-        # For titles
-        region_names = ['North Sea','Outer Shelf','Norwegian Trench','English Channel','Whole Domain']
-        # For file names
-        region_abbrev = ['northsea','outershelf','nortrench','engchannel','wholedomain']
-        
-        season_names = ['Annual','DJF','MAM','JJA','SON']
-        legend = run_name
-        n_regions = len(region_names)
-        n_seasons = len(season_names)
-        for rr in range(0,n_regions):
-            for ss in range(1,n_seasons):
-                tem_list = [tmp.prof_error_tem.isel( region=rr, season=ss, depth=np.arange(0,30) ) for tmp in stats_list]
-                sal_list = [tmp.prof_error_sal.isel( region=rr, season=ss, depth=np.arange(0,30) ) for tmp in stats_list]
-                
-                title_tmp = '$\Delta T$ (degC) | {0} | {1}'.format(region_names[rr], season_names[ss])
-                fn_out = 'prof_error_tem_{0}_{1}{2}'.format(season_names[ss], region_abbrev[rr], file_type)
-                fn_out = os.path.join(dn_out, fn_out)
-                f,a = self.plot_profile_centred(tem_list[0].depth, tem_list,
-                              title = title_tmp, legend_names = legend)
-                print("  >>>>>  Saving: " + fn_out)
-                f.savefig(fn_out)
-                plt.close()
-                
-                title_tmp = '$\Delta S$ (PSU) |' + region_names[rr] +' | '+season_names[ss]
-                fn_out = 'prof_error_sal_{0}_{1}{2}'.format(season_names[ss], region_abbrev[rr], file_type)
-                fn_out = os.path.join(dn_out, fn_out)
-                f,a = self.plot_profile_centred(sal_list[0].depth, sal_list,
-                             title = title_tmp,legend_names = legend)
-                print("  >>>>>  Saving: " + fn_out)
-                f.savefig(fn_out)
-                plt.close()
-    
-                
-    def plot_profile_centred(self, depth, variables, title="", legend_names= {} ):
-    
-        fig = plt.figure(figsize=(3.5,7))
-        ax = plt.subplot(111)
-        
-        if type(variables) is not list:
-            variables = [variables]
-    
-        xmax = 0
-        for vv in variables:
-            xmax = np.max([xmax, np.nanmax(np.abs(vv))])
-            ax.plot(savgol_filter(vv.squeeze(),5,2), depth.squeeze())
-            
-        plt.xlim(-xmax-0.05*xmax, xmax+0.05*xmax)
-        ymax = np.nanmax(np.abs(depth))
-        plt.plot([0,0],[-1e7,1e7], linestyle='--',linewidth=1,color='k')
-        plt.ylim(0,ymax)
-        plt.gca().invert_yaxis()
-        plt.ylabel('Depth (m)')
-        plt.grid()
-        plt.legend(legend_names, fontsize=10)
-        plt.title(title, fontsize=8)
-        return fig, ax
-                
-    def plot_profile(self, depth, variables, title, fn_out, legend_names= {} ):
-    
-        fig = plt.figure(figsize=(3.5,7))
-        ax = plt.subplot(111)
-        
-        if type(variables) is not list:
-            variables = [variables]
-    
-        for vv in variables:
-            ax.plot(vv.squeeze(), depth.squeeze())
-        plt.gca().invert_yaxis()
-        plt.ylabel('Depth (m)')
-        plt.grid()
-        plt.legend(legend_names)
-        plt.title(title, fontsize=12)
-        print("  >>>>>  Saving: " + fn_out)
-        plt.savefig(fn_out)
-        plt.close()
-        return fig, ax

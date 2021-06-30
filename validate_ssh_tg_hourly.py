@@ -318,7 +318,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     write_ds_to_file(ds_stats, fn_out)
     
 def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_obs, fn_out,
-                     chunks = {'time_counter':100}, dist_crit = 5):
+                     chunks = {'time_counter':100}, dist_omit = 5):
                      
     '''
     Routine for extraction of model ssh at obs locations.
@@ -333,7 +333,7 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_obs, fn_out,
      fn_obs          : Absolute path to Tidegauge data file
      fn_out          : Absolute path to output file
      chunks          : xarray chunking dictionary
-     dist_crit       : Distance (km) from obs point to reject nearest model point
+     dist_omit       : Distance (km) from obs point to reject nearest model point
     '''
     
     # Read NEMO data
@@ -375,7 +375,7 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_obs, fn_out,
                                                   nemo_extracted.latitude, 
                                                   obs.longitude.values,
                                                   obs.latitude.values)
-    omit_ind = interp_dist>dist_crit
+    omit_ind = interp_dist>dist_omit
     bad_flag[omit_ind] = True
     
     # Align timings
