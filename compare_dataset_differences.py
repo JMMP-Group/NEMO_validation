@@ -1,29 +1,30 @@
+'''
+Routines for calculating average differences between model runs. These routines
+will average in time (either over some defined time period or into seasonal
+groups) and in depth, according to some user defined reference depths.
+
+The two main routines are:
+    
+    1. time_averaged_differences()
+    2. depth_averaged_difference_means()
+    
+The first routine opens data for two model runs and will average specified 
+variables in time. This output is saved to a new netCDF file, which should be
+provided as input to depth_averaged_difference_means(). This will take the
+time averaged means and further average them into user defined depth bins.
+
+Please see the docstrings for the individual routines for more information.
+
+'''
+
 import pandas as pd
 import xarray as xr
-import xarray.ufuncs as uf
 import sys
 sys.path.append('/work/dbyrne/code/COAsT')
 import numpy as np
-import matplotlib.pyplot as plt
-from datetime import datetime
 import os.path
-import coast.general_utils as gu
 import coast
 from dask.diagnostics import ProgressBar
-
-cfg1 = 'REF'
-cfg2 = 'LAMBDA'
-
-fn_nemo_data1 = "/projectsa/NWSrivers/AMM7/{0}/25hourm.grid_T*".format(cfg1)
-fn_nemo_data2 = "/projectsa/NWSrivers/AMM7/{0}/25hourm.grid_T*".format(cfg1)
-fn_nemo_domain = "/projectsa/NWSrivers/AMM7/INPUTS/mesh_mask.nc"
-fn_out = "/projectsa/NWSrivers/AMM7/analysis/differences/diff_{0}_{1}.nc".format(cfg1, cfg2)
-fn_out_seasonal = "/projectsa/NWSrivers/AMM7/analysis/differences/diff_seasonal_{0}_{1}.nc".format(cfg1, cfg2)
-
-variables = ['temperature','salinity']
-
-start_date = datetime(2017,1,1) 
-end_date = datetime(2019,1,1)
 
 def write_ds_to_file(ds, fn, **kwargs):
     ''' 
@@ -35,12 +36,41 @@ def write_ds_to_file(ds, fn, **kwargs):
         ds.to_netcdf(fn, **kwargs)
         
 def time_averaged_differences(fn_nemo_data1, fn_nemo_data2, fn_nemo_domain,
-                              fn_out, fn_out_seasonal, variables, 
-                              start_date=None, end_data=None):
+                              fn_out, fn_out_seasonal, variables = None, 
+                              start_date = None, end_date = None,
+                              chunks = {'time_counter':100}):
+    '''
+    Calculates and writes time-averaged differences between two provided 
+    datasets. Differences will be calculated as dataset2 - dataset1.
+    
+    *NOTE: Ensure that both model configurations use the same grid (and
+    NEMO domain file). Additionally, they should also lie over the same time
+    period and frequency. No interpolation or regridding will be done by this
+    routine. If model runs have the same time frequency and domain, but
+    differing time periods, start_date and end_date can be specified over common
+    time periods.
+    
+    INPUTS:
+        fn_nemo_data1 (str)     : Full path to nemo data file 1
+        fn_nemo_data2 (str)     : Full path to nemo data file 2
+        fn_nemo_domain (str)    : Full path to nemo domain file
+        fn_out (str)            : Full path to output file for all-period averaging
+        fn_out_seasonal (str)   : Full path to output file for seasonal averaging
+        variables (list of str) : List or array of COAsT variable names to include
+                                  If unspecified, all time dependent variables
+                                  will be included.
+        start_date (datetime)   : Start date for analysis
+        end_date (datetime)     : End date for analysis
+        
+    OUTPUTS:
+            Two output files will be written by this routine. The first will contain
+            differences averaged over the entire model runs (fn_out). The second wil
+            contain climatological (seasonal) means.
+    '''
 
     print('Loading NEMO data', flush=True)
-    nemo1 = coast.NEMO(fn_nemo_data1, fn_nemo_domain, multiple=True, chunks={'time_counter':100})
-    nemo2 = coast.NEMO(fn_nemo_data2, fn_nemo_domain, multiple=True, chunks={'time_counter':100})
+    nemo1 = coast.NEMO(fn_nemo_data1, fn_nemo_domain, multiple=True, chunks=chunks)
+    nemo2 = coast.NEMO(fn_nemo_data2, fn_nemo_domain, multiple=True, chunks=chunks)
     
     nemo1 = nemo1.dataset
     nemo2 = nemo2.dataset

@@ -223,8 +223,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
         ds_reg_prof['prof_obs_sal'][reg, season_ind] = reg_tmp_mean.obs_sal
         ds_reg_prof['prof_error_tem'][reg, season_ind] = reg_tmp_mean.error_tem
         ds_reg_prof['prof_error_sal'][reg, season_ind] = reg_tmp_mean.error_sal
-        ds_reg_prof['prof_abs_error_tem'][reg, season_ind] = reg_tmp_mean.error_tem
-        ds_reg_prof['prof_abs_error_sal'][reg, season_ind] = reg_tmp_mean.error_sal
+        ds_reg_prof['prof_abs_error_tem'][reg, season_ind] = reg_tmp_mean.abs_error_tem
+        ds_reg_prof['prof_abs_error_sal'][reg, season_ind] = reg_tmp_mean.abs_error_sal
         ds_reg_prof['mean_bathy'][reg, season_ind] = reg_tmp_mean.bathy
         
         # Do regional averaging across all seasons
@@ -236,8 +236,8 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
         ds_reg_prof['prof_obs_sal'][reg, 4] = reg_tmp_mean.obs_sal
         ds_reg_prof['prof_error_tem'][reg, 4] = reg_tmp_mean.error_tem
         ds_reg_prof['prof_error_sal'][reg, 4] = reg_tmp_mean.error_sal
-        ds_reg_prof['prof_abs_error_tem'][reg, 4] = reg_tmp_mean.error_tem
-        ds_reg_prof['prof_abs_error_sal'][reg, 4] = reg_tmp_mean.error_sal
+        ds_reg_prof['prof_abs_error_tem'][reg, 4] = reg_tmp_mean.abs_error_tem
+        ds_reg_prof['prof_abs_error_sal'][reg, 4] = reg_tmp_mean.abs_error_sal
         ds_reg_prof['mean_bathy'][reg, 4] = reg_tmp_mean.bathy
     
     # Drop bathy for some reason
