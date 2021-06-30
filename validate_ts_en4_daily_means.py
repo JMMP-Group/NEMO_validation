@@ -55,7 +55,7 @@ def write_ds_to_file(ds, fn, **kwargs):
 def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
                         ref_depth_method = 'interp',
                         regional_masks=[], region_names=[],
-                        start_date = None, end_date = None):
+                        start_date = None, end_date = None, dist_omit=5):
     '''
     Routine for doing REGIONAL averaging of analysis files outputted using 
     analyse_ts_per_file(). INPUT is the output from the analysis and OUTPUT is a file 
@@ -255,9 +255,7 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     write_ds_to_file(ds_interp, fn_out)
 
 def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,  
-                        run_name = 'Undefined', surface_def=5, bottom_def=10, 
-                        dist_crit=5, n_obs_levels=400, 
-                        model_frequency='daily', instant_data=False):
+                        run_name = 'Undefined', surface_def=5, bottom_def=10):
     '''
     Extracts and does some basic analysis and identification of model data at obs
     locations, times and depths. Writes extracted data to file.
@@ -356,6 +354,7 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
     
     # Define variable arrays for interpolated data for monthly EN4 data
     n_mod_levels = mod_profiles.dims['z_dim']
+    n_obs_levels = en4.dims['level']
     n_prof = en4.dims['profile']
     data = xr.Dataset(coords = dict(
                           longitude=     (["profile"], en4.longitude.values),
