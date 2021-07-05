@@ -287,7 +287,6 @@ def analyse_ts_regional(fn_nemo_domain, fn_extracted, fn_out, ref_depth,
     # Merge output dataset
     ds_interp = xr.merge((ds_interp, ds_reg_prof))
     ds_interp['is_in_region'] = (['region','profile'], is_in_region)
-    ds_interp['bad_flag'] = (['profile'], ds.bad_flag.values)
     
     ds_interp['start_date'] = start_date
     ds_interp['end_date'] = end_date
@@ -460,7 +459,7 @@ def extract_ts_per_file(fn_nemo_data, fn_nemo_domain, fn_en4, fn_out,
                           nn_ind_y = (["profile"], ind2D[1])))
 
 	# Vector of bools which save whether a datapoint is bad for some reason
-    interp_dist = np.zeros(n_prof).astype(bool)
+    interp_dist = np.zeros(n_prof)
     
     # Now loop over profiles and interpolate model onto obs.
     for prof in range(0,n_prof):
