@@ -1,2 +1,2 @@
 # NEMO_validation
-Scripts for validation of NEMO output
+Scripts for validation of Coastal Ocean NEMO output
