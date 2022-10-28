@@ -23,7 +23,6 @@ import numpy as np
 import datetime
 import pandas as pd
 
-
 args = sys.argv
 
 model = args[1]
@@ -64,8 +63,6 @@ regional_masks.append( mm.region_def_nws_norwegian_trench(lon,lat,bath))
 regional_masks.append( mm.region_def_kattegat(lon,lat,bath))
 regional_masks.append( mm.region_def_nws_fsc(lon,lat,bath))
 regional_masks.append( mm.region_def_south_north_sea(lon,lat,bath))
-regional_masks.append( region_def_nws_fsc(lon,lat,bath))
-
 
 off_shelf = mm.region_def_off_shelf(lon, lat, bath)
 off_shelf[regional_masks[3].astype(bool)] = 0
