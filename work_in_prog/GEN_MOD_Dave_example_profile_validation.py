@@ -96,6 +96,7 @@ nemo = coast.Gridded(fn_dat, fn_dom, multiple=True, config=fn_cfg_nemo)
 print(nemo.dataset)
 lon = nemo.dataset.longitude.values.squeeze()
 lat = nemo.dataset.latitude.values.squeeze()
+bathy = nemo.dataset.bathymetry.values.squeeze()
 print('NEMO object created')
 
 # Extract time indices between start and end dates
@@ -253,38 +254,40 @@ class MaskMaker_new(coast.MaskMaker):
 
 # Define Regional Masks
 print('Doing regional analysis..')
-#mm = coast.MaskMaker()
-mm = MaskMaker_new()
+mm = coast.MaskMaker()
 
-regional_masks = []
-bath = nemo.dataset.bathymetry.values
-regional_masks.append( np.ones(lon.shape) )
-regional_masks.append( mm.region_def_nws_north_sea(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_outer_shelf(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_english_channel(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_norwegian_trench(lon,lat,bath))
-regional_masks.append( mm.region_def_kattegat(lon,lat,bath))
-regional_masks.append( mm.region_def_fsc(lon,lat,bath))
-regional_masks.append( mm.region_def_south_north_sea(lon,lat,bath))
-off_shelf = mm.region_def_off_shelf(lon, lat, bath)
-off_shelf[regional_masks[3].astype(bool)] = 0  # excludes english channel (wasn't in anyway...)
-off_shelf[regional_masks[4].astype(bool)] = 0  # exludes norwegian trench
 
-regional_masks.append(off_shelf)
-regional_masks.append( mm.region_def_irish_sea(lon,lat,bath))
+masks_list = []
+# Add regional mask for whole domain
+masks_list.append(np.ones(lon.shape))
+masks_list.append(mm.region_def_nws_north_sea(lon, lat, bathy))
+masks_list.append(mm.region_def_nws_outer_shelf(lon, lat, bathy))
+masks_list.append(mm.region_def_nws_norwegian_trench(lon, lat, bathy))
+masks_list.append(mm.region_def_nws_english_channel(lon, lat, bathy))
+masks_list.append(mm.region_def_south_north_sea(lon, lat, bathy))
+masks_list.append(mm.region_def_off_shelf(lon, lat, bathy))
+masks_list.append(mm.region_def_irish_sea(lon, lat, bathy))
+masks_list.append(mm.region_def_kattegat(lon, lat, bathy))
+masks_list.append(mm.region_def_fsc(lon,lat,bathy))
 
-region_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
-                'kattegat', 'fsc','southern_north_sea', 'off_shelf', 'irish_sea' ]
 
-mask_list = mm.make_mask_dataset(lon, lat, regional_masks)
-mask_indices = analysis.determine_mask_indices(model_profiles_interp_ref, mask_list)
+
+masks_names = ["whole domain", "north sea", "outer shelf", "norwegian trench",
+                "english_channel", "southern north sea", "off shelf",
+                "irish sea", "kattegat", "fsc"]
+
+mask_xr = mm.make_mask_dataset(lon, lat, masks_list, masks_names)
+mask_indices = analysis.determine_mask_indices(model_profiles_interp, mask_xr)
+
+
+
 
 # Mask plotting
 if(0):
 	import matplotlib.pyplot as plt
 	for count in range(len(region_names)):
-		plt.pcolormesh( mask_list.longitude, mask_list.latitude, mask_list.mask.isel(dim_mask=count)) 
-		plt.contour(lon,lat,bath, [10,200], colors=["w","w"])
+		plt.pcolormesh( mask_xr.longitude, mask_xr.latitude, mask_xr.mask.isel(dim_mask=count))
+		plt.contour(lon, lat, bathy, [10,200], colors=["w","w"])
 		plt.title(region_names[count])
 		plt.savefig(f"mask_{region_names[count]}.png")
 
