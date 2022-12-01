@@ -298,5 +298,6 @@ mask_means = analysis.mask_means(differences, mask_indices)
 print('Regional means calculated.')
 
 # SAVE mask dataset to file
+mask_xr.to_netcdf(dn_out + 'mask_xr.nc'.format(run_name))
 mask_means.to_netcdf(dn_out + 'mask_means_daily_{0}.nc'.format(run_name))
 print('done')
