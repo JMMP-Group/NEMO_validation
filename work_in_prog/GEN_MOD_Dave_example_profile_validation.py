@@ -254,7 +254,7 @@ class MaskMaker_new(coast.MaskMaker):
 
 # Define Regional Masks
 print('Doing regional analysis..')
-mm = coast.MaskMaker()
+mm = coast.MaskMaker_new()
 
 
 masks_list = []
