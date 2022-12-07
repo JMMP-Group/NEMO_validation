@@ -13,7 +13,7 @@ Then preprocesing is triggered with:
 
 which calls a machine dependant scheduler script `$MACHINE_pre_process_en4_monthly.sh` to invoke `pre_process_en4_monthly.py`
 
-
+Output files are stored in the directory `config.py: config.dout_en4`
 
 ## Process monthly data
 In recent coast development env (my conda env coast_nov2022)
