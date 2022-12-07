@@ -8,6 +8,7 @@
 ## THIS FILES NEEDS EDITTING TO RUN ON SPICE AT THE MO
 
 module add jaspy
-source ~/envs/coast/bin/activate
+source activate $CONDA_ENV
+
 # Pass in integer year and month: python pre_process_en4_monthly.py <year> <month>
 python pre_process_en4_monthly.py $1 $2
