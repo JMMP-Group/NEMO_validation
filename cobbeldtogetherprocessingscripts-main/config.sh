@@ -14,5 +14,5 @@ if [ $MACHINE = "LOTUS" ]; then
 
 elif [ $MACHINE = "SPICE" ]; then
   # Use to activate conda environment in $MACHINE_pre_process_en4_monthly.sh
-  CONDA_ENV="~/envs/coast/bin/activate"
+  CONDA_ENV="~/envs/coast/bin/activate"  ## WHAT IS THIS REALLY? IT IS PROBABLY YOUR OLD COAST ENV
 fi
