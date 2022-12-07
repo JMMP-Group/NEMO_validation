@@ -1,7 +1,7 @@
 """
 config file to store directory paths, common to multiple scripts. Is user/machine dependent
 
-import config
+from config import config
 thing=config.THING
 where:
     less config.py
@@ -20,7 +20,7 @@ class config:
     print(config.coast_repo)
     """
     machine = environ.get('MACHINE')
-
+    print(f"machine:{machine}")
     if "LOTUS" in machine.upper():
         # location of COAsT repo, if using a particular branch
         coast_repo = "/home/users/jelt/GitHub/COAsT"

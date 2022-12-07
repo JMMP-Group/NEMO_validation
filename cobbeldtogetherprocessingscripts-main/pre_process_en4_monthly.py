@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-import config
+from config import config
 import sys
 # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
 #sys.path.append('/home/h01/fred/NOTES/SET_UP_CONDA_ARTIFACTORY/COAsT')
 #sys.path.append('/home/h01/fred/NOTES/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY')
 # sys.path.append('/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY')
+
+print(config.coast_repo)
 sys.path.append(config.coast_repo)
 
 import coast
