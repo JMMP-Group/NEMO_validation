@@ -19,16 +19,16 @@ class config:
 
     print(config.coast_repo)
     """
-    username = environ.get('USER')
+    machine = environ.get('MACHINE')
 
-    if "JASMIN" in gethostname().upper():
+    if "LOTUS" in machine.upper():
         # location of COAsT repo, if using a particular branch
         coast_repo = "/home/users/jelt/GitHub/COAsT"
         din_en4 = "/home/users/jelt/EN4/"
         dout_en4 = "/home/users/jelt/tmp/"
         fn_cfg_prof = "/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
 
-    elif "METO" in gethostname().upper():
+    elif "SPICE" in machine.upper():
         # location of COAsT repo, if using a particular branch
         coast_repo = "/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"
         din_en4 = "/scratch/fred/EN4/"
@@ -36,6 +36,6 @@ class config:
         fn_cfg_prof = "/data/users/fred/coast_demo/config/example_en4_profiles.json"
 
     else:
-        print(f"Do not recognise hostname: {gethostname()}")
+        print(f"Do not recognise machine: {machine}")
 
 
