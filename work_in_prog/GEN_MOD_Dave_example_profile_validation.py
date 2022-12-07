@@ -112,6 +112,8 @@ nemo.dataset["landmask"] = nemo.dataset.bottom_level == 0
 nemo.dataset = nemo.dataset.rename({"depth_0": "depth"})
 print('Landmask calculated')
 
+nemo.dataset.landmask.to_netcdf(dn_out + 'landmask.nc')
+
 # CREATE EN4 PROFILE OBJECT containing processed data. We just need to
 # create a Profile object and place the data straight into its dataset
 profile = coast.Profile(config=fn_cfg_prof)
@@ -280,16 +282,21 @@ mask_xr = mm.make_mask_dataset(lon, lat, masks_list, masks_names)
 mask_indices = analysis.determine_mask_indices(model_profiles_interp, mask_xr)
 
 
-
+masks_list = []
+masks_list.append(np.ones(lon.shape))
+masks_list.append(mm.region_def_kattegat(lon, lat, bathy))
+masks_names = ["whole domain", "kategat"]
+mask_kat_xr = mm.make_mask_dataset(lon, lat, masks_list, masks_names)
+mask_kat_xr.to_netcdf(dn_out + 'mask_kat_xr.nc')
 
 # Mask plotting
 if(0):
 	import matplotlib.pyplot as plt
-	for count in range(len(region_names)):
+	for count in range(len(masks_names)):
 		plt.pcolormesh( mask_xr.longitude, mask_xr.latitude, mask_xr.mask.isel(dim_mask=count))
 		plt.contour(lon, lat, bathy, [10,200], colors=["w","w"])
-		plt.title(region_names[count])
-		plt.savefig(f"mask_{region_names[count]}.png")
+		plt.title(masks_names[count])
+		plt.savefig(f"mask_{masks_names[count]}.png")
 
 
 # Do mask averaging
