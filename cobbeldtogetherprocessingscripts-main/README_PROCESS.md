@@ -9,7 +9,7 @@ To make it easier to work across sites and architectures two config files are us
 
 Then preprocesing is triggered with:
 
-2. Execute `iter_en4_proc.sh`
+2. Execute `. ./iter_en4_proc.sh`
 
 which calls a machine dependant scheduler script `$MACHINE_pre_process_en4_monthly.sh` to invoke `pre_process_en4_monthly.py`
 
