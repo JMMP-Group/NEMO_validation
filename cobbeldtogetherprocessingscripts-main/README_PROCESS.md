@@ -1,13 +1,19 @@
-# Steps for procesing data 
+# Steps for processing data 
 
 # Process the en4 data
 
-before we do anythgin we break up the en4 data into processed months for coast
+Prior to computing diagnostics, the EN4 data is preprocessed into monthly COAsT-ready files for a restricted geographic domain.
+To make it easier to work across sites and architectures two config files are used to control python and bash processes.
 
-we use
+1 . `config.sh` and `config.py` must both be edited for path, conda environment, and machine choices.
 
-* iter_en4_proc.sh to loop through and call
-* pre_process_en4_monthly.py
+Then preprocesing is triggered with:
+
+2. Execute `iter_en4_proc.sh`
+
+which calls a machine dependant scheduler script `$MACHINE_pre_process_en4_monthly.sh` to invoke `pre_process_en4_monthly.py`
+
+
 
 ## Process monthly data
 In recent coast development env (my conda env coast_nov2022)
