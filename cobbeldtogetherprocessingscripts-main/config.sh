@@ -27,8 +27,8 @@ if [ $MACHINE = "LOTUS" ]; then
   export FN_CFG_PROF="/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
 
   # location of raw EN4 data
-  export DIN_EN4="/home/users/jelt/EN4/"
-  export DIN_EN4="/gws/nopw/j04/class_vol2/senemo/shared/EN4"
+  #export DIN_EN4="/home/users/jelt/EN4/"
+  export DIN_EN4="/gws/nopw/j04/class_vol2/senemo/shared/EN4/"
 
   # prefix for preprocessed EN4 data (chunked into files by region and time)
   export REGION="AMM15"
