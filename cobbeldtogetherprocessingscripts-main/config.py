@@ -15,11 +15,11 @@ from os import environ
 class config:
     """
     # main.py
-    import config
+    from config import config
 
     print(config.coast_repo)
     """
-    machine = environ.get('MACHINE')
+    machine = environ.get('MACHINE')  # read SHELL variable. Set in config.sh
     print(f"machine:{machine}")
     if "LOTUS" in machine.upper():
         # location of COAsT repo, if using a particular branch
