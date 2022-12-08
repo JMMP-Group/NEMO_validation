@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from config import config
+from config import config, bounds
 import sys
 # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
 #sys.path.append('/home/h01/fred/NOTES/SET_UP_CONDA_ARTIFACTORY/COAsT')
@@ -36,7 +36,9 @@ print (fn_out)
 profile = coast.Profile(config=config.fn_cfg_prof)
 profile.read_en4(fn_en4, multiple=True)
 
-profile = profile.subset_indices_lonlat_box(lonbounds=[-25.47, 16.25], latbounds=[43, 64.5])
+# Restrict by region
+lonbounds, latbounds = bounds.get_bounds(region=config.region)
+profile = profile.subset_indices_lonlat_box(lonbounds=lonbounds, latbounds=latbounds)
 
 new_profile = profile.process_en4()
 
