@@ -41,4 +41,4 @@ profile = profile.subset_indices_lonlat_box(lonbounds=[-25.47, 16.25], latbounds
 new_profile = profile.process_en4()
 
 new_profile.dataset.to_netcdf(fn_out)
-
+print(f"Saved: {fn_out}")
