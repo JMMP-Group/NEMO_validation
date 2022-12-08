@@ -26,10 +26,12 @@ if [ $MACHINE = "LOTUS" ]; then
 
   # location of raw EN4 data
   export DIN_EN4="/home/users/jelt/EN4/"
-  # location of preprocessed EN4 data
-  export DOUT_EN4="/home/users/jelt/tmp/"
-  export REGION="AMM15"  # prefix for preprocessed EN4 data (chunked into files by region and time)
 
+  # prefix for preprocessed EN4 data (chunked into files by region and time)
+  export REGION="AMM15"
+  # location of preprocessed EN4 data
+  #export DOUT_EN4="/home/users/jelt/tmp/"
+  export DOUT_EN4="/home/users/jelt/"$REGION"/"
 
 ## SETTINGS FOR MET OFFICE SPICE PROCESSING
 elif [ $MACHINE = "SPICE" ]; then

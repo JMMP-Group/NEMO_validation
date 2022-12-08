@@ -26,6 +26,8 @@ month  = int(args[2])
 #fn_en4 = "/scratch/fred/EN4/EN.4.2.2.f.profiles.g10.%d%02d.nc"%(year,month)
 fn_en4 = config.din_en4 + "EN.4.2.2.f.profiles.g10.%d%02d.nc"%(year,month)
 
+# Make target dir if not present
+print(os.popen("mkdir -p "+config.dout_en4).read())
 #fn_out = "/scratch/fred/EN4/SCIPY_processed_%d%02d.nc"%(year,month)
 fn_out = config.dout_en4 + config.region+"_processed_%d%02d.nc"%(year,month)
 print (fn_en4)
