@@ -5,7 +5,7 @@
 Prior to computing diagnostics, the EN4 data is preprocessed into monthly COAsT-ready files for a restricted geographic domain.
 To make it easier to work across sites and architectures two config files are used to control python and bash processes.
 
-1 . `config.sh` and `config.py` must both be edited for path, conda environment, and machine choices.
+1 . `config.sh` must both be edited for path, conda environment, and machine choices.
 
 Then preprocesing is triggered with:
 

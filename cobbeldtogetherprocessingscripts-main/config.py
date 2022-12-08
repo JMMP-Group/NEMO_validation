@@ -1,5 +1,7 @@
 """
-config file to store directory paths, common to multiple scripts. Is user/machine dependent
+Config file for python, to store directory paths, variable choices etc that are common to multiple scripts.
+Reads data set in config.sh
+ Enables work flow to be machine independent
 
 from config import config
 thing=config.THING
@@ -19,23 +21,19 @@ class config:
 
     print(config.coast_repo)
     """
-    machine = environ.get('MACHINE')  # read SHELL variable. Set in config.sh
-    print(f"machine:{machine}")
-    if "LOTUS" in machine.upper():
-        # location of COAsT repo, if using a particular branch
-        coast_repo = "/home/users/jelt/GitHub/COAsT"
-        din_en4 = "/home/users/jelt/EN4/"
-        dout_en4 = "/home/users/jelt/tmp/"
-        fn_cfg_prof = "/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
+    def get_shell_var(self, var:str, debug=False):
+        try:
+            if debug: print(f"{var}: {environ.get(var.upper())}")
+            return environ.get(var.upper())
+        except:
+            print(f"Problem with getting shell variable: {var}")
 
-    elif "SPICE" in machine.upper():
-        # location of COAsT repo, if using a particular branch
-        coast_repo = "/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"
-        din_en4 = "/scratch/fred/EN4/"
-        dout_en4 = "/scratch/fred/EN4/"
-        fn_cfg_prof = "/data/users/fred/coast_demo/config/example_en4_profiles.json"
-
-    else:
-        print(f"Do not recognise machine: {machine}")
+    # read SHELL variables. Set in config.sh
+    #machine = environ.get('MACHINE')
+    machine = self.get_shell_var('MACHINE', True)
+    coast_repo = self.get_shell_var('COAST_REPO', True)
+    din_en4 = self.get_shell_var('DIN_EN4', True)
+    dout_en4 = self.get_shell_var('DOUT_EN4', True)
+    fn_cfg_prof = self.get_shell_var('FN_CFG_PROF', True)
 
 
