@@ -1,18 +1,20 @@
 #!/bin/bash
 
-## Years to loop over during monthly preprocessing: called in iter_en4_proc.sh
-export STARTYEAR=1980
-export ENDYEAR=1980
+## Set the machine to be used. Pick one.
+export MACHINE="LOTUS"  # resource on JASMIN
+#export MACHINE="SPICE"  # resource at MO
 
-## Process monthly data
-export MOD="P0.0"  # Model name
+## Years to loop over during monthly preprocessing: called in iter_en4_proc.sh, iter_sub_METEST.sh
+export STARTYEAR=1980  # 2004
+export ENDYEAR=1980    # 2014
+
+## Process monthly data. Required in iter_sub_METEST.sh
+export MOD="P0.0"  # Model reference name
 export GRID="CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
 # options?: "domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
 # options?: "GEG_SF12.nc" CO7_EXACT_CFG_FILE.nc
 
-## Set the machine to be used. Pick one.
-export MACHINE="LOTUS"  # resource on JASMIN
-#export MACHINE="SPICE"  # resource at MO
+
 
 ## SETTINGS FOR JASMIN LOTUS PROCESSING
 if [ $MACHINE = "LOTUS" ]; then
@@ -26,6 +28,7 @@ if [ $MACHINE = "LOTUS" ]; then
 
   # location of raw EN4 data
   export DIN_EN4="/home/users/jelt/EN4/"
+  export DIN_EN4="/gws/nopw/j04/class_vol2/senemo/shared/EN4"
 
   # prefix for preprocessed EN4 data (chunked into files by region and time)
   export REGION="AMM15"
@@ -33,12 +36,19 @@ if [ $MACHINE = "LOTUS" ]; then
   #export DOUT_EN4="/home/users/jelt/tmp/"
   export DOUT_EN4="/home/users/jelt/"$REGION"/"
 
+  # directory for NEMO domain_cfg.nc file
+  export DIR_DOM="/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/"
+  # directory for NEMO data files
+  #fn_dat = "/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/%s/DAILY/%s0*T.nc"%(exper,startyear)
+  #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s%02d*T.nc*"%(exper,startyear,month)
+  export DIR_DAT="/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/"
+
 ## SETTINGS FOR MET OFFICE SPICE PROCESSING
 elif [ $MACHINE = "SPICE" ]; then
   # Use to activate conda environment in $MACHINE_pre_process_en4_monthly.sh
-  export CONDA_ENV_OLD="~/envs/coast"  ## WHAT IS THIS REALLY? THIS IS YOUR OLD COAST ENV
+  export CONDA_ENV_OLD="/home/h01/fred/NOTES/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"  ## WHAT IS THIS REALLY? THIS IS YOUR OLD COAST ENV
   # Use to active conda environment in the "process monthly data" model/en4 inter-comparison
-  export CONDA_ENV_NEW="coast_nov2022"  ## OR WHAT IS THIS REALLY? WHAT IS THE PATH?
+  export CONDA_ENV_NEW="/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_NOV_2022_DEVELOP/COAsT"  ## OR WHAT IS THIS REALLY? WHAT IS THE PATH?
   export CONDA_ENV=CONDA_ENV_OLD  ## Ideally you would only ever use one (new) conda environment
 
   # location of COAsT repo, if using a particular branch
@@ -52,5 +62,7 @@ elif [ $MACHINE = "SPICE" ]; then
   export DOUT_EN4="/scratch/fred/EN4/"
   export REGION="SCIPY"  # prefix for preprocessed EN4 data (chunked into files by region and time)
 
-
+  # directory for NEMO domain_cfg.nc file
+  export DIR_DOM="/data/users/fred/ME_DOMAINS/"
+  #fn_dom = "/data/users/fred/ME_DOMAINS/
 fi

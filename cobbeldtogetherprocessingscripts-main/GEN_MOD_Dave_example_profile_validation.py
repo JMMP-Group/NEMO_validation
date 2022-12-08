@@ -20,12 +20,17 @@
 #
 # last field "debug" restricts the number profiles to make manageable for debugging
 
-
+from config import config
 import sys
+
+config = config() # initialise variables in python
+
 # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
 #sys.path.append('/home/users/dbyrne/code/COAsT')
 #sys.path.append('/home/h01/fred/NOTES/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY')
-sys.path.append('/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_NOV_2022_DEVELOP/COAsT/')
+#sys.path.append('/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_NOV_2022_DEVELOP/COAsT/')
+sys.path.append(config.coast_repo)
+
 import coast
 import xarray as xr
 import numpy as np
@@ -68,7 +73,10 @@ run_name='p0_%d%02d_%d'%(startyear,month,endyear)
 # File paths (All)
 #fn_dom = "/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/CO7_EXACT_CFG_FILE.nc"
 #fn_dom = "/data/users/fred/CO7_EXACT_CFG_FILE.nc"
-fn_dom = "/data/users/fred/ME_DOMAINS/%s"%(grid)
+#fn_dom = "/data/users/fred/ME_DOMAINS/%s"%(grid)
+fn_dom = f"{dir_dom}{grid}"
+if ~os.exists(fn_dom):
+	print(f"Does not exist: {fn_dom}")
 
 #fn_dat = "/gws/nopw/j04/jmmp/CO9_AMM15/outputs/{0}/daily/*.nc".format(run_name)
 #fn_dat = "/gws/nopw/j04/jmmp_collab/AMM15/PORT/P0.0/*.nc"
