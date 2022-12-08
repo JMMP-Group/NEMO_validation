@@ -27,7 +27,7 @@ month  = int(args[2])
 fn_en4 = config.din_en4 + "EN.4.2.2.f.profiles.g10.%d%02d.nc"%(year,month)
 
 #fn_out = "/scratch/fred/EN4/SCIPY_processed_%d%02d.nc"%(year,month)
-fn_out = config.dout_en4 + "SCIPY_processed_%d%02d.nc"%(year,month)
+fn_out = config.dout_en4 + config.region+"_processed_%d%02d.nc"%(year,month)
 print (fn_en4)
 print (fn_out)
 #fn_cfg_prof = "/data/users/fred/coast_demo/config/example_en4_profiles.json"

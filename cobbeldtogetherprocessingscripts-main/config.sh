@@ -17,34 +17,38 @@ export MACHINE="LOTUS"  # resource on JASMIN
 ## SETTINGS FOR JASMIN LOTUS PROCESSING
 if [ $MACHINE = "LOTUS" ]; then
   # Use to activate conda environment in $MACHINE_pre_process_en4_monthly.sh
-  CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
+  export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
 
   # location of COAsT repo, if using a particular branch
-  COAST_REPO="/home/users/jelt/GitHub/COAsT"
+  export COAST_REPO="/home/users/jelt/GitHub/COAsT"
   # COAsT configuration file for EN4 profiles
-  FN_CFG_PROF="/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
+  export FN_CFG_PROF="/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
 
   # location of raw EN4 data
-  DIN_EN4="/home/users/jelt/EN4/"
+  export DIN_EN4="/home/users/jelt/EN4/"
   # location of preprocessed EN4 data
-  DOUT_EN4="/home/users/jelt/tmp/"
+  export DOUT_EN4="/home/users/jelt/tmp/"
+  export REGION="AMM15"  # prefix for preprocessed EN4 data (chunked into files by region and time)
+
 
 ## SETTINGS FOR MET OFFICE SPICE PROCESSING
 elif [ $MACHINE = "SPICE" ]; then
   # Use to activate conda environment in $MACHINE_pre_process_en4_monthly.sh
-  CONDA_ENV_OLD="~/envs/coast"  ## WHAT IS THIS REALLY? THIS IS YOUR OLD COAST ENV
+  export CONDA_ENV_OLD="~/envs/coast"  ## WHAT IS THIS REALLY? THIS IS YOUR OLD COAST ENV
   # Use to active conda environment in the "process monthly data" model/en4 inter-comparison
-  CONDA_ENV_NEW="coast_nov2022"  ## OR WHAT IS THIS REALLY? WHAT IS THE PATH?
-  CONDA_ENV=CONDA_ENV_OLD  ## Ideally you would only ever use one (new) conda environment
+  export CONDA_ENV_NEW="coast_nov2022"  ## OR WHAT IS THIS REALLY? WHAT IS THE PATH?
+  export CONDA_ENV=CONDA_ENV_OLD  ## Ideally you would only ever use one (new) conda environment
 
   # location of COAsT repo, if using a particular branch
-  COAST_REPO = "/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"
+  export COAST_REPO = "/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"
   # COAsT configuration file for EN4 profiles
-  FN_CFG_PROF="/data/users/fred/coast_demo/config/example_en4_profiles.json"
+  export FN_CFG_PROF="/data/users/fred/coast_demo/config/example_en4_profiles.json"
 
   # location of raw EN4 data
-  DIN_EN4="/scratch/fred/EN4/"
+  export DIN_EN4="/scratch/fred/EN4/"
   # location of preprocessed EN4 data
-  DOUT_EN4="/scratch/fred/EN4/"
+  export DOUT_EN4="/scratch/fred/EN4/"
+  export REGION="SCIPY"  # prefix for preprocessed EN4 data (chunked into files by region and time)
+
 
 fi

@@ -30,6 +30,7 @@ class config:
 
     # read SHELL variables. Set in config.sh
     #machine = environ.get('MACHINE')
+    region = self.get_shell_var('REGION', True)
     machine = self.get_shell_var('MACHINE', True)
     coast_repo = self.get_shell_var('COAST_REPO', True)
     din_en4 = self.get_shell_var('DIN_EN4', True)
