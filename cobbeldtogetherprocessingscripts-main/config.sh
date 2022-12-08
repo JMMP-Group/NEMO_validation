@@ -41,7 +41,7 @@ if [ $MACHINE = "LOTUS" ]; then
   # directory for NEMO data files
   #fn_dat = "/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/%s/DAILY/%s0*T.nc"%(exper,startyear)
   #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s%02d*T.nc*"%(exper,startyear,month)
-  export DIR_DAT="/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/"
+  export DIR_DAT="/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/"$MOD"/DAILY/"
 
 ## SETTINGS FOR MET OFFICE SPICE PROCESSING
 elif [ $MACHINE = "SPICE" ]; then
@@ -65,4 +65,7 @@ elif [ $MACHINE = "SPICE" ]; then
   # directory for NEMO domain_cfg.nc file
   export DIR_DOM="/data/users/fred/ME_DOMAINS/"
   #fn_dom = "/data/users/fred/ME_DOMAINS/
+  # directory for NEMO data files
+  #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s%02d*T.nc*"%(exper,startyear,month)
+  export DIR_DAT="/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/"$MOD"/DAILY/"
 fi
