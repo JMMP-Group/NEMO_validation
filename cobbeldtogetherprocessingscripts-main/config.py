@@ -24,6 +24,10 @@ class config:
         self.din_en4     = self.get_shell_var('DIN_EN4', True)
         self.dout_en4    = self.get_shell_var('DOUT_EN4', True)
         self.fn_cfg_prof = self.get_shell_var('FN_CFG_PROF', True)
+        self.fn_cfg_nemo = self.get_shell_var('FN_CFG_NEMO', True)
+        self.dn_dom     = self.get_shell_var('DN_DOM', True)
+        self.dn_dat     = self.get_shell_var('DN_DAT', True)
+        self.dn_out     = self.get_shell_var('DN_OUT', True)
 
     def get_shell_var(self, var:str, debug=False):
         try:

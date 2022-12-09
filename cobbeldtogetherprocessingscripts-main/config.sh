@@ -5,8 +5,8 @@ export MACHINE="LOTUS"  # resource on JASMIN
 #export MACHINE="SPICE"  # resource at MO
 
 ## Years to loop over during monthly preprocessing: called in iter_en4_proc.sh, iter_sub_METEST.sh
-export STARTYEAR=1980  # 2004
-export ENDYEAR=1980    # 2014
+export STARTYEAR=2004 #1980  # 2004
+export ENDYEAR=2005 #1980    # 2014
 
 ## Process monthly data. Required in iter_sub_METEST.sh
 export MOD="P0.0"  # Model reference name
@@ -23,8 +23,10 @@ if [ $MACHINE = "LOTUS" ]; then
 
   # location of COAsT repo, if using a particular branch
   export COAST_REPO="/home/users/jelt/GitHub/COAsT"
-  # COAsT configuration file for EN4 profiles
-  export FN_CFG_PROF="/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
+  # COAsT configuration files
+  export DN_CFG="/home/users/jelt/GitHub/COAsT/config/"
+  export FN_CFG_PROF=$DN_CFG"example_en4_profiles.json"
+  export FN_CFG_NEMO=$DN_CFG"example_nemo_grid_t.json"
 
   # location of raw EN4 data
   #export DIN_EN4="/home/users/jelt/EN4/"
@@ -34,14 +36,16 @@ if [ $MACHINE = "LOTUS" ]; then
   export REGION="AMM15"
   # location of preprocessed EN4 data
   #export DOUT_EN4="/home/users/jelt/tmp/"
-  export DOUT_EN4="/home/users/jelt/"$REGION"/"
+  #export DOUT_EN4="/home/users/jelt/"$REGION"/"
+  export DOUT_EN4=$DIN_EN4$REGION"/"
 
   # directory for NEMO domain_cfg.nc file
-  export DIR_DOM="/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/"
+  export DN_DOM="/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/"
   # directory for NEMO data files
   #fn_dat = "/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/%s/DAILY/%s0*T.nc"%(exper,startyear)
   #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s%02d*T.nc*"%(exper,startyear,month)
-  export DIR_DAT="/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/"$MOD"/DAILY/"
+  export DN_DAT="/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/"$MOD"/DAILY/"
+  export DN_OUT="/home/users/jelt/tmp/" #"$REGION"/" 
 
 ## SETTINGS FOR MET OFFICE SPICE PROCESSING
 elif [ $MACHINE = "SPICE" ]; then
@@ -53,8 +57,11 @@ elif [ $MACHINE = "SPICE" ]; then
 
   # location of COAsT repo, if using a particular branch
   export COAST_REPO = "/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"
-  # COAsT configuration file for EN4 profiles
-  export FN_CFG_PROF="/data/users/fred/coast_demo/config/example_en4_profiles.json"
+  # COAsT configuration files 
+  export DN_CFG="/data/users/fred/coast_demo/config/"
+  export FN_CFG_PROF=$DN_CFG"example_en4_profiles.json"
+  export FN_CFG_NEMO=$DN_CFG"example_nemo_grid_t.json"
+
 
   # location of raw EN4 data
   export DIN_EN4="/scratch/fred/EN4/"
@@ -63,9 +70,10 @@ elif [ $MACHINE = "SPICE" ]; then
   export REGION="SCIPY"  # prefix for preprocessed EN4 data (chunked into files by region and time)
 
   # directory for NEMO domain_cfg.nc file
-  export DIR_DOM="/data/users/fred/ME_DOMAINS/"
+  export DN_DOM="/data/users/fred/ME_DOMAINS/"
   #fn_dom = "/data/users/fred/ME_DOMAINS/
   # directory for NEMO data files
   #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s%02d*T.nc*"%(exper,startyear,month)
-  export DIR_DAT="/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/"$MOD"/DAILY/"
+  export DN_DAT="/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/"$MOD"/DAILY/"
+  export DN_OUT="/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/"$MOD"/analysisb/"
 fi
