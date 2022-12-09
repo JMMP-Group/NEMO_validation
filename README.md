@@ -1,9 +1,17 @@
 # NEMO_validation
-Scripts for validation of Coastal Ocean NEMO output
+Scripts for validation of Coastal Ocean NEMO output.
+
+This is split into a number of sections with corresponding directories:
+EN4_preprocessing
+EN4_processing
+EN4_postprocessing
+
+There are also original files that are under review (in `review_in_progress_Orig_files`, which includes sea level
+analysis) and two directories that are temporary.
 
 # Steps for processing data 
 
-# Process the en4 data
+## Preprocess the EN4 data
 
 Prior to computing diagnostics, the EN4 data is preprocessed into monthly COAsT-ready files for a restricted geographic domain.
 To make it easier to work across sites and architectures two config files are used to control python and bash processes.
@@ -18,13 +26,11 @@ which calls a machine dependant scheduler script `$MACHINE_pre_process_en4_month
 
 Output files are stored in the directory `config.sh: DOUT_EN4`
 
-## Process monthly data
-In recent coast development env (my conda env coast_nov2022)
 
+## Process monthly data to generate model error profiles with respect to EN4 profiles
 
-
-we use **iter_sub_METEST.sh**  to submit over all years and months separately,
-its a bit dumb as some months have only a few profiles asn some much more so the queue time 
+We use **iter_sub_METEST.sh**  to submit over all years and months separately,
+its a bit dumb as some months have only a few profiles and some much more so the queue time 
 for the serial sbatch should really be a bit more dynamic e.g. the longer ones take hours
 the shorter ones take minutes
 
@@ -48,8 +54,11 @@ where:
 
 using arguments: $1 $2 $3 $4 $5 corresponding to the above.
 
+This outputs ....
 
-## Concatenate profiles (merge months)
+## Postprocessing
+
+### Concatenate error profiles (merge months)
 
 **The next steps I used my older version of COAST, but should be easy enough to convert**
 
@@ -65,7 +74,7 @@ That just concatenates all matching a specified month into a single file
 in preparation for creating a mean for each month.
 
 
-## Create Means
+### Create Means
 
 As the runs were not done yet  I just did them by hand on the command line but could have a  simple loop 
 through the months as above
@@ -76,7 +85,7 @@ sbatch mean.sbatch P0.0 2
 for example will mean up all for feb
 
 
-## Plot the results.
+### Plot the results.
 
 To plot the months I used:
 **plot_month.py**
