@@ -53,7 +53,7 @@ where:
 
 using arguments: $1 $2 $3 $4 $5 corresponding to the above.
 
-This outputs ....
+This outputs: `DN_OUT/$REGION/` ... 
 
 ## Postprocessing
 

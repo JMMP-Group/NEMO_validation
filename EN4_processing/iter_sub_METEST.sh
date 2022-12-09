@@ -2,6 +2,8 @@
 echo "Bash version ${BASH_VERSION}..."
 source config.sh
 
+rm LOGS/OUT* LOGS/*.err LOGS/*.out
+
 #MOD=$1
 #GRID="domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
 #GRID=$2 #   "GEG_SF12.nc" CO7_EXACT_CFG_FILE.nc
