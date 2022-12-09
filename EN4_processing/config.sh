@@ -53,7 +53,7 @@ elif [ $MACHINE = "SPICE" ]; then
   export CONDA_ENV_OLD="/home/h01/fred/NOTES/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"  ## WHAT IS THIS REALLY? THIS IS YOUR OLD COAST ENV
   # Use to active conda environment in the "process monthly data" model/en4 inter-comparison
   export CONDA_ENV_NEW="/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_NOV_2022_DEVELOP/COAsT"  ## OR WHAT IS THIS REALLY? WHAT IS THE PATH?
-  export CONDA_ENV=CONDA_ENV_OLD  ## Ideally you would only ever use one (new) conda environment
+  export CONDA_ENV=CONDA_ENV_NEW  ## Ideally you would only ever use one (new) conda environment
 
   # location of COAsT repo, if using a particular branch
   export COAST_REPO = "/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"
