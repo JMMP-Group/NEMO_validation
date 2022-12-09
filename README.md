@@ -2,9 +2,11 @@
 Scripts for validation of Coastal Ocean NEMO output.
 
 This is split into a number of sections with corresponding directories:
+```
 EN4_preprocessing
 EN4_processing
 EN4_postprocessing
+```
 
 There are also original files that are under review (in `review_in_progress_Orig_files`, which includes sea level
 analysis) and two directories that are temporary.
@@ -53,7 +55,18 @@ where:
 
 using arguments: $1 $2 $3 $4 $5 corresponding to the above.
 
-This outputs: `DN_OUT/$REGION/` ... 
+This outputs, in `DN_OUT/$REGION/`, files like: 
+```
+extracted_profiles_p0_200401_2005.nc
+interpolated_profiles_p0_200401_2005.nc
+interpolated_obs_p0_200401_2005.nc
+profile_errors_p0_200401_2005.nc
+surface_data_p0_200401_2005.nc
+mid_data_p0_200401_2005.nc
+bottom_data_p0_200401_2005.nc
+mask_means_daily_p0_200401_2005.nc
+
+```
 
 ## Postprocessing
 
