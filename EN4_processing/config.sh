@@ -12,3 +12,4 @@ if [ $MACHINE = "LOTUS" ]; then
 ## SETTINGS FOR MET OFFICE SPICE PROCESSING
 elif [ $MACHINE = "SPICE" ]; then
   source spice_config.sh
+fi

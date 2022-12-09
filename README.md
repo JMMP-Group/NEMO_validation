@@ -24,8 +24,7 @@ Then preprocesing is triggered with:
 
 which calls a machine dependant scheduler script `$MACHINE_pre_process_en4_monthly.sh` to invoke `pre_process_en4_monthly.py`
 
-Output files are stored in the directory `config.sh: DOUT_EN4`
-
+Output files are stored in the directory `config.sh: DOUT_EN4` with file structure: `<region>_processed_yyyymm.nc`
 
 ## Process monthly data to generate model error profiles with respect to EN4 profiles
 
