@@ -92,7 +92,7 @@ As the runs were not done yet  I just did them by hand on the command line but c
 through the months as above
 
 ```bash
-sbatch mean.sbatch P0.0 2
+sbatch spice_mean.sbatch P0.0 2
 ```
 for example will mean up all for feb
 
