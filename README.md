@@ -85,6 +85,12 @@ python merge_monthly.py $1 $2 #(Model month)**
 That just concatenates all matching a specified month into a single file
 in preparation for creating a mean for each month.
 
+Outputs are written to DN_OUT by month number, mm:
+```
+mm_PRO_INDEX.nc  ## merging interpolated_profiles_*.nc (model profiles on ref levels)
+mm_PRO_DIFF.nc   ## merging profile_errors_*.nc (diff between model & obs on ref levels)
+```
+
 
 ### Create Means
 

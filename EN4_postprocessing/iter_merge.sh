@@ -3,6 +3,7 @@ echo "Bash version ${BASH_VERSION}..."
 source config.sh
 
 mkdir -p LOGS
+rm LOGS/*err LOGS/*out LOGS/*log
 
 #MOD=$1
 for (( month=1; month<13; month++ ))
