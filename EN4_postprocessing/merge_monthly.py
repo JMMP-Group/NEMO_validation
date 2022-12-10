@@ -22,7 +22,8 @@ with ProgressBar():
   ds_index.to_netcdf(config.dn_out+"%02d_PRO_INDEX.nc"%(month))
   ds_diff.to_netcdf(config.dn_out+"%02d_PRO_DIFF.nc"%(month))
 
-print('All Done')
+print('File written to {config.dn_out+"%02d_PRO_INDEX.nc"%(month)}')
+print('File written to {config.dn_out+"%02d_PRO_DIFF.nc"%(month)}')
 
 
 
