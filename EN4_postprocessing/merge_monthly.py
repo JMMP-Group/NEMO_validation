@@ -1,6 +1,7 @@
 import xarray as xr
 import sys
 from dask.diagnostics import ProgressBar
+from config import config
 
 config = config() # initialise variables in python
 
