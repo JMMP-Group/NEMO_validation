@@ -39,15 +39,18 @@ print (fn_out)
 #fn_cfg_prof = "/data/users/fred/coast_demo/config/example_en4_profiles.json"
 #fn_cfg_prof = "/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
 
-#profile = coast.Profile(config=config.fn_cfg_prof)
-#profile.read_en4(fn_en4, multiple=True)
-profile = coast.Profile(fn_en4, multiple=True, config=config.fn_cfg_prof)
+# Works with new coast:
+profile = coast.Profile(config=config.fn_cfg_prof)
+profile.read_en4(fn_en4, multiple=True)
+# works with old coast: 
+#profile = coast.Profile(fn_en4, multiple=True, config=config.fn_cfg_prof)
 
-ind = profile.subset_indices_lonlat_box([-25.47, 16.25], [43, 64.5])[0]
-profile = profile.isel(profile=ind)
+#ind = profile.subset_indices_lonlat_box([-25.47, 16.25], [43, 64.5])[0]
+#profile = profile.isel(profile=ind)
 # Restrict by region
 b = bounds(config.region)
-#profile = profile.subset_indices_lonlat_box(lonbounds=b.lonbounds, latbounds=b.latbounds)
+# new coast:
+profile = profile.subset_indices_lonlat_box(lonbounds=b.lonbounds, latbounds=b.latbounds)
 
 new_profile = profile.process_en4()
 
