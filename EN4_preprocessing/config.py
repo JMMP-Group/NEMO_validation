@@ -40,7 +40,7 @@ class config:
 
 class bounds:
     """ bounds class to define cartesian box for preprocesses EN4 data"""
-    def __init__(self, region):
+    def __init__(self, region="AMM15"):
         self.lonbounds, self.latbounds = self.get_bounds(region)
 
 

@@ -21,7 +21,8 @@ export CONDA_ENV_NEW="/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_NOV_2022_D
 export CONDA_ENV=CONDA_ENV_OLD  ## Ideally you would only ever use one (new) conda environment
 
 # location of COAsT repo, if using a particular branch
-export COAST_REPO = "/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"
+export COAST_REPO="/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY"
+#export COAST_REPO="/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_NOV_2022_DEVELOP/COAsT"
 # COAsT configuration files 
 export DN_CFG="/data/users/fred/coast_demo/config/"
 export FN_CFG_PROF=$DN_CFG"example_en4_profiles.json"
@@ -32,7 +33,7 @@ export FN_CFG_NEMO=$DN_CFG"example_nemo_grid_t.json"
 export DIN_EN4="/scratch/fred/EN4/"
 # location of preprocessed EN4 data
 export DOUT_EN4="/scratch/fred/EN4/"
-export REGION="SCIPY"  # prefix for preprocessed EN4 data (chunked into files by region and time)
+export REGION="AMM15"  # prefix for preprocessed EN4 data (chunked into files by region and time)
 
 # directory for NEMO domain_cfg.nc file
 export DN_DOM="/data/users/fred/ME_DOMAINS/"

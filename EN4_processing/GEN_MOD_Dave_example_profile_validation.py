@@ -168,6 +168,8 @@ print(profile.dataset)
 
 # Extract time indices between start and end dates for Profile data.
 t_ind = pd.to_datetime(profile.dataset.time.values)>=start_date
+
+profile.dataset = profile.dataset.rename({"profile": "id_dim"})
 profile.dataset = profile.dataset.isel(id_dim=t_ind)
 t_ind = pd.to_datetime(profile.dataset.time.values)<end_date
 profile.dataset = profile.dataset.isel(id_dim=t_ind)
