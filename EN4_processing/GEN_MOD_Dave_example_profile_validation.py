@@ -157,23 +157,26 @@ print('Landmask calculated')
 profile = coast.Profile(config=fn_cfg_prof)
 try:
   profile.dataset = xr.open_dataset(fn_prof, chunks={'id_dim':10000})
+  print('Profile object created')
+  # Extract time indices between start and end dates for Profile data.
+  t_ind = pd.to_datetime(profile.dataset.time.values) >= start_date
+  profile.dataset = profile.dataset.isel(id_dim=t_ind)
+  t_ind = pd.to_datetime(profile.dataset.time.values) < end_date
+  profile.dataset = profile.dataset.isel(id_dim=t_ind)
+  print('Profile object time subsetted')
+  print(profile.dataset)
 except:
   profile.dataset = xr.open_dataset(fn_prof, chunks={'profile':10000})
   profile.dataset = profile.dataset.rename({"profile":"id_dim"})
   print(f"Profiles generated with legacy COAsT version. New dims: (id_dim, z_dim)")
-
-print('Profile object created')
-
-print(profile.dataset)
-
-# Extract time indices between start and end dates for Profile data.
-t_ind = pd.to_datetime(profile.dataset.time.values)>=start_date
-
-profile.dataset = profile.dataset.rename({"profile": "id_dim"})
-profile.dataset = profile.dataset.isel(id_dim=t_ind)
-t_ind = pd.to_datetime(profile.dataset.time.values)<end_date
-profile.dataset = profile.dataset.isel(id_dim=t_ind)
-
+  print('Profile object created')
+  # Extract time indices between start and end dates for Profile data.
+  t_ind = pd.to_datetime(profile.dataset.time.values)>=start_date
+  profile.dataset = profile.dataset.isel(id_dim=t_ind)
+  t_ind = pd.to_datetime(profile.dataset.time.values)<end_date
+  profile.dataset = profile.dataset.isel(id_dim=t_ind)
+  print('Profile object time subsetted')
+  print(profile.dataset)
 
 # Extract only the variables that we want
 nemo.dataset = nemo.dataset[["temperature","salinity","bathymetry","bottom_level","landmask"]]
