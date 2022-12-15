@@ -1,10 +1,10 @@
 #! /bin/ksh
 #SBATCH --mem=20000
 #SBATCH --ntasks=1
-#SBATCH --output=LOGS/mean_output
-#SBATCH --error=LOGS/mean_error
+#SBATCH -o LOGS/%A_%a_mean.out
+#SBATCH -e LOGS/%A_%a_mean.err
 #SBATCH --time=5
 
-time -v ipython mean_monthly.py $1 $2 #(Model month)
-
-
+echo "time -v python mean_monthly.py $1 $2"  # $1 <-- MOD, $2 <-- month
+# NB was ipython
+time -v python mean_monthly.py $1 $2 > LOGS/mean_monthly_$1_$2.log
