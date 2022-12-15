@@ -64,7 +64,7 @@ fn_list = ["%s%02d_mask_means_daily.nc"%(config.dn_out, 1),
 #          "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cq846/analysis/ALL_mask_means_daily.nc"]#
 
 # Filename for the output
-fn_out = "OUTPLOT/regional_means_{0}.svg".format(run_name)
+fn_out = "FIGS/regional_means_{0}.svg".format(run_name)
 
 #%% General Plot Settings
 # regions need to match those in EN4_postprocessing mean_monthly.py
