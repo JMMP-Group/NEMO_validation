@@ -1,5 +1,5 @@
 '''
-For plotting analysis data from a netcdf file created using COAsT.Profile.mask_means().
+For plotting analysis data from a netcdf file created using COAsT.ProfileAnalysis.mask_means().
 This will plot multiple datasets onto a set of subplots. Each subplot is for
 a different averaging region.
 
@@ -10,6 +10,9 @@ of file paths (strings).
 Below this section are a bunch of parameters you can set, with explanations in
 comments. Edit this as much as you like or even go into the plotting code below.
 '''
+
+from config import config
+config = config() # initialise variables in python
 
 import xarray as xr
 import matplotlib.pyplot as plt
@@ -24,16 +27,28 @@ run_name = "test"
 #           "/Users/dbyrne/transfer/mask_means_daily_test.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/mi-bd207/analysis/mask_means_daily_p0_2003_2004.nc", "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/rosie_mi-an561_1990/analysis/mask_means_daily_p0_2003_2004.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.9/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc"]
-fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/01_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/02_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/03_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/04_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/06_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/07_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/08_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/10_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/11_mask_means_daily.nc",
-           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/12_mask_means_daily.nc"]
+fn_list = ["%s%02d_mask_means_daily.nc"%(config.dn_out, 1),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 2),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 4),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 5),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 6),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 7),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 8),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 9),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 10),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 11),
+           "%s%02d_mask_means_daily.nc"%(config.dn_out, 12)]
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/01_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/02_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/03_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/04_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/06_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/07_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/08_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/10_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/11_mask_means_daily.nc",
+#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/12_mask_means_daily.nc"]
 #           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.6/analysis/ALL_mask_means_daily.nc",
 #           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.7/analysis/ALL_mask_means_daily.nc",
 #           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.8/analysis/ALL_mask_means_daily.nc",
@@ -52,9 +67,10 @@ fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/01_mask_me
 fn_out = "OUTPLOT/regional_means_{0}.svg".format(run_name)
 
 #%% General Plot Settings
-region_ind = [0, 1, 2, 3, 4,5, 6,  7, 8,9, 10]              # Region indices (in analysis) to plot
+# regions need to match those in EN4_postprocessing mean_monthly.py
+region_ind = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]              # Region indices (in analysis) to plot
 region_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
-                 'kat','fsc','shelf_break','S_north_sea', 'off-shelf', 'Irish_Sea' ]
+                 'kat','fsc','S_north_sea', 'off-shelf', 'Irish_Sea' ]
 
 
 #region_names = ["A","B","C","D","E","F","G","H","I"]  # Region names, will be used for titles in plot
@@ -68,6 +84,7 @@ save_plot = True                # Boolean to save plot or not
 
 #ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50))) # Data depths
 #ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50), np.arange(1000,2000,100)))
+# Should match definition in EN4_processing: ref_depth
 ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50), np.arange(1000,4000,100)))
 #ref_depth = np.arange(1,4000,10)
 
