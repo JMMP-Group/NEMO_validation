@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH -o LOGS/%A_%a_mean.out
 #SBATCH -e LOGS/%A_%a_mean.err
-#SBATCH --time=5
+#SBATCH --time=30:00
 module add jaspy
 source activate $CONDA_ENV
 
