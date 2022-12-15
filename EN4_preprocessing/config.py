@@ -26,6 +26,7 @@ class config:
         self.fn_cfg_prof = self.get_shell_var('FN_CFG_PROF', True)
         self.fn_cfg_nemo = self.get_shell_var('FN_CFG_NEMO', True)
         self.dn_dom     = self.get_shell_var('DN_DOM', True)
+        self.grid_nc     = self.get_shell_var('GRID', True)
         self.dn_dat     = self.get_shell_var('DN_DAT', True)
         self.dn_out     = self.get_shell_var('DN_OUT', True)
 

@@ -35,7 +35,7 @@ month = int(args[2])
 
 # File paths (All)
 #fn_dom = "/data/users/fred/CO7_EXACT_CFG_FILE.nc"
-fn_dom = "%s%s"%(config.dn_dom, grid)
+fn_dom = "%s%s"%(config.dn_dom, config.grid_nc)
 #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/DAILY/20050101*T.nc*"
 fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper
 print(fn_dat)
