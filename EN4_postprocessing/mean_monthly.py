@@ -64,8 +64,8 @@ model_profiles_interp.dataset = xr.open_dataset(fn_analysis_index, chunks={'id_d
 print('Doing regional analysis..')
 
 # load nemo lat/lon grid to define regions (as function of bathymetry)
-nemo = coast.Gridded(fn_dat_nemo, fn_domain=fn_dom_nemo, multiple=True, config=fn_cfg_nemo)
-#nemo = coast.Gridded(fn_domain=fn_dom_nemo, config=fn_cfg_nemo)
+#nemo = coast.Gridded(fn_dat_nemo, fn_domain=fn_dom_nemo, multiple=True, config=fn_cfg_nemo)
+nemo = coast.Gridded(fn_domain=fn_dom_nemo, config=fn_cfg_nemo)
 
 bath = nemo.dataset.bathymetry.values.squeeze()
 lon = nemo.dataset.longitude.values.squeeze()
