@@ -120,9 +120,9 @@ if(1):    # New COAsT, without FSC as a defined region
     masks_list.append(mm.region_def_kattegat(lon, lat, bath))  # 5
     masks_list.append(mm.region_def_fsc(lon, lat, bath))  # 6
     #masks_list.append(mm.region_def_nws_shelf_break(lon,lat,bath))  # 7
-    masks_list.append(mm.region_def_south_north_sea(lon, lat, bath))  # 8
-    masks_list.append(mm.region_def_off_shelf(lon, lat, bath))  # 9
-    masks_list.append(mm.region_def_irish_sea(lon, lat, bath))  # 10
+    masks_list.append(mm.region_def_south_north_sea(lon, lat, bath))  # 7
+    masks_list.append(mm.region_def_off_shelf(lon, lat, bath))  # 8
+    masks_list.append(mm.region_def_irish_sea(lon, lat, bath))  # 9
 
     masks_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
                     'kattegat','fsc', 'southern_north_sea', 'off_shelf', 'irish_sea' ]
@@ -160,23 +160,23 @@ else:  # OLD COAsT with FSC region defined internally
     print( " Size of masks is ",len(regional_masks[:]))
     regional_masks.append( mm.region_def_nws_fsc(lon,lat,bath)) #6
     print( " Size of masks is ",len(regional_masks[:]))
-    regional_masks.append( mm.region_def_nws_shelf_break(lon,lat,bath)) #7
+    #regional_masks.append( mm.region_def_nws_shelf_break(lon,lat,bath)) #7
+    #print( " Size of masks is ",len(regional_masks[:]))
+    regional_masks.append( mm.region_def_south_north_sea(lon,lat,bath)) #7
     print( " Size of masks is ",len(regional_masks[:]))
-    regional_masks.append( mm.region_def_south_north_sea(lon,lat,bath)) #8
+    off_shelf = mm.region_def_off_shelf(lon, lat, bath) #8
+    off_shelf[regional_masks[3].astype(bool)] = 0 #8
+    off_shelf[regional_masks[4].astype(bool)] = 0 #8
+    regional_masks.append(off_shelf) #8
     print( " Size of masks is ",len(regional_masks[:]))
-    off_shelf = mm.region_def_off_shelf(lon, lat, bath) #9
-    off_shelf[regional_masks[3].astype(bool)] = 0 #9
-    off_shelf[regional_masks[4].astype(bool)] = 0 #9
-    regional_masks.append(off_shelf) #10
-    print( " Size of masks is ",len(regional_masks[:]))
-    regional_masks.append( mm.region_def_irish_sea(lon,lat,bath)) # 10
+    regional_masks.append( mm.region_def_irish_sea(lon,lat,bath)) # 9
     print( " Size of masks is ",len(regional_masks[:]))
 
 
     print( " Final Size of masks is ",len(regional_masks[:]))
 
     region_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
-                    'kattegat','fsc','shelf_break', 'southern_north_sea', 'off_shelf', 'irish_sea' ]
+                    'kattegat','fsc', 'southern_north_sea', 'off_shelf', 'irish_sea' ]
     print( " Size of names is ",len(region_names[:]))
 
     mask_list = mm.make_mask_dataset(lon, lat, regional_masks)
