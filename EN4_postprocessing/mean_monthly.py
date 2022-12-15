@@ -35,10 +35,10 @@ month = int(args[2])
 
 # File paths (All)
 #fn_dom = "/data/users/fred/CO7_EXACT_CFG_FILE.nc"
-fn_dom = "%s%s"%(config.dn_dom, config.grid_nc)
+fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
 #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/DAILY/20050101*T.nc*"
-fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper
-print(fn_dat)
+fn_dat_nemo = "%s%s%02d*T.nc"%(config.dn_dat, "2004", month)  # NB config.dn_dat contains $MOD/exper. yyyy:str is just to get grid data from a valid file
+print(fn_dat_nemo)
 #fn_cfg_nemo = "/data/users/fred/coast_demo/config/example_nemo_grid_t.json"
 fn_cfg_nemo = config.fn_cfg_nemo
 #fn_cfg_prof = "/data/users/fred/coast_demo/config/example_en4_profiles.json"
@@ -64,7 +64,8 @@ model_profiles_interp.dataset = xr.open_dataset(fn_analysis_index, chunks={'id_d
 print('Doing regional analysis..')
 
 # load nemo lat/lon grid to define regions (as function of bathymetry)
-nemo = coast.Gridded(fn_dat, fn_dom, multiple=True, config=fn_cfg_nemo)
+nemo = coast.Gridded(fn_dat_nemo, fn_domain=fn_dom_nemo, multiple=True, config=fn_cfg_nemo)
+#nemo = coast.Gridded(fn_domain=fn_dom_nemo, config=fn_cfg_nemo)
 
 bath = nemo.dataset.bathymetry.values.squeeze()
 lon = nemo.dataset.longitude.values.squeeze()
