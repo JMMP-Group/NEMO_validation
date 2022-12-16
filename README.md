@@ -72,18 +72,17 @@ mask_means_daily_p0_200401_2005.nc
 
 ### Concatenate error profiles (merge months)
 
-**The next steps I used my older version of COAST, but should be easy enough to convert**
+Merge months from multiple years into single files.
 
-**iter_merge.sh** is just a simple loop over months
-
-calling **merge.sbatch** which in turn calls 
-
-```bash
-python merge_monthly.py $1 $2 #(Model month)**
+Execute with:
 ```
+iter_merge.sh
+```
+which is just a simple concatenating loop over each month.
 
-That just concatenates all matching a specified month into a single file
-in preparation for creating a mean for each month.
+Each month invokes a machine specific sbatch scripts (e.g `spice_merge.sbatch`) where the model and month are passed
+onto a generic script
+`python merge_monthly.py $1 $2 #1=Model, 2=month` 
 
 Outputs are written to DN_OUT by month number, mm:
 ```
@@ -91,20 +90,56 @@ mm_PRO_INDEX.nc  ## merging interpolated_profiles_*.nc (model profiles on ref le
 mm_PRO_DIFF.nc   ## merging profile_errors_*.nc (diff between model & obs on ref levels)
 ```
 
-
 ### Create Means
 
-As the runs were not done yet  I just did them by hand on the command line but could have a  simple loop 
-through the months as above
+Then call `iter_mean.sh` to compute the spatial means over subregions within the NWS domain.
 
-```bash
-sbatch spice_mean.sbatch P0.0 2
+This launches machine specific script 
+
+`sbatch ${MACHINE,,}_mean.sbatch $MOD $month`
+that in turn launches a machine independent script:
 ```
-for example will mean up all for feb
+python mean_monthly.py $1 $2 > LOGS/mean_monthly_$1_$2.log  # 1=Model, 2=month
+```
+
+to compute averages in each of the defined regions:
+```
+masks_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
+                    'kattegat','fsc','shelf_break', 'southern_north_sea', 'irish_sea' ]
+```
+Creating output:
+```
+01_mask_means_daily.nc
+...
+12_mask_means_daily.nc
+```
+
+
+
 
 
 ### Plot the results.
+#### JP:
 
+```
+iter_plot.sh
+```
+
+sets machine specific paths and variables and launches
+
+```sbatch ${MACHINE,,}_plot.sbatch```
+
+which submits the following machine independent script
+
+```python plot_month.py > LOGS/plot_month.log```
+
+This plots multiple panels of area meaned profiles. One panel per region.
+The month, variable and depth properties are currently hardwired into `plot_month.py`
+
+
+Outputs `FIGS/regional_means_test.svg`
+
+#### WIP - Enda:
 To plot the months I used:
 **plot_month.py**
 
