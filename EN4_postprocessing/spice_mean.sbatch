@@ -3,7 +3,7 @@
 #SBATCH --ntasks=1
 #SBATCH -o LOGS/%A_%a_mean.out
 #SBATCH -e LOGS/%A_%a_mean.err
-#SBATCH --time=5
+#SBATCH --time=30:00
 
 echo "time -v python mean_monthly.py $1 $2"  # $1 <-- MOD, $2 <-- month
 # NB was ipython
