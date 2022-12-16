@@ -26,20 +26,18 @@ Then preprocesing is triggered with:
 
 which calls a machine dependant scheduler script `$MACHINE_pre_process_en4_monthly.sh` to invoke `pre_process_en4_monthly.py`
 
-Output files are stored in the directory `config.sh: DOUT_EN4` with file structure: `<region>_processed_yyyymm.nc`
+Output files are stored in the directory `config.sh: DOUT_EN4` with file structure: `<region>_processed_yyyymm.nc`. E.g.
+`AMM15_processed_201410.nc`
 
 ## Process monthly data to generate model error profiles with respect to EN4 profiles
 
-We use **iter_sub_METEST.sh**  to submit over all years and months separately,
-its a bit dumb as some months have only a few profiles and some much more so the queue time 
-for the serial sbatch should really be a bit more dynamic e.g. the longer ones take hours
-the shorter ones take minutes
+We use `iter_sub_METEST.sh`  to submit over all years and months separately. This allows for simple parallelisation 
+as each month can be independently processed. This script sets the paths and variable names and launches a machine specific
+script to process each month.
 
-anyway it calls:
-
-**spice_ana_MOD_METEST.sh**
-
-sending the arguments $MOD $start $month $end $GRID
+```
+sbatch ${MACHINE,,}_ana_MOD_METEST.sh $MOD $start $month $end $GRID
+```
 
 where:
 
@@ -49,10 +47,11 @@ where:
 * $end is the endyear
 * $GRID contains is the domain file with grid info for that experiment
 
-**spice_ana_MOD_METEST.sh** in turn calls the python 
+`spice_ana_MOD_METEST.sh` in turn calls the machine independent python script:
 
-**GEN_MOD_Dave_example_profile_validation.py**
-
+```
+python  GEN_MOD_Dave_example_profile_validation.py $1 $2 $3 $4 $5  > LOGS/OUT_$1_$2_$3_$4_$5.log
+```
 using arguments: $1 $2 $3 $4 $5 corresponding to the above.
 
 This outputs, in `DN_OUT/$REGION/`, files like: 
@@ -66,6 +65,26 @@ mid_data_p0_200401_2005.nc
 bottom_data_p0_200401_2005.nc
 mask_means_daily_p0_200401_2005.nc
 
+```
+
+However, some months have many profiles and some months few, so they take differing times to complete on different nodes.
+Experience found that most months were completed in 20mins, about 10% needed 1hr, 5% 2hr and a couple needed more.
+A short script with commandline control of the allocated walltime can see the slowest jobs, which previous ran out of 
+walltime, through. For example:
+```
+#!/bin/bash
+# comment out --time in lotus_ana_MOD_METEST.sh so it can be specified here
+echo "Bash version ${BASH_VERSION}..."
+source config.sh
+
+rm LOGS/OUT* LOGS/*.err LOGS/*.out
+
+#sbatch -J 201407 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2014 7 2015 CO7_EXACT_CFG_FILE.nc
+#sbatch -J 201010 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2010 10 2011 CO7_EXACT_CFG_FILE.nc
+#sbatch -J 201011 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2010 11 2011 CO7_EXACT_CFG_FILE.nc
+sbatch -J 201109 --time=12:00:00 lotus_ana_MOD_METEST.sh P0.0 2011 9 2012 CO7_EXACT_CFG_FILE.nc
+#sbatch -J 201110 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2011 10 2012 CO7_EXACT_CFG_FILE.nc
+sbatch -J 200905 --time=12:00:00 lotus_ana_MOD_METEST.sh P0.0 2009 5 2010 CO7_EXACT_CFG_FILE.nc
 ```
 
 ## Postprocessing
