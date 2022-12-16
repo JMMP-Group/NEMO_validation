@@ -27,8 +27,8 @@ run_name = "test"
 #           "/Users/dbyrne/transfer/mask_means_daily_test.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/mi-bd207/analysis/mask_means_daily_p0_2003_2004.nc", "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/rosie_mi-an561_1990/analysis/mask_means_daily_p0_2003_2004.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.9/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc"]
-fn_list = ["%s%02d_mask_means_daily.nc"%(config.dn_out, 1),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 2),
+fn_list = ["%s%02d_mask_means_daily.nc"%(config.dn_out, 1)]#,
+tt=["%s%02d_mask_means_daily.nc"%(config.dn_out, 2),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 4),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 5),
@@ -69,12 +69,14 @@ fn_out = "FIGS/regional_means_{0}.svg".format(run_name)
 #%% General Plot Settings
 # regions need to match those in EN4_postprocessing mean_monthly.py
 region_ind = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]              # Region indices (in analysis) to plot
+#region_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
+#                 'kat','fsc','S_north_sea', 'off-shelf', 'Irish_Sea' ]
 region_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
-                 'kat','fsc','S_north_sea', 'off-shelf', 'Irish_Sea' ]
-
+                    'kattegat','fsc', 'southern_north_sea', 'off_shelf', 'irish_sea' ] # match definition in mean_monthly.py
 
 #region_names = ["A","B","C","D","E","F","G","H","I"]  # Region names, will be used for titles in plot
-var_name = "profile_average_diff_temperature"     # Variable name in analysis file to plot
+#var_name = "profile_average_diff_temperature"     # Variable name in analysis file to plot
+var_name = "profile_mean_diff_temperature"     # Variable name in analysis file to plot
 #var_name = "profile_average_diff_salinity"     # Variable name in analysis file to plot
 #var_name = "profile_average_abs_diff_temperature"     # Variable name in analysis file to plot
 #var_name = "profile_average_abs_diff_salinity"     # Variable name in analysis file to plot
@@ -136,38 +138,46 @@ title_fontweight = "bold"                  # Fontweight to use for title
 
 # Read all datasets into list
 ds_list = [xr.open_dataset(dd) for dd in fn_list]
-n_ds = len(ds_list)
-n_reg = len(region_ind)
-n_ax = n_r*n_c
+n_ds = len(ds_list)  # 12: one per month
+n_reg = len(region_ind)  # max number of regions in any ds_list element
+n_ax = n_r*n_c  # panels in fig
 
 # Create plot and flatten axis array
 f,a = plt.subplots(n_r, n_c, figsize = figsize, sharex = sharex, sharey = sharey)
 a_flat = a.flatten()
 
-# Loop over regions
-for ii in range(n_ax):
-    print (ii,n_ax)
+# Loop over regions - not necessarily in same order across different ds_list elements
+#for ii in range(n_ax):
+for ii, reg_str in enumerate(region_names):
+    print(f"region number:{ii}, number of panels:{n_ax}")
     
     if ii >= n_reg:
         a_flat[ii].axis('off')
         continue
     
     # Get the index of this region
-    index = region_ind[ii]
-    
-    # Loop over datasets and plot their variable
+    #index = region_ind[ii]
+ 
+    # Loop over monthly datasets and plot their variable
     p = []
     for pp in range(n_ds):
         ds = ds_list[pp]
         print("ii is ",ii)
         print("size is" ,len(a_flat[:]) )
         print("size ds" ,len(ds[var_name][:]) )
-        print("index is" ,index )
+
         #p.append( a_flat[ii].plot(ds[var_name][index], ref_depth)[0] )
         #p.append( a_flat[ii].plot(ds[var_name][index][4:50], ref_depth[4:50])[0] )
         #p.append( a_flat[ii].plot(ds[var_name][index][4:150], ref_depth[4:150])[0] )
-        p.append( a_flat[ii].plot(ds[var_name][index][:100], ref_depth[:100])[0] )
-        
+        #p.append( a_flat[ii].plot(ds[var_name][index][:100], ref_depth[:100])[0] )
+        # Get the index of this region
+        try:
+          index = list(ds.region_names.values).index(reg_str)
+          p.append( a_flat[ii].plot(ds[var_name][index][:100], ref_depth[:100])[0] )
+          print("region index is" ,index )        
+          print("region name is" ,ds.region_names[index] )
+        except:
+          print(f"{reg_str} not in file")
     # Do some plot things
     a_flat[ii].set_title(region_names[ii])
     a_flat[ii].grid()
