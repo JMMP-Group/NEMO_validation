@@ -5,7 +5,7 @@ export MACHINE="LOTUS"  # resource on JASMIN
 
 ## Years to loop over during monthly preprocessing: called in iter_en4_proc.sh, iter_sub_METEST.sh
 export STARTYEAR=2004 #1980  # 2004
-export ENDYEAR=2004 #1980    # 2014
+export ENDYEAR=2014 #1980    # 2014
 
 ## Process monthly data. Required in iter_sub_METEST.sh
 export MOD="P0.0"  # Model reference name
@@ -40,5 +40,7 @@ export DN_DOM="/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/"
 # directory for NEMO data files
 #fn_dat = "/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/%s/DAILY/%s0*T.nc"%(exper,startyear)
 #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s%02d*T.nc*"%(exper,startyear,month)
-export DN_DAT="/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/"$MOD"/DAILY/"
-export DN_OUT="/home/users/jelt/tmp/" #"$REGION"/" 
+#export DN_DAT="/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/"$MOD"/DAILY/"
+export DN_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/p0/daily/"  # Dave 25h data
+#export DN_OUT="/home/users/jelt/tmp/" #"$REGION"/" 
+export DN_OUT="/home/users/jelt/"$REGION"/25h/"
