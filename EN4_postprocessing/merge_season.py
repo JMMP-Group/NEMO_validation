@@ -1,10 +1,18 @@
-import xarray as xr
-import sys
-from dask.diagnostics import ProgressBar
 from config import config
-from coast import general_utils
+import sys
 
 config = config() # initialise variables in python
+
+# IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
+#sys.path.append('/home/users/dbyrne/code/COAsT')
+#sys.path.append('/home/h01/fred/NOTES/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY')
+#sys.path.append('/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_NOV_2022_DEVELOP/COAsT/')
+sys.path.append(config.coast_repo)
+
+import xarray as xr
+from dask.diagnostics import ProgressBar
+from coast import general_utils
+
 
 def extract_season(ds, season=None):
     # Extract season if needed
