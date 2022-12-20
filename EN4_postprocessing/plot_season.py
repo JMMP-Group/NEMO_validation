@@ -27,9 +27,9 @@ run_name = "test"
 #           "/Users/dbyrne/transfer/mask_means_daily_test.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/mi-bd207/analysis/mask_means_daily_p0_2003_2004.nc", "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/rosie_mi-an561_1990/analysis/mask_means_daily_p0_2003_2004.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.9/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc"]
-fn_list = ["%s%03s_mask_means_daily.nc"%(config.dn_out, "DJF")]#,
-tt=["%s%02d_mask_means_daily.nc"%(config.dn_out, 2),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
+fn_list = ["%s%03s_mask_means_daily.nc"%(config.dn_out, "DJF"),
+           "%s%03s_mask_means_daily.nc"%(config.dn_out, "JJA")]#
+tt=[           "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 4),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 5),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 6),
@@ -68,10 +68,11 @@ fn_out = "FIGS/regional_means_{0}.svg".format(run_name)
 
 #%% General Plot Settings
 # regions need to match those in EN4_postprocessing mean_monthly.py
-region_ind = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]              # Region indices (in analysis) to plot
-region_names = ['whole_domain', 'N_north_sea','outer_shelf','eng_channel','nor_trench',
-                 'kat','fsc','S_north_sea', 'off-shelf', 'Irish_Sea' ]
-
+#region_ind = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  # Region indices (in analysis) to plot
+#region_names = ['whole_domain', 'N_north_sea', 'outer_shelf', 'eng_channel', 'nor_trench',
+#                'kat', 'fsc', 'S_north_sea', 'off-shelf', 'Irish_Sea']
+region_ind = [ 1, 7, 3, 2, 9, 5, 4]              # Region indices (in analysis) to plot
+region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Irish Sea', 'Kattegat', 'Nor. Trench']
 
 #region_names = ["A","B","C","D","E","F","G","H","I"]  # Region names, will be used for titles in plot
 #var_name = "profile_mean_diff_temperature"     # Variable name in analysis file to plot
@@ -91,8 +92,8 @@ ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(
 print (np.shape(ref_depth))
 
 # Subplot axes settings
-n_r = 3               # Number of subplot rows
-n_c = 4               # Number of subplot columns
+n_r = 2               # Number of subplot rows
+n_c = 7               # Number of subplot columns
 figsize = (7,7)       # Figure size
 sharey = True         # Align y axes
 sharex = False        # Align x axes
@@ -110,7 +111,7 @@ max_depth = 150                   # Maximum plot depth
 #legend_str = ["P0.0","GLS","ERA5","GLS+ERA5","P0.0NERCWAD","P0.0NERCNOWAD","GEG_FES_ME"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.0NERCWAD","P0.0NERCNOWAD","p0 GEG OLDBDY 0.69", "p0 GEG OLD BDY 0.7","P0.0_NERC_GEG"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 legend_str = ["P0.0","P0.6","P0.7","P0.8","503","504","535","545","P0.5.c"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
-legend_str = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","OCT","NOV","DEC"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
+#legend_str = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","OCT","NOV","DEC"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.1b","P0.6","P0.7","P0.8","u-cp812","u-cp815","u-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","FES_P0.1b","TPX_GLS_P0.6","TPX_ERA5_P0.7","TPX_GLS_ERA5_P0.8","FES_MEu-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
 legend_index = 11          # Axis index to put legend (flattened index, start from 0).
@@ -123,8 +124,8 @@ xlabel = "Absolute Error (degC)"           # Xlabel string
 xlabelpos = (figsize[0]/2, 0)              # (x,y) position of xlabel
 ylabel = "Depth (m)"                       # Ylabel string
 ylabelpos = (figsize[1]/2, 0)              # (x,y) position of ylabel
-#fig_title = "Regional MAE || All Seasons"  # Whole figure title
-fig_title = "Regional Mean Error "  # Whole figure title
+fig_title = "Regional MAE || All Seasons"  # Whole figure title
+#fig_title = "Regional Mean Error "  # Whole figure title
 label_fontsize = 11                        # Fontsize of all labels
 label_fontweight = "normal"                # Fontweight to use for labels and subtitles
 title_fontsize = 13                        # Fontsize of title
