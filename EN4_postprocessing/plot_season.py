@@ -145,47 +145,48 @@ n_ax = n_r*n_c
 # Create plot and flatten axis array
 f,a = plt.subplots(n_r, n_c, figsize = figsize, sharex = sharex, sharey = sharey)
 a_flat = a.flatten()
+a_flat = a
 
 # Loop over regions
 for ii in range(n_ax):
     print (ii,n_ax)
-    
-    if ii >= n_reg:
-        a_flat[ii].axis('off')
-        continue
-    
-    # Get the index of this region
-    index = region_ind[ii]
-    
-    # Loop over datasets and plot their variable
-    p = []
-    for pp in range(n_ds):
-        ds = ds_list[pp]
-        print("ii is ",ii)
-        print("size is" ,len(a_flat[:]) )
-        print("size ds" ,len(ds[var_name][:]) )
-        print("index is" ,index )
-        #p.append( a_flat[ii].plot(ds[var_name][index], ref_depth)[0] )
-        #p.append( a_flat[ii].plot(ds[var_name][index][4:50], ref_depth[4:50])[0] )
-        #p.append( a_flat[ii].plot(ds[var_name][index][4:150], ref_depth[4:150])[0] )
-        p.append( a_flat[ii].plot(ds[var_name][index][:100], ref_depth[:100])[0] )
-        
-    # Do some plot things
-    a_flat[ii].set_title(region_names[ii])
-    a_flat[ii].grid()
-    a_flat[ii].set_ylim(0, max_depth)
-        
-    # Plot fixed lines at 0 and mean depth
-    if plot_zero_line:
-        a_flat[ii].plot([0,0], [0, max_depth], c='k', linewidth = 1, linestyle = '-')
-    if plot_mean_depth:
-        a_flat[ii].plot()
-        
-    # Invert y axis
-    a_flat[ii].invert_yaxis()
+    for row, season in enumerate(['DJF', 'JJA']):
+        if ii >= n_reg:
+            a_flat[row,ii].axis('off')
+            continue
+
+        # Get the index of this region
+        index = region_ind[ii]
+
+        # Loop over datasets and plot their variable
+        p = []
+        for pp in range(n_ds):
+            ds = ds_list[pp]
+            print("ii is ",ii)
+            print("size is" ,len(a_flat[:]) )
+            print("size ds" ,len(ds[var_name][:]) )
+            print("index is" ,index )
+            #p.append( a_flat[ii].plot(ds[var_name][index], ref_depth)[0] )
+            #p.append( a_flat[ii].plot(ds[var_name][index][4:50], ref_depth[4:50])[0] )
+            #p.append( a_flat[ii].plot(ds[var_name][index][4:150], ref_depth[4:150])[0] )
+            p.append( a_flat[row,ii].plot(ds[var_name][index][:100], ref_depth[:100])[0] )
+
+        # Do some plot things
+        a_flat[row,ii].set_title(region_names[ii])
+        a_flat[row,ii].grid()
+        a_flat[row,ii].set_ylim(0, max_depth)
+
+        # Plot fixed lines at 0 and mean depth
+        if plot_zero_line:
+            a_flat[row,ii].plot([0,0], [0, max_depth], c='k', linewidth = 1, linestyle = '-')
+        if plot_mean_depth:
+            a_flat[row,ii].plot()
+
+        # Invert y axis
+        a_flat[row,ii].invert_yaxis()
 
 # Make legend
-a_flat[legend_index].legend(p, legend_str, fontsize = legend_fontsize)
+a_flat[row,legend_index].legend(p, legend_str, fontsize = legend_fontsize)
 
 # Set Figure title
 f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
