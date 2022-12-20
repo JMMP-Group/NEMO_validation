@@ -68,7 +68,7 @@ mask_means_daily_p0_200401_2005.nc
 ```
 
 However, some months have many profiles and some months few, so they take differing times to complete on different nodes.
-Experience found that most months were completed in 20mins, about 10% needed 1hr, 5% 2hr and a couple needed more.
+Experience found that most months were completed in 20mins, about 10% needed 1hr, 5% 2hr and a couple needed 3hrs.
 A short script with commandline control of the allocated walltime can see the slowest jobs, which previous ran out of 
 walltime, through. For example:
 ```
@@ -82,9 +82,9 @@ rm LOGS/OUT* LOGS/*.err LOGS/*.out
 #sbatch -J 201407 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2014 7 2015 CO7_EXACT_CFG_FILE.nc
 #sbatch -J 201010 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2010 10 2011 CO7_EXACT_CFG_FILE.nc
 #sbatch -J 201011 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2010 11 2011 CO7_EXACT_CFG_FILE.nc
-sbatch -J 201109 --time=12:00:00 lotus_ana_MOD_METEST.sh P0.0 2011 9 2012 CO7_EXACT_CFG_FILE.nc
+sbatch -J 201109 --time=3:00:00 lotus_ana_MOD_METEST.sh P0.0 2011 9 2012 CO7_EXACT_CFG_FILE.nc
 #sbatch -J 201110 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2011 10 2012 CO7_EXACT_CFG_FILE.nc
-sbatch -J 200905 --time=12:00:00 lotus_ana_MOD_METEST.sh P0.0 2009 5 2010 CO7_EXACT_CFG_FILE.nc
+sbatch -J 200905 --time=3:00:00 lotus_ana_MOD_METEST.sh P0.0 2009 5 2010 CO7_EXACT_CFG_FILE.nc
 ```
 
 ## Postprocessing
