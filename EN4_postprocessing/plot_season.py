@@ -74,10 +74,10 @@ region_names = ['whole_domain', 'N_north_sea','outer_shelf','eng_channel','nor_t
 
 
 #region_names = ["A","B","C","D","E","F","G","H","I"]  # Region names, will be used for titles in plot
-var_name = "profile_average_diff_temperature"     # Variable name in analysis file to plot
-#var_name = "profile_average_diff_salinity"     # Variable name in analysis file to plot
-#var_name = "profile_average_abs_diff_temperature"     # Variable name in analysis file to plot
-#var_name = "profile_average_abs_diff_salinity"     # Variable name in analysis file to plot
+#var_name = "profile_mean_diff_temperature"     # Variable name in analysis file to plot
+#var_name = "profile_mean_diff_salinity"     # Variable name in analysis file to plot
+var_name = "profile_mean_abs_diff_temperature"     # Variable name in analysis file to plot
+#var_name = "profile_mean_abs_diff_salinity"     # Variable name in analysis file to plot
 plot_zero_line = True            # Plot a black vertical line at x = 0
 plot_mean_depth = False          # Plot the mean bathymetric depth. Make sure 'bathymetry' is in the analysis dataset
 save_plot = True                # Boolean to save plot or not
@@ -100,7 +100,8 @@ subplot_padding = .5  # Amount of vertical and horizontal padding between plots
 fig_pad = (.075, .075, .075, .1)   # Whole figure padding as % (left, top, right, bottom)
 #max_depth = 50                    # Maximum plot depth
 #max_depth = 4000                   # Maximum plot depth
-max_depth = 800                   # Maximum plot depth
+#max_depth = 800                   # Maximum plot depth
+max_depth = 150                   # Maximum plot depth
 
 # Legend settings
 #legend_str = ["P0.0", "P0.9", "BOB"]     # List of strings to use in legend (match with fn_list ordering)
