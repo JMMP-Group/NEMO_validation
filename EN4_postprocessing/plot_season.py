@@ -27,7 +27,7 @@ run_name = "test"
 #           "/Users/dbyrne/transfer/mask_means_daily_test.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/mi-bd207/analysis/mask_means_daily_p0_2003_2004.nc", "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/rosie_mi-an561_1990/analysis/mask_means_daily_p0_2003_2004.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.9/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc"]
-fn_list = ["%s%03a_mask_means_daily.nc"%(config.dn_out, "DJF")]#,
+fn_list = ["%s%03s_mask_means_daily.nc"%(config.dn_out, "DJF")]#,
 tt=["%s%02d_mask_means_daily.nc"%(config.dn_out, 2),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 4),
