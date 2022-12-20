@@ -148,7 +148,8 @@ a_flat = a.flatten()
 a_flat = a
 
 # Loop over regions
-for ii in range(n_ax):
+#for ii in range(n_ax):
+for ii in range(n_reg):
     print (ii,n_ax)
     for row, season in enumerate(['DJF', 'JJA']):
         if ii >= n_reg:
