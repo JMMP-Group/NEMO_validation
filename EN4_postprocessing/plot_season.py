@@ -21,14 +21,19 @@ import numpy as np
 #%% File settings
 run_name = "test"
 
+# Variable to plot
+#var_str = "Salinity"
+var_str = "Temperature"
+
 # List of analysis output files. Profiles from each will be plotted
 # on each axis of the plot
 #fn_list = ["/Users/dbyrne/transfer/mask_means_daily_test.nc",
 #           "/Users/dbyrne/transfer/mask_means_daily_test.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/mi-bd207/analysis/mask_means_daily_p0_2003_2004.nc", "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/rosie_mi-an561_1990/analysis/mask_means_daily_p0_2003_2004.nc"]
 #fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.9/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc"]
-fn_list = ["%s%03s_mask_means_daily.nc"%(config.dn_out, "DJF"),
-           "%s%03s_mask_means_daily.nc"%(config.dn_out, "JJA")]#
+fn_list_DJF = [config.dn_out+"DJF_mask_means_daily.nc"]#
+fn_list_JJA = [config.dn_out+"JJA_mask_means_daily.nc"]#
+#           "%s%03s_mask_means_daily.nc"%(config.dn_out, "JJA")]#
 tt=[           "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 4),
            "%s%02d_mask_means_daily.nc"%(config.dn_out, 5),
@@ -64,7 +69,7 @@ tt=[           "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
 #          "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cq846/analysis/ALL_mask_means_daily.nc"]#
 
 # Filename for the output
-fn_out = "FIGS/regional_means_{0}.svg".format(run_name)
+fn_out = "FIGS/regional_means_{0}_{1}.svg".format(run_name, var_str)
 
 #%% General Plot Settings
 # regions need to match those in EN4_postprocessing mean_monthly.py
@@ -77,8 +82,12 @@ region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Ir
 #region_names = ["A","B","C","D","E","F","G","H","I"]  # Region names, will be used for titles in plot
 #var_name = "profile_mean_diff_temperature"     # Variable name in analysis file to plot
 #var_name = "profile_mean_diff_salinity"     # Variable name in analysis file to plot
-var_name = "profile_mean_abs_diff_temperature"     # Variable name in analysis file to plot
-#var_name = "profile_mean_abs_diff_salinity"     # Variable name in analysis file to plot
+if var_str == "Temperature":
+  var_name = "profile_mean_abs_diff_temperature"     # Variable name in analysis file to plot
+elif var_str == "Salinity":
+  var_name = "profile_mean_abs_diff_salinity"     # Variable name in analysis file to plot
+else:
+  print(f"Not expecting {var_str}")
 plot_zero_line = True            # Plot a black vertical line at x = 0
 plot_mean_depth = False          # Plot the mean bathymetric depth. Make sure 'bathymetry' is in the analysis dataset
 save_plot = True                # Boolean to save plot or not
@@ -114,7 +123,7 @@ legend_str = ["P0.0","P0.6","P0.7","P0.8","503","504","535","545","P0.5.c"]# ,"G
 #legend_str = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","OCT","NOV","DEC"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.1b","P0.6","P0.7","P0.8","u-cp812","u-cp815","u-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","FES_P0.1b","TPX_GLS_P0.6","TPX_ERA5_P0.7","TPX_GLS_ERA5_P0.8","FES_MEu-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
-legend_index = 11          # Axis index to put legend (flattened index, start from 0).
+legend_index = 6 #11          # Axis index to put legend (flattened index, start from 0).
                           # Good to place in an empty subplot
 legend_pos = 'upper right' # Position for legend, using matplitlib legend string
 legend_fontsize =  6
@@ -124,9 +133,10 @@ xlabel = "Absolute Error (degC)"           # Xlabel string
 xlabelpos = (figsize[0]/2, 0)              # (x,y) position of xlabel
 ylabel = "Depth (m)"                       # Ylabel string
 ylabelpos = (figsize[1]/2, 0)              # (x,y) position of ylabel
-fig_title = "Regional MAE || All Seasons"  # Whole figure title
+fig_title = "Regional MAE || "+var_str  # Whole figure title
+#fig_title = "Regional MAE || Seasons"  # Whole figure title
 #fig_title = "Regional Mean Error "  # Whole figure title
-label_fontsize = 11                        # Fontsize of all labels
+label_fontsize = 8 #11                        # Fontsize of all labels
 label_fontweight = "normal"                # Fontweight to use for labels and subtitles
 title_fontsize = 13                        # Fontsize of title
 title_fontweight = "bold"                  # Fontweight to use for title
@@ -137,7 +147,9 @@ title_fontweight = "bold"                  # Fontweight to use for title
 #%% SCRIPT: READ AND PLOT DATA
 
 # Read all datasets into list
-ds_list = [xr.open_dataset(dd) for dd in fn_list]
+ds_list_DJF = [xr.open_dataset(dd) for dd in fn_list_DJF]
+ds_list_JJA = [xr.open_dataset(dd) for dd in fn_list_JJA]
+ds_list = ds_list_DJF
 n_ds = len(ds_list)
 n_reg = len(region_ind)
 n_ax = n_r*n_c
@@ -151,7 +163,7 @@ a_flat = a
 #for ii in range(n_ax):
 for ii in range(n_reg):
     print (ii,n_ax)
-    for row, season in enumerate(['DJF', 'JJA']):
+    for row, season in enumerate(["DJF", "JJA"]):
         if ii >= n_reg:
             a_flat[row,ii].axis('off')
             continue
@@ -162,18 +174,21 @@ for ii in range(n_reg):
         # Loop over datasets and plot their variable
         p = []
         for pp in range(n_ds):
-            ds = ds_list[pp]
-            print("ii is ",ii)
-            print("size is" ,len(a_flat[:]) )
-            print("size ds" ,len(ds[var_name][:]) )
-            print("index is" ,index )
+
+            print(f"season:{season}")
+            if season == "DJF":
+              ds = ds_list_DJF[pp]
+            elif season == "JJA":
+              ds = ds_list_JJA[pp]
+            else:
+              print(f"Not expecting that season: {season}")
             #p.append( a_flat[ii].plot(ds[var_name][index], ref_depth)[0] )
             #p.append( a_flat[ii].plot(ds[var_name][index][4:50], ref_depth[4:50])[0] )
-            #p.append( a_flat[ii].plot(ds[var_name][index][4:150], ref_depth[4:150])[0] )
+            #p.append( a_flat[row,ii].plot(ds[var_name][index][4:150], ref_depth[4:150])[0] )
             p.append( a_flat[row,ii].plot(ds[var_name][index][:100], ref_depth[:100])[0] )
 
         # Do some plot things
-        a_flat[row,ii].set_title(region_names[ii])
+        a_flat[row,ii].set_title(f"{region_names[ii]}:\n{season}", fontsize=8)
         a_flat[row,ii].grid()
         a_flat[row,ii].set_ylim(0, max_depth)
 
@@ -187,7 +202,7 @@ for ii in range(n_reg):
         a_flat[row,ii].invert_yaxis()
 
 # Make legend
-a_flat[row,legend_index].legend(p, legend_str, fontsize = legend_fontsize)
+a_flat[0,legend_index].legend(p, legend_str, fontsize = legend_fontsize)
 
 # Set Figure title
 f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
