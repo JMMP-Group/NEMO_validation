@@ -5,5 +5,5 @@
 #SBATCH -e LOGS/%A_%a_plot.err
 #SBATCH --time=5
 
-echo "time -v python plot_month.py"
-time -v python plot_month.py > LOGS/plot_month.log
+echo "time -v python plot_season.py"
+time -v python plot_season.py > LOGS/plot_season.log
