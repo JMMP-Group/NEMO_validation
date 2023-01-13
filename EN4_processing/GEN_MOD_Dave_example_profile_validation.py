@@ -150,7 +150,7 @@ def reduce_resolution(profile_mod, profile_obs):
     ds_mod_decimated = ds_mod.isel(id_dim=unique_mod_indices_id)
     print(f"Subselect model profiles onto the space-time model resolution - DONE")
 
-return Profile(dataset=ds_mod_decimated), Profile(dataset=ds_out)
+    return coast.Profile(dataset=ds_mod_decimated), coast.Profile(dataset=ds_out)
 
 ###########################################################
 
@@ -336,6 +336,16 @@ print("THIS FAR C.0 %s %s ",ALLTIME,DT)
 keep_indices = model_profiles.dataset.interp_dist <= 5
 model_profiles = model_profiles.isel(id_dim=keep_indices)
 profile = profile.isel(id_dim=keep_indices)
+if np.sum(~keep_indices.values)>0:
+	print(f"Dropped {np.sum(~keep_indices.values)} profiles: too far in space")
+
+# Throw away profile where the interpolation time is larger than 12h
+keep_indices = np.abs(model_profiles.dataset.interp_lag) <= np.timedelta64(12, 'h')
+model_profiles = model_profiles.isel(id_dim=keep_indices)
+profile = profile.isel(id_dim=keep_indices)
+if np.sum(~keep_indices.values)>0:
+	print(f"Dropped {np.sum(~keep_indices.values)} profiles: too far in time")
+
 
 BEFORE = NOW
 NOW = time.perf_counter()
