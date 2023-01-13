@@ -39,6 +39,121 @@ import pandas as pd
 import os
 
 import time
+
+def reduce_resolution(profile_mod, profile_obs):
+    """
+    Take the nearest x,y,t grid point information from Profile object that came from the model.
+    Identify profiles from common grid points.
+    Average observation profiles over common profiles (model does not have sufficient spatial/temporal resolution to
+    resolve their differences).
+    Output reduced set of obs profiles corresponding to unique model space-time points
+    Output corresponding model profiles.
+
+    NB If the model profiles were first interpolated on a single obs profile and then onto a common reference profile, then an
+    assumption is being made that the vertical distribution of the first obs profile (in a set to be averaged) is
+    representative of the whole set.
+
+    Assumes the z_dim dimension and depth coordinate is common to all depth varying variables.
+    I.e. all profiles are on the same vertical grid.
+
+    INPUTS:
+    profile_mod (z_dim, id_dim): output from Profile.obs_operator() method with nearest_x, nearest_y, nearest_t
+                                    variables. A COAsT.Profile object
+    profile_obs (z_dim, id_dim): A COAsT.Profile object
+
+    OUTPUTS:
+    profile_mod_reduced (z_dim, id_dim_reduced): A COAsT.Profile object with unique (nearest_x, nearest_y, nearest_t)
+    profile_obs_reduced (z_dim, id_dim_reduced): A COAsT.Profile object where data has been averaged.
+
+    COAsT.Profile object
+    """
+
+    ds_mod = profile_mod.dataset  # provides nearest grid point indices and new coords
+    ds = profile_obs.dataset  # provides the obs dataset, to be reduced
+    var_modifier = ""  # optional suffix for output variable names
+
+    # Find the unique triples of nearest model x,y,t indices (within the Profile obj). And the indices where they are found (in the parent Profile object)
+    unique_mod_indices, unique_mod_indices_id = np.unique(np.array([[int(ds_mod.nearest_index_x[i].values),
+        int(ds_mod.nearest_index_y[i].values),
+        int(ds_mod.nearest_index_t[i].values)] for i in range(ds_mod.dims['id_dim'])]), axis=0, return_index=True) # find unique rows
+
+
+    # Get a list of variables in this dataset
+    vars_in = [items for items in ds.keys()]
+    vars_out = [vv + "{0}".format(var_modifier) for vv in vars_in]
+
+    # Get output dimensions and create 2D id, depth arrays
+    n_id = len(unique_mod_indices)
+    n_z = ds.dims['z_dim']
+
+    # Create output dataset and fill in new coordinates
+    depth_arr = ds_mod.depth.isel(id_dim=unique_mod_indices_id).values
+    time_arr = ds_mod.time.isel(id_dim=unique_mod_indices_id).values
+    lat_arr = ds_mod.latitude.isel(id_dim=unique_mod_indices_id).values
+    lon_arr = ds_mod.longitude.isel(id_dim=unique_mod_indices_id).values
+
+    ds_out = xr.Dataset(coords=dict(depth=(["id_dim", "z_dim"], depth_arr),
+                                    time=(["id_dim"], time_arr),
+                                    longitude=(["id_dim"], lon_arr),
+                                    latitude=(["id_dim"], lat_arr)))
+
+    # Loop over variables and create empty placeholders
+    for vv in vars_out:
+        if len(ds[vv].shape) == 2:
+            ds_out[vv] = (["id_dim", "z_dim"], np.zeros((n_id, n_z)) * np.nan)
+        elif len(ds[vv].shape) == 1:
+            ds_out[vv] = (["id_dim"], np.zeros((n_id)) * np.nan)
+        else:
+            print(f"Panic! Did not expect vv:{vv}, shape:{ds[vv].shape}")
+
+    # Grid_N is the count in each box
+    ds_out["grid_N{0}".format(var_modifier)] = (["id_dim", "z_dim"], np.zeros((n_id, n_z)) * np.nan)
+
+    # Loop over every unique profile (at model resolution)
+    print(f"Averaging obs onto the space-time model resolution - slow")
+    for ii in range(n_id):
+        condition_x = np.isclose(ds_mod.nearest_index_x.values, unique_mod_indices[ii][0])
+        condition_y = np.isclose(ds_mod.nearest_index_y.values, unique_mod_indices[ii][1])
+        condition_t = np.isclose(ds_mod.nearest_index_t.values, unique_mod_indices[ii][2])
+        condition_xy = np.logical_and(condition_x, condition_y)
+        prof_ind = np.logical_and(condition_t, condition_xy)  # all the profile indices for THIS nearest model point
+        # Check the profile indices include unique_mod_indices_id
+        if prof_ind[unique_mod_indices_id[ii]] == False:
+            print(f"Panic. Arrays have become unordered. Expected ii:{ii}, unique_mod_indices_id[ii]=True")
+        # NB Thoughts on speed up options:
+        # prof_ind is an array of np.bool(np.size(input id_dim))
+        # unique_mod_indices_id are integers
+        # Such that np.argmin(prof_ind>0) = unique_mod_indices_id, but unique... does not capture repeats.
+        # Using unique_mod_indices_id could speed up the algorithm but .isel(id_dim=prof_ind).mean(dim="id_dim") fails
+        # as isel collapses the dimension for one value
+
+        for vv in range(len(vars_in)):
+            vv_in = vars_in[vv]
+            vv_out = vars_out[vv]
+
+            # Check datatype isn't string
+            if ds[vv_in].dtype in ["S1", "S2"]:
+                continue
+            ds_out[vv_out][ii] = ds[vv_in].isel(id_dim=prof_ind).mean(dim="id_dim")
+            # if len(ds[vv_in].shape) == 2:
+            #    ds_out[vv_out][ii] = ds[vv_in].isel(id_dim=prof_ind).mean(dim="id_dim")
+            # elif len(ds[vv_in].shape) == 1:
+            #    ds_out[vv_out][ii] = ds[vv_in].isel(id_dim=prof_ind).mean(dim="id_dim")
+
+            # Store N in own variable
+            ds_out["grid_N{0}".format(var_modifier)][ii] = np.sum(prof_ind)
+
+    print(f"Averaging obs onto the space-time model resolution - DONE")
+
+    # Subselect model profiles - assumes model can be interpolated onto the depth bins of the
+    #  first obs depth profiles, as representative of the depth bins for the averaged profiles
+    ds_mod_decimated = ds_mod.isel(id_dim=unique_mod_indices_id)
+    print(f"Subselect model profiles onto the space-time model resolution - DONE")
+
+return Profile(dataset=ds_mod_decimated), Profile(dataset=ds_out)
+
+###########################################################
+
 starttime =time.perf_counter()
 
 
@@ -253,7 +368,7 @@ DT = NOW-BEFORE
 print("THIS FAR C.3 %s %s ",ALLTIME,DT)
 
 # Vertical interpolation of model profiles to reference depths
-model_profiles_interp_ref = analysis.interpolate_vertical(model_profiles_interp, ref_depth)
+model_profiles_interp_ref_full = analysis.interpolate_vertical(model_profiles_interp, ref_depth)
 print('Model interpolated to ref depths')
 
 BEFORE = NOW
@@ -263,7 +378,7 @@ DT = NOW-BEFORE
 print("THIS FAR C.4 %s %s ",ALLTIME,DT)
 
 # Interpolation of obs profiles to reference depths
-profile_interp_ref = analysis.interpolate_vertical(profile, ref_depth)
+profile_interp_ref_full = analysis.interpolate_vertical(profile, ref_depth)
 print('Obs interpolated to reference depths')
 
 BEFORE = NOW
@@ -271,6 +386,16 @@ NOW = time.perf_counter()
 ALLTIME = NOW-starttime
 DT = NOW-BEFORE
 print("THIS FAR C.5 %s %s ",ALLTIME,DT)
+
+# Average depth-interpolated obs profiles onto horizontal-space/time model grid
+#model_profiles_interp_ref, profile_interp_ref = analysis.reduce_resolution(model_profiles_interp_ref_full, profile_interp_ref_full)
+model_profiles_interp_ref, profile_interp_ref = reduce_resolution(model_profiles_interp_ref_full, profile_interp_ref_full)
+
+BEFORE = NOW
+NOW = time.perf_counter()
+ALLTIME = NOW-starttime
+DT = NOW-BEFORE
+print("THIS FAR C.6 %s %s ",ALLTIME,DT)
 
 # Difference between Model and Obs
 differences = analysis.difference(profile_interp_ref, model_profiles_interp_ref)
@@ -281,7 +406,7 @@ BEFORE = NOW
 NOW = time.perf_counter()
 ALLTIME = NOW-starttime
 DT = NOW-BEFORE
-print("THIS FAR C.6 %s %s ",ALLTIME,DT)
+print("THIS FAR C.7 %s %s ",ALLTIME,DT)
 
 # Surface & Bottom averaging
 surface_def = 5
@@ -291,7 +416,7 @@ BEFORE = NOW
 NOW = time.perf_counter()
 ALLTIME = NOW-starttime
 DT = NOW-BEFORE
-print("THIS FAR C.7 %s %s ",ALLTIME,DT)
+print("THIS FAR C.8 %s %s ",ALLTIME,DT)
 obs_profiles_surface   = analysis.depth_means(profile_interp_ref, [0, surface_def])
 surface_errors         = analysis.difference(obs_profiles_surface, model_profiles_surface)
 
