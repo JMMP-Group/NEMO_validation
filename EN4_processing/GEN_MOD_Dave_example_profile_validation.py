@@ -584,4 +584,4 @@ print("THIS FAR J %s %s ",ALLTIME,DT)
 
 # SAVE mask dataset to file
 mask_means.to_netcdf(dn_out + 'mask_means_daily_{0}.nc'.format(run_name))
-print('done')
+print(f"Done. Files outputted to: {dn_out}")
