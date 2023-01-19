@@ -232,8 +232,8 @@ fn_dom = "%s%s"%(config.dn_dom, grid)
 
 
 # Say a month at a time
-fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper
-fn_dat = "%scoast_example_nemo_subset_data.nc"%(config.dn_dat)  # NB config.dn_dat contains $MOD/exper
+fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper  ## NEEDS TO MOVE TO CONFIG
+#fn_dat = "%scoast_example_nemo_subset_data.nc"%(config.dn_dat)  # NB config.dn_dat contains $MOD/exper
 print(fn_dat)
 
 dn_out = f"{config.dn_out}"
