@@ -302,13 +302,13 @@ except:
   print(profile.dataset)
 
 # Extract only the variables that we want
-#nemo.dataset = nemo.dataset[["temperature","salinity","bathymetry","bottom_level","landmask"]]
-#profile.dataset = profile.dataset[['potential_temperature','practical_salinity','depth']]
-#profile.dataset = profile.dataset.rename({"potential_temperature":"temperature", "practical_salinity":"salinity"})
+nemo.dataset = nemo.dataset[["temperature","salinity","bathymetry","bottom_level","landmask"]]
+profile.dataset = profile.dataset[['potential_temperature','practical_salinity','depth']]
+profile.dataset = profile.dataset.rename({"potential_temperature":"temperature", "practical_salinity":"salinity"})
 
-nemo.dataset = nemo.dataset[["temperature","bathymetry","bottom_level","landmask"]]
-profile.dataset = profile.dataset[['potential_temperature','depth']]
-profile.dataset = profile.dataset.rename({"potential_temperature":"temperature"})
+#nemo.dataset = nemo.dataset[["temperature","bathymetry","bottom_level","landmask"]]
+#profile.dataset = profile.dataset[['potential_temperature','depth']]
+#profile.dataset = profile.dataset.rename({"potential_temperature":"temperature"})
 
 # Cut out a geographical box - to speed up obs_operator processing
 profile = profile.subset_indices_lonlat_box(lonbounds = [-26, 17],
