@@ -26,9 +26,6 @@ import sys
 config = config() # initialise variables in python
 
 # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
-#sys.path.append('/home/users/dbyrne/code/COAsT')
-#sys.path.append('/home/h01/fred/NOTES/SET_UP_CONDA_ARTIFACTORY/COAST_SCIPY')
-#sys.path.append('/data/users/fred/SET_UP_CONDA_ARTIFACTORY/COAST_NOV_2022_DEVELOP/COAsT/')
 sys.path.append(config.coast_repo)
 
 import coast
@@ -37,6 +34,8 @@ import numpy as np
 #import datetime
 import pandas as pd
 import os
+from coast import crps_util as cu
+import numpy as np
 
 import time
 
@@ -154,6 +153,51 @@ def reduce_resolution(profile_mod, profile_obs):
 
 ###########################################################
 
+def surface_crps_process(gridded_mod_surf, prof_obs_surf):
+
+    """
+    gridded_mod_surf  xr.Dataset with temperature and salinity xr.Dataarrays
+    prof_obs_surf  xr.Dataset with temperature and salinity xr.Dataarrays and latotide, longitude, time coords (or variables)
+
+    """
+    radius_list = [0, 8, 14, 20]  # evaluate CRPS over radii (km)
+
+    var_list = ["temperature", "salinity"]
+    n_id = prof_obs_surf.dims['id_dim']
+    n_rad = len(radius_list)
+    n_var = len(var_list)
+
+    for v_count, var_str in enumerate(var_list):
+        crps_vals = np.zeros((n_var, n_rad, n_id))*np.nan
+        crps_points = np.zeros((n_var, n_rad, n_id), dtype=int)
+        crps_land_flags = np.full((n_var, n_rad, n_id), True)
+        for r_count, nh_radius in enumerate(radius_list):
+            crps_vals[v_count, r_count,:], \
+            crps_points[v_count, r_count,:], \
+            crps_land_flags[v_count, r_count,:] = cu.crps_sonf_moving(gridded_mod_surf[var_str],
+                            prof_obs_surf.longitude, prof_obs_surf.latitude, prof_obs_surf[var_str], prof_obs_surf.obs_time,
+                            nh_radius,
+                            'nearest')
+
+
+    print(f"CRPS values: {crps_vals}")
+    #print(f"Number of points used: {b}")
+    #print(f"Land present?: {~land_flags}")
+    #print(f"Average {var_str} CRPS (rad:{nh_radius}) where no land: {np.nanmean(crps_vals[~land_flags])}")
+
+    # Add the crps metrics along new dimension
+    for v_count, var_str in enumerate(var_list):
+        prof_obs_surf[var_str+"_crps"] = (['radius','id_dim'], np.array(crps_vals[v_count,:,:]))
+        prof_obs_surf[var_str+"_crps_pts"] = (['radius','id_dim'], np.array(crps_points[v_count,:,:]))
+        prof_obs_surf[var_str+"_crps_land_flags"] = (['radius','id_dim'], np.array(crps_land_flags[v_count,:,:]))
+    # Add coords to new dimension
+    prof_obs_surf = prof_obs_surf.assign_coords({"radius": np.array(radius_list)})
+
+    #print(prof_obs_surf.temperature_crps)
+    print(prof_obs_surf)
+    return prof_obs_surf
+
+
 starttime =time.perf_counter()
 
 
@@ -178,67 +222,31 @@ end_date = np.datetime64(str(endyear)+"-01-01")
 
 
 # Reference depths (in metres)
-#ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50)))
 ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50), np.arange(1000,4000,100)))
-#ref_depth = np.arange(1,200,20)
 
 # Name of the run -- used mainly for naming output files
 run_name='p0_%d%02d_%d'%(startyear,month,endyear)
 
 # File paths (All)
-#fn_dom = "/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/CO7_EXACT_CFG_FILE.nc"
-#fn_dom = "/data/users/fred/CO7_EXACT_CFG_FILE.nc"
-#fn_dom = "/data/users/fred/ME_DOMAINS/%s"%(grid)
 fn_dom = "%s%s"%(config.dn_dom, grid)
 
-#fn_dat = "/gws/nopw/j04/jmmp/CO9_AMM15/outputs/{0}/daily/*.nc".format(run_name)
-#fn_dat = "/gws/nopw/j04/jmmp_collab/AMM15/PORT/P0.0/*.nc"
-#fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/199[23]*T.nc"%(exper)
+
 # Say a month at a time
-#fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s%02d*T.nc*"%(exper,startyear,month)
 fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper
-
-#EOD restrict to one day
-#fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s0101*T.nc*"%(exper,startyear)
-#EOD restrict to one month
-#fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s01*T.nc*"%(exper,startyear)
-#EOD restrict to one year
-#fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s*T.nc*"%(exper,startyear)
-
-#fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/PPC3/%s*T.nc"%(exper,startyear)
-#fn_dat = "/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/%s/DAILY/%s0*T.nc"%(exper,startyear)
+fn_dat = "%scoast_example_nemo_subset_data.nc"%(config.dn_dat)  # NB config.dn_dat contains $MOD/exper
 print(fn_dat)
-#dn_out = "/gws/nopw/j04/jmmp/CO9_AMM15/"
-#dn_out = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/analysisb/"%(exper)
-#dn_out = "/home/users/jelt/tmp/"
+
 dn_out = f"{config.dn_out}"
+
 # Make them in case they are not there.
-#print(os.popen("mkdir -p /scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/analysisb"%(exper)).read())
-#print(os.popen("mkdir -p /home/users/jelt/tmp/").read())
 print(os.popen(f"mkdir -p {dn_out}").read())
 
-#fn_prof = "/gws/nopw/j04/jmmp/CO9_AMM15/obs/processed.nc" # Processed eN4 file
-#fn_prof = "/scratch/fred/EN4/SCIPY_processed_1990-2020.nc"
-#fn_prof = "/scratch/fred/EN4/SCIPY_processed_%d%02d.nc"%(startyear,month)
-#fn_prof = "/home/users/deazer/SAMPLE_DATA_COAST_WORKFLOW/SCIPY_processed_1990-2020.nc"
 fn_prof = config.dout_en4 + config.region+"_processed_%d%02d.nc"%(startyear,month)  # generated by pre_process_en4_monthly.py
-
-#fn_cfg_nemo = "/home/users/dbyrne/enda/example_nemo_grid_t.json"
-#fn_cfg_prof = "/home/users/dbyrne/enda/example_en4_profiles.json"
-
-#fn_cfg_nemo = "/data/users/fred/coast_demo/config/example_nemo_grid_t_pot_pra.json"
-#fn_cfg_nemo = "/data/users/fred/coast_demo/config/example_nemo_grid_t.json"
 fn_cfg_nemo = config.fn_cfg_nemo
-#fn_cfg_nemo = "/home/users/jelt/GitHub/COAsT/config/example_nemo_grid_t.json"
-#fn_cfg_prof = "/data/users/fred/coast_demo/config/example_en4_profiles.json"
-#fn_cfg_prof = "/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
 fn_cfg_prof = config.fn_cfg_prof
 
 # CREATE NEMO OBJECT and read in NEMO data. Extract latitude and longitude array
 print('Reading model data..')
-#if ~os.path.exists(fn_dat): print(f"No file: {fn_dat}")
-#if ~os.path.exists(fn_dom): print(f"No file: {fn_dom}")
-#if ~os.path.exists(fn_cfg_nemo): print(f"No file: {fn_cfg_nemo}")
 print(f"nemo = coast.Gridded({fn_dat}, {fn_dom}, multiple=True, config={fn_cfg_nemo})")
 nemo = coast.Gridded(fn_dat, fn_dom, multiple=True, config=fn_cfg_nemo)
 print(nemo.dataset)
@@ -294,10 +302,13 @@ except:
   print(profile.dataset)
 
 # Extract only the variables that we want
-nemo.dataset = nemo.dataset[["temperature","salinity","bathymetry","bottom_level","landmask"]]
-#nemo.dataset = nemo.dataset.rename({"bathymetry": "bathy_metry"})
-profile.dataset = profile.dataset[['potential_temperature','practical_salinity','depth']]
-profile.dataset = profile.dataset.rename({"potential_temperature":"temperature", "practical_salinity":"salinity"})
+#nemo.dataset = nemo.dataset[["temperature","salinity","bathymetry","bottom_level","landmask"]]
+#profile.dataset = profile.dataset[['potential_temperature','practical_salinity','depth']]
+#profile.dataset = profile.dataset.rename({"potential_temperature":"temperature", "practical_salinity":"salinity"})
+
+nemo.dataset = nemo.dataset[["temperature","bathymetry","bottom_level","landmask"]]
+profile.dataset = profile.dataset[['potential_temperature','depth']]
+profile.dataset = profile.dataset.rename({"potential_temperature":"temperature"})
 
 # Cut out a geographical box - to speed up obs_operator processing
 profile = profile.subset_indices_lonlat_box(lonbounds = [-26, 17],
@@ -333,14 +344,14 @@ DT = NOW-BEFORE
 print("THIS FAR C.0 %s %s ",ALLTIME,DT)
 
 # Throw away profiles where the interpolation distance is larger than 5km.
-keep_indices = model_profiles.dataset.interp_dist <= 5
+keep_indices = model_profiles.dataset.interp_dist <= 5  ## SHOULD MOVE PARAMTER TO CONFIG
 model_profiles = model_profiles.isel(id_dim=keep_indices)
 profile = profile.isel(id_dim=keep_indices)
 if np.sum(~keep_indices.values)>0:
 	print(f"Dropped {np.sum(~keep_indices.values)} profiles: too far in space")
 
 # Throw away profile where the interpolation time is larger than 12h
-keep_indices = np.abs(model_profiles.dataset.interp_lag) <= np.timedelta64(12, 'h')
+keep_indices = np.abs(model_profiles.dataset.interp_lag) <= np.timedelta64(12, 'h')  ## SHOULD MOVE PARAMTER TO CONFIG
 model_profiles = model_profiles.isel(id_dim=keep_indices)
 profile = profile.isel(id_dim=keep_indices)
 if np.sum(~keep_indices.values)>0:
@@ -494,7 +505,7 @@ model_profiles_interp_ref.dataset.to_netcdf(dn_out + "interpolated_profiles_{0}.
 profile_interp_ref.dataset.to_netcdf(dn_out + "interpolated_obs_{0}.nc".format(run_name))
 
 differences.dataset.to_netcdf(dn_out+"profile_errors_{0}.nc".format(run_name))
-surface_data.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
+#surface_data.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
 mid_data.to_netcdf(dn_out+"mid_data_{0}.nc".format(run_name))
 bottom_data.to_netcdf(dn_out+"bottom_data_{0}.nc".format(run_name))
 print('Analysis datasets writted to file')
@@ -505,83 +516,8 @@ DT = NOW-BEFORE
 print("THIS FAR G %s %s ",ALLTIME,DT)
 
 
-## Create a child class of MaskMaker in order to create/prototype a new region
-class MaskMaker_new(coast.MaskMaker):
-    @classmethod
-    def region_def_fsc(cls, longitude, latitude, bath):
-        """
-        Regional definition for Faroe Shetland Channel (Northwest European Shelf)
-        Longitude, latitude and bath should be 2D arrays corresponding to model
-        coordinates and bathymetry. Bath should be positive with depth.
-        """
-        vertices_lon = [-7.13, -9.72, -6.37, -0.45, -4.53 ]
-        vertices_lat = [62.17, 60.6, 59.07, 61.945, 62.51 ]
- 
-        mask = cls.fill_polygon_by_lonlat(np.zeros(longitude.shape), longitude, latitude, vertices_lon, vertices_lat)
-        mask = mask * (bath > 200) * (bath > 0) * (~np.isnan(bath))
-        return mask
-
-
-
-# Define Regional Masks
-print('Doing regional analysis..')
-#mm = coast.MaskMaker()
-mm = MaskMaker_new()
-
-BEFORE = NOW
-NOW = time.perf_counter()
-ALLTIME = NOW-starttime
-DT = NOW-BEFORE
-print("THIS FAR H %s %s ",ALLTIME,DT)
-regional_masks = []
-bath = nemo.dataset.bathymetry.values
-regional_masks.append( np.ones(lon.shape) )
-regional_masks.append( mm.region_def_nws_north_sea(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_outer_shelf(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_english_channel(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_norwegian_trench(lon,lat,bath))
-regional_masks.append( mm.region_def_kattegat(lon,lat,bath))
-regional_masks.append( mm.region_def_fsc(lon,lat,bath))
-regional_masks.append( mm.region_def_south_north_sea(lon,lat,bath))
-off_shelf = mm.region_def_off_shelf(lon, lat, bath)
-off_shelf[regional_masks[3].astype(bool)] = 0  # excludes english channel (wasn't in anyway...)
-off_shelf[regional_masks[4].astype(bool)] = 0  # exludes norwegian trench
-
-regional_masks.append(off_shelf)
-regional_masks.append( mm.region_def_irish_sea(lon,lat,bath))
-
-region_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
-                'kattegat', 'fsc','southern_north_sea', 'off_shelf', 'irish_sea' ]
-
-mask_list = mm.make_mask_dataset(lon, lat, regional_masks)
-mask_indices = analysis.determine_mask_indices(model_profiles_interp_ref, mask_list)
-
-
-BEFORE = NOW
-NOW = time.perf_counter()
-ALLTIME = NOW-starttime
-DT = NOW-BEFORE
-print("THIS FAR I %s %s ",ALLTIME,DT)
-# Mask plotting
-if(0):
-	import matplotlib.pyplot as plt
-	for count in range(len(region_names)):
-		plt.pcolormesh( mask_list.longitude, mask_list.latitude, mask_list.mask.isel(dim_mask=count)) 
-		plt.contour(lon,lat,bath, [10,200], colors=["w","w"])
-		plt.title(region_names[count])
-		plt.savefig(f"mask_{region_names[count]}.png")
-
-
-# Do mask averaging
-mask_means = analysis.mask_means(differences, mask_indices)
-
-print('Regional means calculated.')
-BEFORE = NOW
-NOW = time.perf_counter()
-ALLTIME = NOW-starttime
-DT = NOW-BEFORE
-print("THIS FAR J %s %s ",ALLTIME,DT)
-
-# SAVE mask dataset to file
-mask_means.to_netcdf(dn_out + 'mask_means_daily_{0}.nc'.format(run_name))
-print('done')
+# CRPS analysis of surface fields
+gridded_mod_surf = nemo.dataset.where(nemo.dataset.depth <= surface_def).mean(dim="z_dim")
+surface_data_crps = surface_crps_process(gridded_mod_surf, surface_data)
+# overwrite previous surface data output (with additional CRPS variables)
+surface_data_crps.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
