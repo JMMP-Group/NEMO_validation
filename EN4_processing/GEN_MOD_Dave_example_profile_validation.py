@@ -294,10 +294,13 @@ except:
   print(profile.dataset)
 
 # Extract only the variables that we want
-nemo.dataset = nemo.dataset[["temperature","salinity","bathymetry","bottom_level","landmask"]]
-#nemo.dataset = nemo.dataset.rename({"bathymetry": "bathy_metry"})
-profile.dataset = profile.dataset[['potential_temperature','practical_salinity','depth']]
-profile.dataset = profile.dataset.rename({"potential_temperature":"temperature", "practical_salinity":"salinity"})
+#nemo.dataset = nemo.dataset[["temperature","salinity","bathymetry","bottom_level","landmask"]]
+#profile.dataset = profile.dataset[['potential_temperature','practical_salinity','depth']]
+#profile.dataset = profile.dataset.rename({"potential_temperature":"temperature", "practical_salinity":"salinity"})
+
+nemo.dataset = nemo.dataset[["temperature","bathymetry","bottom_level","landmask"]]
+profile.dataset = profile.dataset[['potential_temperature','depth']]
+profile.dataset = profile.dataset.rename({"potential_temperature":"temperature"})
 
 # Cut out a geographical box - to speed up obs_operator processing
 profile = profile.subset_indices_lonlat_box(lonbounds = [-26, 17],
@@ -333,14 +336,14 @@ DT = NOW-BEFORE
 print("THIS FAR C.0 %s %s ",ALLTIME,DT)
 
 # Throw away profiles where the interpolation distance is larger than 5km.
-keep_indices = model_profiles.dataset.interp_dist <= 5
+keep_indices = model_profiles.dataset.interp_dist <= 5  ## SHOULD MOVE PARAMTER TO CONFIG
 model_profiles = model_profiles.isel(id_dim=keep_indices)
 profile = profile.isel(id_dim=keep_indices)
 if np.sum(~keep_indices.values)>0:
 	print(f"Dropped {np.sum(~keep_indices.values)} profiles: too far in space")
 
 # Throw away profile where the interpolation time is larger than 12h
-keep_indices = np.abs(model_profiles.dataset.interp_lag) <= np.timedelta64(12, 'h')
+keep_indices = np.abs(model_profiles.dataset.interp_lag) <= np.timedelta64(12, 'h')  ## SHOULD MOVE PARAMTER TO CONFIG
 model_profiles = model_profiles.isel(id_dim=keep_indices)
 profile = profile.isel(id_dim=keep_indices)
 if np.sum(~keep_indices.values)>0:
