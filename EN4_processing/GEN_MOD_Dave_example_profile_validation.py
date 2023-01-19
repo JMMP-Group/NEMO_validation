@@ -34,6 +34,8 @@ import numpy as np
 #import datetime
 import pandas as pd
 import os
+from coast import crps_util as cu
+import numpy as np
 
 import time
 
@@ -151,6 +153,51 @@ def reduce_resolution(profile_mod, profile_obs):
 
 ###########################################################
 
+def surface_crps_process(gridded_mod_surf, prof_obs_surf):
+
+    """
+    gridded_mod_surf  xr.Dataset with temperature and salinity xr.Dataarrays
+    prof_obs_surf  xr.Dataset with temperature and salinity xr.Dataarrays and latotide, longitude, time coords (or variables)
+
+    """
+    radius_list = [0, 8, 14, 20]  # evaluate CRPS over radii (km)
+
+    var_list = ["temperature", "salinity"]
+    n_id = prof_obs_surf.dims['id_dim']
+    n_rad = len(radius_list)
+    n_var = len(var_list)
+
+    for v_count, var_str in enumerate(var_list):
+        crps_vals = np.zeros((n_var, n_rad, n_id))*np.nan
+        crps_points = np.zeros((n_var, n_rad, n_id), dtype=int)
+        crps_land_flags = np.full((n_var, n_rad, n_id), True)
+        for r_count, nh_radius in enumerate(radius_list):
+            crps_vals[v_count, r_count,:], \
+            crps_points[v_count, r_count,:], \
+            crps_land_flags[v_count, r_count,:] = cu.crps_sonf_moving(gridded_mod_surf[var_str],
+                            prof_obs_surf.longitude, prof_obs_surf.latitude, prof_obs_surf[var_str], prof_obs_surf.obs_time,
+                            nh_radius,
+                            'nearest')
+
+
+    print(f"CRPS values: {crps_vals}")
+    #print(f"Number of points used: {b}")
+    #print(f"Land present?: {~land_flags}")
+    #print(f"Average {var_str} CRPS (rad:{nh_radius}) where no land: {np.nanmean(crps_vals[~land_flags])}")
+
+    # Add the crps metrics along new dimension
+    for v_count, var_str in enumerate(var_list):
+        prof_obs_surf[var_str+"_crps"] = (['radius','id_dim'], np.array(crps_vals[v_count,:,:]))
+        prof_obs_surf[var_str+"_crps_pts"] = (['radius','id_dim'], np.array(crps_points[v_count,:,:]))
+        prof_obs_surf[var_str+"_crps_land_flags"] = (['radius','id_dim'], np.array(crps_land_flags[v_count,:,:]))
+    # Add coords to new dimension
+    prof_obs_surf = prof_obs_surf.assign_coords({"radius": np.array(radius_list)})
+
+    #print(prof_obs_surf.temperature_crps)
+    print(prof_obs_surf)
+    return prof_obs_surf
+
+
 starttime =time.perf_counter()
 
 
@@ -181,9 +228,6 @@ ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(
 run_name='p0_%d%02d_%d'%(startyear,month,endyear)
 
 # File paths (All)
-#fn_dom = "/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/CO7_EXACT_CFG_FILE.nc"
-#fn_dom = "/data/users/fred/CO7_EXACT_CFG_FILE.nc"
-#fn_dom = "/data/users/fred/ME_DOMAINS/%s"%(grid)
 fn_dom = "%s%s"%(config.dn_dom, grid)
 
 
@@ -461,7 +505,7 @@ model_profiles_interp_ref.dataset.to_netcdf(dn_out + "interpolated_profiles_{0}.
 profile_interp_ref.dataset.to_netcdf(dn_out + "interpolated_obs_{0}.nc".format(run_name))
 
 differences.dataset.to_netcdf(dn_out+"profile_errors_{0}.nc".format(run_name))
-surface_data.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
+#surface_data.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
 mid_data.to_netcdf(dn_out+"mid_data_{0}.nc".format(run_name))
 bottom_data.to_netcdf(dn_out+"bottom_data_{0}.nc".format(run_name))
 print('Analysis datasets writted to file')
@@ -472,83 +516,8 @@ DT = NOW-BEFORE
 print("THIS FAR G %s %s ",ALLTIME,DT)
 
 
-## Create a child class of MaskMaker in order to create/prototype a new region
-class MaskMaker_new(coast.MaskMaker):
-    @classmethod
-    def region_def_fsc(cls, longitude, latitude, bath):
-        """
-        Regional definition for Faroe Shetland Channel (Northwest European Shelf)
-        Longitude, latitude and bath should be 2D arrays corresponding to model
-        coordinates and bathymetry. Bath should be positive with depth.
-        """
-        vertices_lon = [-7.13, -9.72, -6.37, -0.45, -4.53 ]
-        vertices_lat = [62.17, 60.6, 59.07, 61.945, 62.51 ]
- 
-        mask = cls.fill_polygon_by_lonlat(np.zeros(longitude.shape), longitude, latitude, vertices_lon, vertices_lat)
-        mask = mask * (bath > 200) * (bath > 0) * (~np.isnan(bath))
-        return mask
-
-
-
-# Define Regional Masks
-print('Doing regional analysis..')
-#mm = coast.MaskMaker()
-mm = MaskMaker_new()
-
-BEFORE = NOW
-NOW = time.perf_counter()
-ALLTIME = NOW-starttime
-DT = NOW-BEFORE
-print("THIS FAR H %s %s ",ALLTIME,DT)
-regional_masks = []
-bath = nemo.dataset.bathymetry.values
-regional_masks.append( np.ones(lon.shape) )
-regional_masks.append( mm.region_def_nws_north_sea(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_outer_shelf(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_english_channel(lon,lat,bath))
-regional_masks.append( mm.region_def_nws_norwegian_trench(lon,lat,bath))
-regional_masks.append( mm.region_def_kattegat(lon,lat,bath))
-regional_masks.append( mm.region_def_fsc(lon,lat,bath))
-regional_masks.append( mm.region_def_south_north_sea(lon,lat,bath))
-off_shelf = mm.region_def_off_shelf(lon, lat, bath)
-off_shelf[regional_masks[3].astype(bool)] = 0  # excludes english channel (wasn't in anyway...)
-off_shelf[regional_masks[4].astype(bool)] = 0  # exludes norwegian trench
-
-regional_masks.append(off_shelf)
-regional_masks.append( mm.region_def_irish_sea(lon,lat,bath))
-
-region_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
-                'kattegat', 'fsc','southern_north_sea', 'off_shelf', 'irish_sea' ]
-
-mask_list = mm.make_mask_dataset(lon, lat, regional_masks)
-mask_indices = analysis.determine_mask_indices(model_profiles_interp_ref, mask_list)
-
-
-BEFORE = NOW
-NOW = time.perf_counter()
-ALLTIME = NOW-starttime
-DT = NOW-BEFORE
-print("THIS FAR I %s %s ",ALLTIME,DT)
-# Mask plotting
-if(0):
-	import matplotlib.pyplot as plt
-	for count in range(len(region_names)):
-		plt.pcolormesh( mask_list.longitude, mask_list.latitude, mask_list.mask.isel(dim_mask=count)) 
-		plt.contour(lon,lat,bath, [10,200], colors=["w","w"])
-		plt.title(region_names[count])
-		plt.savefig(f"mask_{region_names[count]}.png")
-
-
-# Do mask averaging
-mask_means = analysis.mask_means(differences, mask_indices)
-
-print('Regional means calculated.')
-BEFORE = NOW
-NOW = time.perf_counter()
-ALLTIME = NOW-starttime
-DT = NOW-BEFORE
-print("THIS FAR J %s %s ",ALLTIME,DT)
-
-# SAVE mask dataset to file
-mask_means.to_netcdf(dn_out + 'mask_means_daily_{0}.nc'.format(run_name))
-print(f"Done. Files outputted to: {dn_out}")
+# CRPS analysis of surface fields
+gridded_mod_surf = nemo.dataset.where(nemo.dataset.depth <= surface_def).mean(dim="z_dim")
+surface_data_crps = surface_crps_process(gridded_mod_surf, surface_data)
+# overwrite previous surface data output (with additional CRPS variables)
+surface_data_crps.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
