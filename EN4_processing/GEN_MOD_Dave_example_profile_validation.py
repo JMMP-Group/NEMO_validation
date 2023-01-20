@@ -505,19 +505,39 @@ model_profiles_interp_ref.dataset.to_netcdf(dn_out + "interpolated_profiles_{0}.
 profile_interp_ref.dataset.to_netcdf(dn_out + "interpolated_obs_{0}.nc".format(run_name))
 
 differences.dataset.to_netcdf(dn_out+"profile_errors_{0}.nc".format(run_name))
-#surface_data.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
+surface_data.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
 mid_data.to_netcdf(dn_out+"mid_data_{0}.nc".format(run_name))
 bottom_data.to_netcdf(dn_out+"bottom_data_{0}.nc".format(run_name))
-print('Analysis datasets writted to file')
+
+print('Analysis datasets written to file')
+
 BEFORE = NOW
 NOW = time.perf_counter()
 ALLTIME = NOW-starttime
 DT = NOW-BEFORE
 print("THIS FAR G %s %s ",ALLTIME,DT)
 
+if(0):
 
-# CRPS analysis of surface fields
-gridded_mod_surf = nemo.dataset.where(nemo.dataset.depth <= surface_def).mean(dim="z_dim")
-surface_data_crps = surface_crps_process(gridded_mod_surf, surface_data)
-# overwrite previous surface data output (with additional CRPS variables)
-surface_data_crps.to_netcdf(dn_out+"surface_data_{0}.nc".format(run_name))
+
+  print('CRPS analysis')
+
+  # CRPS analysis of surface fields
+  gridded_mod_surf = nemo.dataset.where(nemo.dataset.depth <= surface_def).mean(dim="z_dim")
+
+  BEFORE = NOW
+  NOW = time.perf_counter()
+  ALLTIME = NOW-starttime
+  DT = NOW-BEFORE
+  print("THIS FAR H %s %s ",ALLTIME,DT)
+
+  surface_data_crps = surface_crps_process(gridded_mod_surf, surface_data)
+  surface_data_crps.to_netcdf(dn_out+"surface_crps_data_{0}.nc".format(run_name))
+
+  BEFORE = NOW
+  NOW = time.perf_counter()
+  ALLTIME = NOW-starttime
+  DT = NOW-BEFORE
+  print("THIS FAR I %s %s ",ALLTIME,DT)
+  print('CRPS Analysis done and datasets written to file')
+
