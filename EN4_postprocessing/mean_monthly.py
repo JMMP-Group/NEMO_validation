@@ -141,7 +141,7 @@ if(1):    # New COAsT, without FSC as a defined region
     mask_xr.to_netcdf(config.dn_out + 'mask_xr.nc')
 
 else:  # OLD COAsT with FSC region defined internally
-
+    break  # really should not be using old coast as the region definitions have changed
     # Define Regional Masks
     mm = coast.MaskMaker()
     regional_masks = []
