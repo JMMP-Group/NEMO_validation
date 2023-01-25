@@ -66,10 +66,7 @@ tt=[           "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
 #          "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cq846/analysis/ALL_mask_means_daily.nc"]#
 
 #%% General Plot Settings
-# regions need to match those in EN4_postprocessing mean_monthly.py
-#region_ind = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  # Region indices (in analysis) to plot
-#region_names = ['whole_domain', 'N_north_sea', 'outer_shelf', 'eng_channel', 'nor_trench',
-#                'kat', 'fsc', 'S_north_sea', 'off-shelf', 'Irish_Sea']
+## Specify the specific regions, their labels and order of appearance to plot. Region indexing to match EN4_postprocessing mean_season.py
 region_ind = [ 1, 7, 3, 2, 9, 5, 4, 6, 8]              # Region indices (in analysis) to plot
 region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Irish Sea', 'Kattegat', 'Nor. Trench', 'FSC', 'Off-shelf']
 
@@ -138,6 +135,10 @@ n_ds = len(ds_list)
 n_reg = len(region_ind)
 n_ax = n_r*n_c
 
+print(f"Check region names specified are consistent with mask file")
+for i in range(n_reg):
+  print(f"Panel label:({region_names[i]}) matches data label: ({ds_list[0].region_names.values[region_ind[i]]})")
+
 # Loop over variable to plot
 for var_str in ["Temperature", "Salinity"]:
  #for analysis_str in ["MAE", "STD", "BIAS"]:
@@ -174,7 +175,7 @@ for var_str in ["Temperature", "Salinity"]:
 
         # Get the index of this region
         index = region_ind[ii]
-
+	
         # Loop over datasets and plot their variable
         p = []
         for pp in range(n_ds):
