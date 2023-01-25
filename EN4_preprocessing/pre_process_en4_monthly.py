@@ -26,33 +26,29 @@ args = sys.argv
 year = int(args[1])
 month  = int(args[2])
 
-#fn_en4 = "/scratch/fred/EN4/EN.4.2.2.f.profiles.g10.*.nc"
-#fn_en4 = "/scratch/fred/EN4/EN.4.2.2.f.profiles.g10.%d%02d.nc"%(year,month)
-fn_en4 = config.din_en4 + "EN.4.2.2.f.profiles.g10.%d%02d.nc"%(year,month)
+
+fn_en4 = config.din_en4 + "EN.4.2.2.f.profiles.g10.%d%02d.nc"%(year, month)
+print(f"Should more filename specification to config file")
 
 # Make target dir if not present
 print(os.popen("mkdir -p "+config.dout_en4).read())
-#fn_out = "/scratch/fred/EN4/SCIPY_processed_%d%02d.nc"%(year,month)
-fn_out = config.dout_en4 + config.region+"_processed_%d%02d.nc"%(year,month)
-print (fn_en4)
-print (fn_out)
-#fn_cfg_prof = "/data/users/fred/coast_demo/config/example_en4_profiles.json"
-#fn_cfg_prof = "/home/users/jelt/GitHub/COAsT/config/example_en4_profiles.json"
+fn_out = config.dout_en4 + config.region+"_processed_%d%02d.nc"%(year, month)
+print (f"Load file: {fn_en4}")
 
-# Works with new coast:
 profile = coast.Profile(config=config.fn_cfg_prof)
 profile.read_en4(fn_en4, multiple=True)
-# works with old coast: 
-#profile = coast.Profile(fn_en4, multiple=True, config=config.fn_cfg_prof)
 
-#ind = profile.subset_indices_lonlat_box([-25.47, 16.25], [43, 64.5])[0]
-#profile = profile.isel(profile=ind)
 # Restrict by region
 b = bounds(config.region)
-# new coast:
 profile = profile.subset_indices_lonlat_box(lonbounds=b.lonbounds, latbounds=b.latbounds)
 
-new_profile = profile.process_en4()
+# Process data: apply QC flags
+try:
+    new_profile = profile.process_en4(remove_flagged_neighbours=True)
+except:
+    new_profile = profile.process_en4()
+    print(f"You were supposed to update COAsT!!")
+    break
 
 new_profile.dataset.to_netcdf(fn_out)
 print(f"Saved: {fn_out}")
