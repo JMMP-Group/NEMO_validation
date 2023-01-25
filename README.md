@@ -89,85 +89,70 @@ sbatch -J 200905 --time=3:00:00 lotus_ana_MOD_METEST.sh P0.0 2009 5 2010 CO7_EXA
 
 ## Postprocessing
 
-### Concatenate error profiles (merge months)
+### Concatenate error profiles (merge seasons)
 
-Merge months from multiple years into single files.
+Merge seasons (DJF, MAM, JJA, SON) from multiple years into single files.
 
 Execute with:
 ```
-iter_merge.sh
+iter_merge_season.sh
 ```
-which is just a simple concatenating loop over each month.
+which is just a simple concatenating loop over each season.
 
-Each month invokes a machine specific sbatch scripts (e.g `spice_merge.sbatch`) where the model and month are passed
-onto a generic script
-`python merge_monthly.py $1 $2 #1=Model, 2=month` 
+Each month invokes a machine specific sbatch scripts (e.g `spice_merge_season.sbatch`) where the model and season are 
+passed onto a generic script
+`python merge_season.py $1 $2 #1=Model, 2=month` 
 
-Outputs are written to DN_OUT by month number, mm:
+Outputs are written to DN_OUT by season string, sss:
 ```
-mm_PRO_INDEX.nc  ## merging interpolated_profiles_*.nc (model profiles on ref levels)
-mm_PRO_DIFF.nc   ## merging profile_errors_*.nc (diff between model & obs on ref levels)
+sss_PRO_INDEX.nc  ## merging interpolated_profiles_*.nc (model profiles on ref levels)
+sss_PRO_DIFF.nc   ## merging profile_errors_*.nc (diff between model & obs on ref levels)
 ```
 
 ### Create Means
 
-Then call `iter_mean.sh` to compute the spatial means over subregions within the NWS domain.
+Then call `iter_mean_season.sh` to compute the spatial means over subregions within the NWS domain.
 
 This launches machine specific script 
 
-`sbatch ${MACHINE,,}_mean.sbatch $MOD $month`
+`sbatch ${MACHINE,,}_mean_season.sbatch $MOD $month`
 that in turn launches a machine independent script:
 ```
-python mean_monthly.py $1 $2 > LOGS/mean_monthly_$1_$2.log  # 1=Model, 2=month
+python mean_season.py $1 $2 > LOGS/mean_season_$1_$2.log  # 1=Model, 2=month
 ```
 
 to compute averages in each of the defined regions:
 ```
-masks_names = ['whole_domain', 'north_sea','outer_shelf','eng_channel','nor_trench',
-                    'kattegat','fsc','shelf_break', 'southern_north_sea', 'irish_sea' ]
+region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Irish Sea', 
+                    'Kattegat', 'Nor. Trench', 'FSC', 'Off-shelf']
 ```
 Creating output:
 ```
-01_mask_means_daily.nc
-...
-12_mask_means_daily.nc
+DJF_mask_means_daily.nc
+MAM_mask_means_daily.nc
+JJA_mask_means_daily.nc
+SON_mask_means_daily.nc
 ```
-
-
-
 
 
 ### Plot the results.
-#### JP:
+
+Plot panels of regionally averaged profiles for summer and winter.
 
 ```
-iter_plot.sh
+iter_plot_season.sh
 ```
 
 sets machine specific paths and variables and launches
 
-```sbatch ${MACHINE,,}_plot.sbatch```
+```sbatch ${MACHINE,,}_plot_season.sbatch```
 
 which submits the following machine independent script
 
-```python plot_month.py > LOGS/plot_month.log```
+```python plot_season.py > LOGS/plot_season.log```
 
-This plots multiple panels of area meaned profiles. One panel per region.
-The month, variable and depth properties are currently hardwired into `plot_month.py`
+This plots multiple panels of area meaned profiles. One panel per region. Top row DJF and lower row JJA.
+This also iterates over variables (temperature, salinity) and diagnostics (MAE, Bias).
 
 
-Outputs `FIGS/regional_means_test.svg`
-
-#### WIP - Enda:
-To plot the months I used:
-**plot_month.py**
-
-This reads in each meaned month and plots the various regions.
-
-To cut off say top data for the salinity I can contrain by index:
-
-```python
-p.append( a_flat[ii].plot(ds[var_name][index][4:150], ref_depth[4:150])[0] )
-```
-
-where the above starts at 4 instead of 0, indeed it also chops off the bottom levels only going to 150
+Outputs e.g. `FIGS/regional_means_abs_diff_salinity_test.svg`
