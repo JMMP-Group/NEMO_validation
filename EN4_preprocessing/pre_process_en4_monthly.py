@@ -28,7 +28,7 @@ month  = int(args[2])
 
 
 fn_en4 = config.din_en4 + "EN.4.2.2.f.profiles.g10.%d%02d.nc"%(year, month)
-print(f"Should more filename specification to config file")
+print(f"Should add filename specification to config file")
 
 # Make target dir if not present
 print(os.popen("mkdir -p "+config.dout_en4).read())
