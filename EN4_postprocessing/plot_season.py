@@ -21,9 +21,6 @@ import numpy as np
 #%% File settings
 run_name = "test"
 
-# Variable to plot
-#var_str = "Salinity"
-var_str = "Temperature"
 
 # List of analysis output files. Profiles from each will be plotted
 # on each axis of the plot
@@ -68,26 +65,16 @@ tt=[           "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
 ##          "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cp815/analysis/ALL_mask_means_daily.nc",
 #          "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cq846/analysis/ALL_mask_means_daily.nc"]#
 
-# Filename for the output
-fn_out = "FIGS/regional_means_{0}_{1}.svg".format(run_name, var_str)
-
 #%% General Plot Settings
 # regions need to match those in EN4_postprocessing mean_monthly.py
 #region_ind = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  # Region indices (in analysis) to plot
 #region_names = ['whole_domain', 'N_north_sea', 'outer_shelf', 'eng_channel', 'nor_trench',
 #                'kat', 'fsc', 'S_north_sea', 'off-shelf', 'Irish_Sea']
-region_ind = [ 1, 7, 3, 2, 9, 5, 4]              # Region indices (in analysis) to plot
-region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Irish Sea', 'Kattegat', 'Nor. Trench']
+region_ind = [ 1, 7, 3, 2, 9, 5, 4, 6, 8]              # Region indices (in analysis) to plot
+region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Irish Sea', 'Kattegat', 'Nor. Trench', 'FSC', 'Off-shelf']
 
 #region_names = ["A","B","C","D","E","F","G","H","I"]  # Region names, will be used for titles in plot
-#var_name = "profile_mean_diff_temperature"     # Variable name in analysis file to plot
-#var_name = "profile_mean_diff_salinity"     # Variable name in analysis file to plot
-if var_str == "Temperature":
-  var_name = "profile_mean_abs_diff_temperature"     # Variable name in analysis file to plot
-elif var_str == "Salinity":
-  var_name = "profile_mean_abs_diff_salinity"     # Variable name in analysis file to plot
-else:
-  print(f"Not expecting {var_str}")
+
 plot_zero_line = True            # Plot a black vertical line at x = 0
 plot_mean_depth = False          # Plot the mean bathymetric depth. Make sure 'bathymetry' is in the analysis dataset
 save_plot = True                # Boolean to save plot or not
@@ -102,8 +89,8 @@ print (np.shape(ref_depth))
 
 # Subplot axes settings
 n_r = 2               # Number of subplot rows
-n_c = 7               # Number of subplot columns
-figsize = (7,7)       # Figure size
+n_c = 9 #7               # Number of subplot columns
+figsize = (9,7)       # Figure size
 sharey = True         # Align y axes
 sharex = False        # Align x axes
 subplot_padding = .5  # Amount of vertical and horizontal padding between plots
@@ -129,13 +116,10 @@ legend_pos = 'upper right' # Position for legend, using matplitlib legend string
 legend_fontsize =  6
 
 # Labels and Titles
-xlabel = "Absolute Error (degC)"           # Xlabel string
 xlabelpos = (figsize[0]/2, 0)              # (x,y) position of xlabel
 ylabel = "Depth (m)"                       # Ylabel string
 ylabelpos = (figsize[1]/2, 0)              # (x,y) position of ylabel
-fig_title = "Regional MAE || "+var_str  # Whole figure title
-#fig_title = "Regional MAE || Seasons"  # Whole figure title
-#fig_title = "Regional Mean Error "  # Whole figure title
+
 label_fontsize = 8 #11                        # Fontsize of all labels
 label_fontweight = "normal"                # Fontweight to use for labels and subtitles
 title_fontsize = 13                        # Fontsize of title
@@ -154,14 +138,34 @@ n_ds = len(ds_list)
 n_reg = len(region_ind)
 n_ax = n_r*n_c
 
-# Create plot and flatten axis array
-f,a = plt.subplots(n_r, n_c, figsize = figsize, sharex = sharex, sharey = sharey)
-a_flat = a.flatten()
-a_flat = a
+# Loop over variable to plot
+for var_str in ["Temperature", "Salinity"]:
+ #for analysis_str in ["MAE", "STD", "BIAS"]:
+ for analysis_str in ["MAE", "BIAS"]:
+  # Labels and Titles
+  xlabel = "{0} (units)".format(analysis_str)           # Xlabel string
+  fig_title = "Regional {0} || {1}".format(analysis_str, var_str)  # Whole figure title
+ 
+  if analysis_str == "MAE":
+    tmp_str = "mean_abs_diff"
+  if analysis_str == "STD":
+    tmp_str = "std_diff"
+  if analysis_str == "BIAS":
+    tmp_str = "mean_diff"
 
-# Loop over regions
-#for ii in range(n_ax):
-for ii in range(n_reg):
+  var_name = "profile_{0}_{1}".format(tmp_str, var_str.lower())
+
+  # Filename for the output
+  fn_out = "FIGS/regional_{0}_{1}.svg".format(var_name, run_name)
+
+  # Create plot and flatten axis array
+  f,a = plt.subplots(n_r, n_c, figsize = figsize, sharex = sharex, sharey = sharey)
+  a_flat = a.flatten()
+  a_flat = a
+
+  # Loop over regions
+  #for ii in range(n_ax):
+  for ii in range(n_reg):
     print (ii,n_ax)
     for row, season in enumerate(["DJF", "JJA"]):
         if ii >= n_reg:
@@ -185,6 +189,7 @@ for ii in range(n_reg):
             #p.append( a_flat[ii].plot(ds[var_name][index], ref_depth)[0] )
             #p.append( a_flat[ii].plot(ds[var_name][index][4:50], ref_depth[4:50])[0] )
             #p.append( a_flat[row,ii].plot(ds[var_name][index][4:150], ref_depth[4:150])[0] )
+            #p.append( a_flat[row,ii].plot(ds[var_name][index][1:150], ref_depth[1:150])[0] )
             p.append( a_flat[row,ii].plot(ds[var_name][index][:100], ref_depth[:100])[0] )
 
         # Do some plot things
@@ -201,24 +206,24 @@ for ii in range(n_reg):
         # Invert y axis
         a_flat[row,ii].invert_yaxis()
 
-# Make legend
-a_flat[0,legend_index].legend(p, legend_str, fontsize = legend_fontsize)
+  # Make legend
+  a_flat[0,legend_index].legend(p, legend_str, fontsize = legend_fontsize)
 
-# Set Figure title
-f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
+  # Set Figure title
+  f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
 
-# Set x and y labels
-f.text(xlabelpos[0], xlabelpos[1], xlabel, 
+  # Set x and y labels
+  f.text(xlabelpos[0], xlabelpos[1], xlabel, 
        va = 'center', rotation = 'horizontal', 
        fontweight = label_fontweight, fontsize = label_fontsize)
 
-# Set tight figure layout
-f.tight_layout(w_pad = subplot_padding, h_pad= subplot_padding)
-f.subplots_adjust(left   = (fig_pad[0]), 
+  # Set tight figure layout
+  f.tight_layout(w_pad = subplot_padding, h_pad= subplot_padding)
+  f.subplots_adjust(left   = (fig_pad[0]), 
                   bottom = (fig_pad[1]),
                   right  = (1-fig_pad[2]),
                   top    = (1-fig_pad[3]))
 
-# Save plot maybe
-if save_plot: 
-    f.savefig(fn_out)
+  # Save plot maybe
+  if save_plot: 
+      f.savefig(fn_out)
