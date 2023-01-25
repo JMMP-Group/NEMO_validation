@@ -38,13 +38,15 @@ profile.read_en4(fn_en4, multiple=True)
 b = bounds(config.region)
 profile = profile.subset_indices_lonlat_box(lonbounds=b.lonbounds, latbounds=b.latbounds)
 
-# Process data: apply QC flags
+
 try:
+    # Process data: apply QC flags
     new_profile = profile.process_en4(remove_flagged_neighbours=True)
+    
+    # Save file
+    new_profile.dataset.to_netcdf(fn_out)
+    print(f"Saved: {fn_out}")
 except:
     new_profile = profile.process_en4()
     print(f"You were supposed to update COAsT!!")
-    break
 
-new_profile.dataset.to_netcdf(fn_out)
-print(f"Saved: {fn_out}")
