@@ -59,36 +59,20 @@ lat = nemo.dataset.latitude.values.squeeze()
 
 # Define Regional Masks
 
-## Create a child class of MaskMaker in order to create/prototype a new region
-class MaskMaker_new(coast.MaskMaker):
-@classmethod
-def region_def_nws_fsc(cls, longitude, latitude, bath):
-    """
-    Regional definition for Faroe Shetland Channel (Northwest European Shelf)
-    Longitude, latitude and bath should be 2D arrays corresponding to model
-    coordinates and bathymetry. Bath should be positive with depth.
-    """
-    vertices_lon = [-7.13, -9.72, -6.37, -0.45, -4.53]
-    vertices_lat = [62.17, 60.6, 59.07, 61.945, 62.51]
-
-    mask = cls.fill_polygon_by_lonlat(np.zeros(longitude.shape), longitude, latitude, vertices_lon, vertices_lat)
-    mask = mask * (bath > 200) * (bath > 0) * (~np.isnan(bath))
-    return mask
-
-mm = MaskMaker_new()
+mm = coast.MaskMaker()
 masks_list = []
 # Add regional mask for whole domain
 masks_list.append(np.ones(lon.shape))  # 0
-masks_list.append(mm.region_def_nws_north_sea(lon, lat, bath))  # 1
+masks_list.append(mm.region_def_nws_north_north_sea(lon, lat, bath))  # 1
 masks_list.append(mm.region_def_nws_outer_shelf(lon, lat, bath))  # 2
 masks_list.append(mm.region_def_nws_english_channel(lon, lat, bath))  # 3
 masks_list.append(mm.region_def_nws_norwegian_trench(lon, lat, bath))  # 4
-masks_list.append(mm.region_def_kattegat(lon, lat, bath))  # 5
+masks_list.append(mm.region_def_nws_kattegat(lon, lat, bath))  # 5
 masks_list.append(mm.region_def_nws_fsc(lon, lat, bath))  # 6
 #masks_list.append(mm.region_def_nws_shelf_break(lon,lat,bath))  # 7
-masks_list.append(mm.region_def_south_north_sea(lon, lat, bath))  # 7
-masks_list.append(mm.region_def_off_shelf(lon, lat, bath))  # 8
-masks_list.append(mm.region_def_irish_sea(lon, lat, bath))  # 9
+masks_list.append(mm.region_def_nws_south_north_sea(lon, lat, bath))  # 7
+masks_list.append(mm.region_def_nws_off_shelf(lon, lat, bath))  # 8
+masks_list.append(mm.region_def_nws_irish_sea(lon, lat, bath))  # 9
 
 masks_names = ['whole_domain', 'northern_north_sea','outer_shelf','eng_channel','nor_trench',
 	    'kattegat', 'fsc', 'southern_north_sea', 'off_shelf', 'irish_sea' ]
