@@ -6,7 +6,6 @@ rm LOGS/OUT* LOGS/*.err LOGS/*.out
 
 #GRID="domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
 #GRID=$2 #   "GEG_SF12.nc" CO7_EXACT_CFG_FILE.nc
-#for (( start=2004; start<2015; start++ ))
 for (( start=$STARTYEAR; start<$(expr $ENDYEAR + 1); start++ ))
 do
   for (( month=1; month<13; month++ ))
