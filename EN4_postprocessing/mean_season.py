@@ -41,7 +41,7 @@ fn_analysis_diff = "%s%03s_PRO_DIFF.nc"%(config.dn_out, season)
 fn_analysis_index = "%s%03s_PRO_INDEX.nc"%(config.dn_out, season)
 fn_out = "%s%03s_mask_means_daily.nc"%(config.dn_out, season)
 
-differences = coast.Profile(config=fn_cfg_prof)  ## IF OLD COAST FALLS OVER HERE, REMOVE "config=fn_cfg_prof" HERE AND +5 lines
+differences = coast.Profile(config=fn_cfg_prof) 
 differences.dataset = xr.open_dataset(fn_analysis_diff, chunks={'id_dim':10000})
 model_profiles_interp = coast.Profile(config=fn_cfg_prof)
 model_profiles_interp.dataset = xr.open_dataset(fn_analysis_index, chunks={'id_dim':10000})
@@ -84,8 +84,13 @@ mask_xr = mm.make_mask_dataset(lon, lat, masks_list, masks_names)
 analysis = coast.ProfileAnalysis()
 mask_indices = analysis.determine_mask_indices(model_profiles_interp, mask_xr)
 
+# Add bathymetry data to profiles before mask averaging
+differences.dataset['bathymetry'] = model_profiles_interp.dataset.bathymetry
+
 # Do mask averaging
 mask_means = analysis.mask_means(differences, mask_indices)
+# Rename averaged bathymetry variable. Drop duplicate
+mask_means = mask_means.drop_vars("profile_mean_bathymetry").rename({"all_mean_bathymetry":"bathymetry"})
 
 # SAVE mask dataset to file
 if season == "DJF": # only save once otherwise conflicts arise if writing same file simultantously

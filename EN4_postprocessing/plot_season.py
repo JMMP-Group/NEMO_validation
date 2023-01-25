@@ -73,7 +73,7 @@ region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Ir
 #region_names = ["A","B","C","D","E","F","G","H","I"]  # Region names, will be used for titles in plot
 
 plot_zero_line = True            # Plot a black vertical line at x = 0
-plot_mean_depth = False          # Plot the mean bathymetric depth. Make sure 'bathymetry' is in the analysis dataset
+plot_mean_depth = True          # Plot the mean bathymetric depth. Make sure 'bathymetry' is in the analysis dataset
 save_plot = True                # Boolean to save plot or not
 
 #ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50))) # Data depths
@@ -202,7 +202,9 @@ for var_str in ["Temperature", "Salinity"]:
         if plot_zero_line:
             a_flat[row,ii].plot([0,0], [0, max_depth], c='k', linewidth = 1, linestyle = '-')
         if plot_mean_depth:
-            a_flat[row,ii].plot()
+            a_flat[row,ii].plot([a_flat[row,ii].get_xlim()[0], a_flat[row,ii].get_xlim()[1]], 
+                                [ds['bathymetry'][index],ds['bathymetry'][index]],
+                                color='k', linestyle='--')
 
         # Invert y axis
         a_flat[row,ii].invert_yaxis()
