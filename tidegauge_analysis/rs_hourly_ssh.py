@@ -3,7 +3,7 @@ import os
 os.chdir('/home/users/jelt/dbyrne/code/model_validation/') 
 
 from analyse_ssh_hourly import analyse_ssh_hourly
-from validate_ssh_tg_hourly import extract_ssh
+from validate_ssh_tg_hourly import extract_ssh, analyse_ssh
 
 run_name='P0.0'
 mass = 'xu-cb676'
@@ -22,5 +22,14 @@ constit = ['M2','S2','N2','K1','O1','P1','M4']
 #analyse_ssh_hourly(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out, constit_to_save=constit, chunks = {'time_counter':50})
 
 fn_ext_out = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/{0}/tg_analysis/ssh_hourly_extract_{1}.nc".format(run_name.upper(), run_name)
+print(f"Start extract_ssh")
 extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_ext_obs, fn_out,
                      chunks = {'time_counter':100}, dist_omit = 5)
+
+fn_analyse_out = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/{0}/tg_analysis/ssh_hourly_analyse_{1}.nc".format(run_name.upper(), run_name)
+print(f"Start analyse_ssh")
+analyse_ssh(fn_ext_out, fn_analyse_out, thresholds = np.arange(-.4, 2, 0.1),
+                constit_to_save = ['M2','S2','K2','N2','K1','O1','P1','Q1'],
+                semidiurnal_constit = ['M2','S2','K2','N2'],
+                diurnal_constit = ['K1','O1','P1','Q1'],
+                apply_ntr_filter = True )
