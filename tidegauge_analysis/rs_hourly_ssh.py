@@ -2,7 +2,7 @@ import os
   
 os.chdir('/home/users/jelt/dbyrne/code/model_validation/') 
 
-from analyse_ssh_hourly import analyse_ssh_hourly
+from analyse_ssh_hourly import analyse_ssh_hourly, plot_stats_ssh_hourly_single_cfg
 from validate_ssh_tg_hourly import extract_ssh, analyse_ssh, plot_single_cfg
 import numpy as np
 
@@ -22,6 +22,7 @@ constit = ['M2','S2','N2','K1','O1','P1','M4']
 
 #analyse_ssh_hourly(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out, constit_to_save=constit, chunks = {'time_counter':50})
 
+dn_out = "/home/users/jelt/GitHub/NEMO_validation/tidegauge_analysis/FIGS"
 fn_extr_out = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/{0}/tg_analysis/ssh_hourly_extract_{1}.nc".format(run_name.upper(), run_name)
 if(0):
   print(f"Start extract_ssh")
@@ -36,8 +37,15 @@ if(0):
                 semidiurnal_constit = ['M2','S2','K2','N2'],
                 diurnal_constit = ['K1','O1','P1','Q1'],
                 apply_ntr_filter = True )
+if(0):
+  fn_ssh_hourly_stats = fn_analyse_out
+  plot_single_cfg( fn_ssh_hourly_stats, dn_out, run_name, file_type='.png')
 
-fn_ssh_hourly_stats = fn_analyse_out
-dn_out = "/home/users/jelt/GitHub/NEMO_validation/tidegauge_analysis/FIGS"
-plot_single_cfg( fn_ssh_hourly_stats, dn_out, run_name, file_type='.png')
-    
+fn_analyse_out_b = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/{0}/tg_analysis/ssh_hourly_analyse_b_{1}.nc".format(run_name.upper(), run_name)
+if(1):
+  analyse_ssh_hourly( fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_analyse_out_b,
+             thresholds=np.arange(0, 2, 0.1),
+             constit_to_save=['M2', 'S2', 'K1', 'O1'],
+             chunks={'time_counter': 100})
+  fn_ssh_hourly_stats = fn_analyse_out_b
+  plot_stats_ssh_hourly_single_cfg( fn_ssh_hourly_stats, dn_out, run_name, file_type='.png')
