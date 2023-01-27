@@ -1,11 +1,16 @@
-import sys
-sys.path.append('/home/users/dbyrne/code/COAsT')
+
+
+# location of COAsT repo, if using a particular branch
+coast_repo = "/home/users/jelt/GitHub/COAsT"
+
+# IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
+sys.path.append(coast_repo)
+
 import coast
 import coast.general_utils as gu
 import coast.plot_util as pu
 import matplotlib.pyplot as plt
 import xarray as xr
-import xarray.ufuncs as uf
 import numpy as np
 from datetime import datetime, timedelta
 import pandas as pd
@@ -156,7 +161,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
         ssh_obs = ds_ssh_port.ssh_obs
         mask = ds_ssh.mask.isel(port=pp).load().values
         
-        if all(uf.isnan(ssh_mod)) or all(uf.isnan(ssh_obs)):
+        if all(np.isnan(ssh_mod)) or all(np.isnan(ssh_obs)):
             print('reject 1')
             continue
         
