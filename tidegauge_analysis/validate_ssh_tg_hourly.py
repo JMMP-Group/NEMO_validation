@@ -366,7 +366,7 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
     obs = obs.isel(port=ind[0])
     
     # Determine spatial indices
-    ind2D = gu.nearest_indices_2D(nemo.longitude, nemo.latitude, 
+    ind2D = gu.nearest_indices_2d(nemo.longitude, nemo.latitude,
                                 obs.longitude, obs.latitude,
                                 mask = landmask)
     
