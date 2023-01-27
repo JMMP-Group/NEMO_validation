@@ -347,7 +347,7 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
     '''
     
     # Read NEMO data
-    nemo = coast.Gridded(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg,
+    nemo = coast.Gridded(fn_nemo_data, fn_nemo_domain, config=fn_nemo_cfg,
                               multiple=True).dataset
     
     # Get NEMO landmask
