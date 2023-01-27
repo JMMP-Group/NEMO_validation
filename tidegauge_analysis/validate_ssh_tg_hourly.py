@@ -327,7 +327,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     
     write_ds_to_file(ds_stats, fn_out)
     
-def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_obs, fn_out,
+def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
                      chunks = {'time_counter':100}, dist_omit = 5):
                      
     '''
@@ -347,8 +347,8 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_obs, fn_out,
     '''
     
     # Read NEMO data
-    nemo = coast.NEMO(fn_nemo_data, fn_nemo_domain, 
-                              multiple=True, chunks=chunks).dataset
+    nemo = coast.Gridded(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg
+                              multiple=True).dataset
     
     # Get NEMO landmask
     landmask = np.array(nemo.bottom_level.values.squeeze() == 0)
