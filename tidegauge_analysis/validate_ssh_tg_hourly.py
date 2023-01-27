@@ -74,7 +74,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
      apply_ntr_filter     : If true, apply Savgol filter to non-tidal residuals
                             before analysis.
     '''
-    
+    min_datapoints=700 
     ds_ssh = xr.open_dataset(fn_ext) 
     
     # Define Dimension Sizes
@@ -419,6 +419,8 @@ class plot_single_cfg():
     
         stats = xr.open_dataset(fn_ssh_hourly_stats)
         
+        print(f"stats:{stats}")
+        print(f"stats.amp_err:{stats.amp_err}")
         lonmax = np.max(stats.longitude)
         lonmin = np.min(stats.longitude)
         latmax = np.max(stats.latitude)
@@ -429,7 +431,7 @@ class plot_single_cfg():
         ### GEOGRAPHICAL SCATTER PLOTS
         # Plot correlations
         f,a = pu.create_geo_axes(lonbounds, latbounds)
-        sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_corr, 
+        sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_corr.sel(season="All"), 
                         vmin=.85, vmax=1,
                   edgecolors='k', linewidths=.5, zorder=100)
         f.colorbar(sca)
@@ -440,7 +442,7 @@ class plot_single_cfg():
         
         # Plot std_err
         f,a = pu.create_geo_axes(lonbounds, latbounds)
-        sca = a.scatter(stats.longitude, stats.latitude, c=stats.std_err, 
+        sca = a.scatter(stats.longitude, stats.latitude, c=stats.ssh_std_err.sel(season="All"), 
                         vmin=-.15, vmax=.15,
                   edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
         f.colorbar(sca)
@@ -451,7 +453,7 @@ class plot_single_cfg():
         
         # Plot mae
         f,a = pu.create_geo_axes(lonbounds, latbounds)
-        sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_mae, 
+        sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_mae.sel(season="All"), 
                         vmin=-.05, vmax=.05,
                   edgecolors='k', linewidths=.5, zorder=100)
         f.colorbar(sca)
