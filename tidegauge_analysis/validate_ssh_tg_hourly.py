@@ -404,7 +404,7 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
     ext = xr.Dataset(coords = dict(
                     longitude = ('port', obs.longitude.values),
                     latitude = ('port', obs.latitude.values),
-                    time = ('time', nemo_extracted.time_instant)),
+                    time = ('time', nemo_extracted.time_instant.values)),
                data_vars = dict(
                     ssh_mod = (['port','time'], ssh_mod),
                     ssh_obs  = (['port','time'], ssh_obs),
