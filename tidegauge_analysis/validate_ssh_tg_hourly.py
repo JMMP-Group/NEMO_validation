@@ -3,6 +3,7 @@
 # location of COAsT repo, if using a particular branch
 coast_repo = "/home/users/jelt/GitHub/COAsT"
 
+import sys
 # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
 sys.path.append(coast_repo)
 
