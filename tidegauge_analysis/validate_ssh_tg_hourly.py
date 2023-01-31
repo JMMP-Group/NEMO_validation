@@ -417,10 +417,10 @@ class plot_single_cfg():
     
     def __init__(self, fn_ssh_hourly_stats, dn_out, run_name, file_type='.png'):
     
-        stats = xr.open_dataset(fn_ssh_hourly_stats)
+        stats = xr.open_dataset(fn_ssh_hourly_stats, engine="netcdf4")
         
         print(f"stats:{stats}")
-        print(f"stats.amp_err:{stats.amp_err}")
+        #print(f"stats.amp_err:{stats.amp_err}")
         lonmax = np.max(stats.longitude)
         lonmin = np.min(stats.longitude)
         latmax = np.max(stats.latitude)
