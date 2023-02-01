@@ -219,8 +219,10 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
             if constit_to_save[cc] in uts_obs.name:
                 ds_stats['a_mod'][pp,cc] = a_dict_mod[constit_to_save[cc]] 
                 ds_stats['a_obs'][pp,cc] = a_dict_obs[constit_to_save[cc]] 
+                ds_stats['a_err'][pp,cc] = a_dict_mod[constit_to_save[cc]] - a_dict_obs[constit_to_save[cc]] 
                 ds_stats['g_mod'][pp,cc] = g_dict_mod[constit_to_save[cc]] 
                 ds_stats['g_obs'][pp,cc] = g_dict_obs[constit_to_save[cc]]
+                ds_stats['g_err'][pp,cc] = g_dict_mod[constit_to_save[cc]] - g_dict_obs[constit_to_save[cc]] 
         
         # NTR: Calculate non tidal residuals
         ntr_obs = ssh_obs.values - tide_obs
@@ -305,6 +307,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
         
         ds_stats['ssh_std_mod'][:, ind] = ssh_seasonal_std.ssh_mod.sel(season=ss)
         ds_stats['ssh_std_obs'][:, ind] = ssh_seasonal_std.ssh_obs.sel(season=ss)
+        ds_stats['ssh_std_err'][:, ind] = ssh_seasonal_std.ssh_mod.sel(season=ss) - ssh_seasonal_std.ssh_obs.sel(season=ss)
         sii+=1
         
     # Annual means and standard deviations
@@ -322,6 +325,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     
     ds_stats['ssh_std_mod'][:, 4] = ssh_std.ssh_mod
     ds_stats['ssh_std_obs'][:, 4] = ssh_std.ssh_obs
+    ds_stats['ssh_std_err'][:, 4] = ssh_std.ssh_mod - ssh_std.ssh_obs
     
     ds_stats = xr.merge((ds_ssh, ds_ntr, ds_stats, ds_tide))
     
@@ -469,7 +473,7 @@ class plot_single_cfg():
         for cc in range(0,n_constit):
             # AMPLITUDE MAP
             f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=stats.amp_err[:,cc], 
+            sca = a.scatter(stats.longitude, stats.latitude, c=stats.a_err[:,cc], 
                             vmin=-.2, vmax=.2,
                       edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
             f.colorbar(sca)
@@ -480,7 +484,7 @@ class plot_single_cfg():
             
             # PHASE MAP
             f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=stats.pha_err[:,cc], 
+            sca = a.scatter(stats.longitude, stats.latitude, c=stats.g_err[:,cc], 
                             vmin=-15, vmax=15,
                       edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
             f.colorbar(sca)
@@ -490,7 +494,7 @@ class plot_single_cfg():
             plt.close('all')
             
             # AMPLITUDE SCATTER
-            f,a = pu.scatter_with_fit(stats.amp_mod[:,cc], stats.amp_obs[:,cc])
+            f,a = pu.scatter_with_fit(stats.a_mod[:,cc], stats.a_obs[:,cc])
             a.set_title('Amplitude Comparison | {0} | {1}'.format(constit[cc], run_name), fontsize=9)
             a.set_xlabel("Model Amplitude (m)")
             a.set_ylabel("Observed Amplitude (m)")
@@ -499,7 +503,7 @@ class plot_single_cfg():
             plt.close('all')
             
             # PHASE SCATTER
-            f,a = pu.scatter_with_fit(stats.pha_mod[:,cc], stats.pha_obs[:,cc])
+            f,a = pu.scatter_with_fit(stats.g_mod[:,cc], stats.g_obs[:,cc])
             a.set_title('Phase Comparison | {0} | {1}'.format(constit[cc], run_name), fontsize=9)
             a.set_xlabel("Model Phase(deg)")
             a.set_ylabel("Observed Phase (deg)")
@@ -676,7 +680,7 @@ class plot_stats_ssh_hourly_compare_cfgs():
         for cc in range(0,n_constit):
             # AMPLITUDE MAP
             f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=stats.amp_err[:,cc], 
+            sca = a.scatter(stats.longitude, stats.latitude, c=stats.a_err[:,cc], 
                             vmin=-.2, vmax=.2,
                       edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
             f.colorbar(sca)
@@ -687,7 +691,7 @@ class plot_stats_ssh_hourly_compare_cfgs():
             
             # PHASE MAP
             f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=stats.pha_err[:,cc], 
+            sca = a.scatter(stats.longitude, stats.latitude, c=stats.g_err[:,cc], 
                             vmin=-15, vmax=15,
                       edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
             f.colorbar(sca)
@@ -697,7 +701,7 @@ class plot_stats_ssh_hourly_compare_cfgs():
             plt.close('all')
             
             # AMPLITUDE SCATTER
-            f,a = pu.scatter_with_fit(stats.amp_mod[:,cc], stats.amp_obs[:,cc])
+            f,a = pu.scatter_with_fit(stats.a_mod[:,cc], stats.a_obs[:,cc])
             a.set_title('Amplitude Comparison | {0} | {1}'.format(constit[cc], run_name), fontsize=9)
             a.set_xlabel("Model Amplitude (m)")
             a.set_ylabel("Observed Amplitude (m)")
@@ -706,7 +710,7 @@ class plot_stats_ssh_hourly_compare_cfgs():
             plt.close('all')
             
             # PHASE SCATTER
-            f,a = pu.scatter_with_fit(stats.pha_mod[:,cc], stats.pha_obs[:,cc])
+            f,a = pu.scatter_with_fit(stats.g_mod[:,cc], stats.g_obs[:,cc])
             a.set_title('Phase Comparison | {0} | {1}'.format(constit[cc], run_name), fontsize=9)
             a.set_xlabel("Model Phase(deg)")
             a.set_ylabel("Observed Phase (deg)")
