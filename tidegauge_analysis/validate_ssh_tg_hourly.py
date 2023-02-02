@@ -43,7 +43,7 @@ def compare_phase(g1, g2):
     r[r>180] = r[r>180] - 360
     return r
 
-def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
+def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
                 constit_to_save = ['M2','S2','K2','N2','K1','O1','P1','Q1'], 
                 semidiurnal_constit = ['M2','S2','K2','N2'],
                 diurnal_constit = ['K1','O1','P1','Q1'],
@@ -74,28 +74,43 @@ def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
      apply_ntr_filter     : If true, apply Savgol filter to non-tidal residuals
                             before analysis.
     '''
-    min_datapoints=700 
-    ds_ssh = xr.open_dataset(fn_ext) 
-    
+    min_datapoints=700
+
+    # Create the object and then inset the netcdf dataset
+    ds_ssh = coast.Tidegauge(dataset=xr.open_dataset(fn_ext))
+
+    # Drop ports that have too few points
+    keep_indices = np.isfinite(ds_ssh.dataset.ssh_obs).sum(dim="t_dim") >= min_datapoints
+    ds_ssh = ds_ssh.isel(id_dim=keep_indices)
+    print(f"Start with {ds_ssh.dataset.dims['id_dim']} ports")
+    print(f"Keep {keep_indices.values.sum()} ports following check on limited obs")
+    keep_indices = np.isfinite(ds_ssh.dataset.ssh_mod).sum(dim="t_dim") >= min_datapoints
+    ds_ssh = ds_ssh.isel(id_dim=keep_indices)
+    print(f"Keep {keep_indices.values.sum()} ports following check on limited model output")
+
     # Define Dimension Sizes
-    n_port = ds_ssh.dims['port']
-    n_time = ds_ssh.dims['time']
+    n_port = ds_ssh.dataset.dims['id_dim']
+    n_time = ds_ssh.dataset.dims['t_dim']
     n_constit = len(constit_to_save)
     n_thresholds = len(thresholds)
     seasons = ['DJF','JJA','MAM','SON','All']
     n_seasons = len(seasons)
     freq_bands = ['diurnal', 'semidiurnal', 'all']
     n_freq_bands = len(freq_bands)
-    
-    # Remove flagged locations
-    ds_ssh.ssh_mod[ds_ssh.bad_flag.values] = np.nan
-    ds_ssh.ssh_obs[ds_ssh.bad_flag.values] = np.nan 
+
+    # Identify seasons
+    month_season_dict = {1:0, 2:0, 3:2, 4:2, 5:2, 6:1,
+                         7:1, 8:1, 9:3, 10:3, 11:3, 12:0}
+    time = ds_ssh.dataset.time.values
+    pd_time = pd.to_datetime(time)
+    pd_month = pd_time.month
+    pd_season = [month_season_dict[ii] for ii in pd_month]
     
     # NTR dataset
     ds_ntr = xr.Dataset(coords = dict(
-                            time = ('time', ds_ssh.time.values),
-                            longitude = ('port', ds_ssh.longitude.values),
-                            latitude = ('port', ds_ssh.latitude.values)),
+                            time = ('time', ds_ssh.dataset.time.values),
+                            longitude = ('port', ds_ssh.dataset.longitude.values),
+                            latitude = ('port', ds_ssh.dataset.latitude.values)),
                         data_vars = dict(
                             ntr_mod = (['port','time'], np.zeros((n_port, n_time))*np.nan),
                             ntr_obs = (['port','time'], np.zeros((n_port, n_time))*np.nan),
@@ -104,9 +119,9 @@ def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
                             ntr_abs_err = (['port','time'], np.zeros((n_port, n_time))*np.nan)))
     
     ds_tide = xr.Dataset(coords = dict(
-                            time = ('time', ds_ssh.time.values),
-                            longitude = ('port', ds_ssh.longitude.values),
-                            latitude = ('port', ds_ssh.latitude.values),
+                            time = ('time', ds_ssh.dataset.time.values),
+                            longitude = ('port', ds_ssh.dataset.longitude.values),
+                            latitude = ('port', ds_ssh.dataset.latitude.values),
                             freq_band = ('freq_band', freq_bands)),
                         data_vars = dict(
                             tide_mod = (['port','freq_band','time'], np.zeros((n_port, n_freq_bands, n_time))*np.nan),
@@ -117,9 +132,9 @@ def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     
     # ANALYSIS dataset
     ds_stats = xr.Dataset(coords = dict(
-                    longitude = ('port', ds_ssh.longitude.values),
-                    latitude = ('port', ds_ssh.latitude.values),
-                    time = ('time', ds_ssh.time.values),
+                    longitude = ('port', ds_ssh.dataset.longitude.values),
+                    latitude = ('port', ds_ssh.dataset.latitude.values),
+                    time = ('time', ds_ssh.dataset.time.values),
                     season = ('season', seasons),
                     constituent = ('constituent', constit_to_save),
                     threshold = ('threshold', thresholds)),
@@ -149,189 +164,97 @@ def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
                     thresh_monthlymax_mod = (['port', 'threshold'], np.zeros((n_port, n_thresholds))),
                     thresh_monthlymax_obs = (['port', 'threshold'], np.zeros((n_port, n_thresholds))))) 
     
-    # Identify seasons
-    month_season_dict = {1:0, 2:0, 3:2, 4:2, 5:2, 6:1,
-                         7:1, 8:1, 9:3, 10:3, 11:3, 12:0}
-    time = ds_ssh.time.values
-    pd_time = pd.to_datetime(time)
-    pd_month = pd_time.month
-    pd_season = [month_season_dict[ii] for ii in pd_month]
-    
-    # Loop over tide gauge locations, perform analysis per location
-    for pp in range(0,n_port):
-        
-        # Temporary in-loop datasets
-        ds_ssh_port = ds_ssh.isel(port=pp).load()
-        ssh_mod = ds_ssh_port.ssh_mod
-        ssh_obs = ds_ssh_port.ssh_obs
-        mask = ds_ssh.mask.isel(port=pp).load().values
-        
-        if all(np.isnan(ssh_mod)) or all(np.isnan(ssh_obs)):
-            print('reject 1')
-            continue
-        
-        if sum(~np.isnan(ssh_obs.values))<min_datapoints:
-            print('reject 2')
-            print(sum(~np.isnan(ssh_obs.values)))
 
-        # Harmonic analysis datenums
-        ha_time  = mdates.date2num(time)
-        
-        # Do harmonic analysis using UTide
-        uts_obs = ut.solve(ha_time, ssh_obs.values, lat=ssh_obs.latitude.values)
-        uts_mod = ut.solve(ha_time, ssh_mod.values, lat=ssh_mod.latitude.values)
-        
-        # Reconstruct full tidal signal 
-        tide_obs = np.array( ut.reconstruct(ha_time, uts_obs).h)
-        tide_mod = np.array( ut.reconstruct(ha_time, uts_mod).h)
-        tide_obs[mask] = np.nan
-        tide_mod[mask] = np.nan
-        ds_tide['tide_obs'][pp, -1, :] = tide_obs
-        ds_tide['tide_mod'][pp, -1, :] = tide_mod
-        
-        # Reconstruct partial semidiurnal tidal signal 
-        tide_2_obs = np.array( ut.reconstruct(ha_time, uts_obs,
-                                              constit = semidiurnal_constit).h)
-        tide_2_mod = np.array( ut.reconstruct(ha_time, uts_mod, 
-                                              constit = semidiurnal_constit).h)
-        tide_2_obs[mask] = np.nan
-        tide_2_mod[mask] = np.nan
-        ds_tide['tide_obs'][pp, 1, :] = tide_2_obs
-        ds_tide['tide_mod'][pp, 1, :] = tide_2_mod
-        
-        # # Reconstruct partial diurnal tidal signal 
-        tide_1_obs = np.array( ut.reconstruct(ha_time, uts_obs,
-                                              constit = diurnal_constit).h)
-        tide_1_mod = np.array( ut.reconstruct(ha_time, uts_mod,
-                                              constit = diurnal_constit).h)
-        tide_1_obs[mask] = np.nan
-        tide_1_mod[mask] = np.nan
-        ds_tide['tide_obs'][pp, 0, :] = tide_1_obs
-        ds_tide['tide_mod'][pp, 0, :] = tide_1_mod
-        
-        # TWL: SAVE constituents
-        a_dict_obs = dict( zip(uts_obs.name, uts_obs.A) )
-        a_dict_mod = dict( zip(uts_mod.name, uts_mod.A) )
-        g_dict_obs = dict( zip(uts_obs.name, uts_obs.g) )
-        g_dict_mod = dict( zip(uts_mod.name, uts_mod.g) )
-        
+
+    # Commence analysis
+    ###################
+    tganalysis = coast.TidegaugeAnalysis()
+
+    # Subtract means from all time series
+    ds = tganalysis.demean_timeseries(ds_ssh.dataset)
+
+    # Harmonic analysis
+    ha_mod = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_mod, min_datapoints=1)
+    ha_obs = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_obs, min_datapoints=1)
+
+    for pp in range(n_port):
+        # save constituents (name + amp/pha)
+        a_dict_obs = dict(zip(ha_obs[pp].name, ha_obs[pp].A))
+        a_dict_mod = dict(zip(ha_mod[pp].name, ha_mod[pp].A))
+        g_dict_obs = dict(zip(ha_obs[pp].name, ha_obs[pp].g))
+        g_dict_mod = dict(zip(ha_mod[pp].name, ha_mod[pp].g))
+
         for cc in range(0, len(constit_to_save)):
-            if constit_to_save[cc] in uts_obs.name:
-                ds_stats['a_mod'][pp,cc] = a_dict_mod[constit_to_save[cc]] 
-                ds_stats['a_obs'][pp,cc] = a_dict_obs[constit_to_save[cc]] 
-                ds_stats['a_err'][pp,cc] = a_dict_mod[constit_to_save[cc]] - a_dict_obs[constit_to_save[cc]] 
-                ds_stats['g_mod'][pp,cc] = g_dict_mod[constit_to_save[cc]] 
-                ds_stats['g_obs'][pp,cc] = g_dict_obs[constit_to_save[cc]]
-                ds_stats['g_err'][pp,cc] = g_dict_mod[constit_to_save[cc]] - g_dict_obs[constit_to_save[cc]] 
-        
-        # NTR: Calculate non tidal residuals
-        ntr_obs = ssh_obs.values - tide_obs
-        ntr_mod = ssh_mod.values - tide_mod
-        
-        # NTR: Apply filter if wanted
-        if apply_ntr_filter:
-            ntr_obs = signal.savgol_filter(ntr_obs,25,3)
-            ntr_mod = signal.savgol_filter(ntr_mod,25,3)
-            
-        if sum(~np.isnan(ntr_obs)) < min_datapoints:
-            continue
-            
-        ntr_err = ntr_mod - ntr_obs
-        ds_ntr['ntr_obs'][pp] = ntr_obs
-        ds_ntr['ntr_mod'][pp] = ntr_mod
-        ds_ntr['ntr_err'][pp] = ntr_err
-        ds_ntr['ntr_abs_err'][pp] = np.abs(ntr_err)
-        ds_ntr['ntr_square_err'][pp] = ntr_err**2
-        
-        # Make masked arrays for seasonal correlation calculation
-        ntr_obs = np.ma.masked_invalid(ntr_obs)
-        ntr_mod = np.ma.masked_invalid(ntr_mod)
-        ds_stats['ntr_corr'][pp,4] = np.ma.corrcoef(ntr_obs, ntr_mod)[1,0]
-        for ss in range(0,4):
-            season_ind = pd_season == ss
-            if np.sum(season_ind)>100:
-                tmp_obs = ntr_obs[season_ind]
-                tmp_mod = ntr_mod[season_ind]
-                ds_stats['ntr_corr'][pp,4] = np.ma.corrcoef(tmp_obs, tmp_mod)[1,0]
-            
-        # Identify NTR peaks for threshold analysis
-        pk_ind_ntr_obs,_ = signal.find_peaks(ntr_obs, distance = 12)
-        pk_ind_ntr_mod,_ = signal.find_peaks(ntr_mod, distance = 12)
-        pk_ntr_obs = ntr_obs[pk_ind_ntr_obs]
-        pk_ntr_mod = ntr_mod[pk_ind_ntr_mod]
-        
-        # Calculate daily and monthly maxima for threshold analysis
-        ds_daily = ds_ntr.groupby('time.day')
-        ds_daily_max = ds_daily.max(skipna=True)
-        ds_monthly = ds_ntr.groupby('time.month')
-        ds_monthly_max = ds_monthly.max(skipna=True)
-        
-        # Threshold Analysis
-        for nn in range(0,n_thresholds):
-            threshn = thresholds[nn]
-            # NTR: Threshold Frequency (Peaks)
-            ds_stats['thresh_peak_mod'][pp, nn] = np.sum( pk_ntr_mod >= threshn)
-            ds_stats['thresh_peak_obs'][pp, nn] = np.sum( pk_ntr_obs >= threshn)
-            
-            # NTR: Threshold integral (Time over threshold)
-            ds_stats['thresh_time_mod'][pp, nn] = np.sum( ntr_mod >= threshn)
-            ds_stats['thresh_time_obs'][pp, nn] = np.sum( ntr_obs >=threshn)
-            
-            # NTR: Number of daily maxima over threshold
-            ds_stats['thresh_dailymax_mod'][pp, nn] = np.sum( ds_daily_max.ntr_mod.values >= threshn)
-            ds_stats['thresh_dailymax_obs'][pp, nn] = np.sum( ds_daily_max.ntr_obs.values >= threshn)
-            
-            # NTR: Number of monthly maxima over threshold
-            ds_stats['thresh_monthlymax_mod'][pp, nn] = np.sum( ds_monthly_max.ntr_mod.values >= threshn)
-            ds_stats['thresh_monthlymax_obs'][pp, nn] = np.sum( ds_monthly_max.ntr_mod.values >= threshn)
-            
+            if constit_to_save[cc] in ha_obs[pp].name:
+                ds_stats['a_mod'][pp, cc] = a_dict_mod[constit_to_save[cc]]
+                ds_stats['a_obs'][pp, cc] = a_dict_obs[constit_to_save[cc]]
+                ds_stats['a_err'][pp, cc] = a_dict_mod[constit_to_save[cc]] - a_dict_obs[constit_to_save[cc]]
+                ds_stats['g_mod'][pp, cc] = g_dict_mod[constit_to_save[cc]]
+                ds_stats['g_obs'][pp, cc] = g_dict_obs[constit_to_save[cc]]
+                ds_stats['g_err'][pp, cc] = g_dict_mod[constit_to_save[cc]] - g_dict_obs[constit_to_save[cc]]
+
+
+    # Reconstruct full tidal signal
+    tide_mod = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_mod)
+    tide_obs = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_obs)
+
+    # Compute differences
+    tide_err = tganalysis.difference(tide_mod.dataset, tide_obs.dataset)
+    ds_merge = tide_err.dataset
+
+    # Reconstruct partial semidiurnal tidal signal
+    tide_2_obs = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_obs,
+                                         constit=semidiurnal_constit)
+    tide_2_mod = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_mod,
+                                         constit=semidiurnal_constit)
+
+    # Reconstruct partial diurnal tidal signal
+    tide_1_obs = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_obs,
+                                         constit=diurnal_constit)
+    tide_1_mod = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_mod,
+                                         constit=diurnal_constit)
+
+    # Store tidal reconstruction data
+    for pp in range(n_port):
+        # Store full tidal reconstruction
+        ds_tide['tide_obs'][pp, -1, :] = tide_obs.isel(id_dim=pp).dataset.reconstructed
+        ds_tide['tide_mod'][pp, -1, :] = tide_mod.isel(id_dim=pp).dataset.reconstructed
+
+        # Store semidiurnal tidal reconstruction
+        ds_tide['tide_obs'][pp, 1, :] = tide_2_obs.isel(id_dim=pp).dataset.reconstructed
+        ds_tide['tide_mod'][pp, 1, :] = tide_2_mod.isel(id_dim=pp).dataset.reconstructed
+
+        # Store diurnal tidal reconstruction
+        ds_tide['tide_obs'][pp, 0, :] = tide_1_obs.isel(id_dim=pp).dataset.reconstructed
+        ds_tide['tide_mod'][pp, 0, :] = tide_1_mod.isel(id_dim=pp).dataset.reconstructed
+
+    # NTR (non tidal residual)
+    ntr_mod = tganalysis.calculate_non_tidal_residuals(ds.dataset.ssh_mod, tide_mod.dataset.reconstructed,
+                                                       apply_filter=False)
+    ntr_obs = tganalysis.calculate_non_tidal_residuals(ds.dataset.ssh_mod, tide_obs.dataset.reconstructed,
+                                                       apply_filter=True, window_length=10, polyorder=2)
+    # Calculate errors
+    ntr_diff = tganalysis.difference(ntr_mod.dataset, ntr_obs.dataset)
+    ds_ntr['ntr_obs'] = ntr_obs.dataset.ntr
+    ds_ntr['ntr_mod'] = ntr_mod.dataset.ntr
+    ds_ntr['ntr_err'] = ntr_diff.dataset.diff_ntr
+    ds_ntr['ntr_abs_err'] = ntr_diff.dataset.abs_diff_ntr
+    ds_ntr['ntr_square_err'] = ntr_diff.dataset.square_diff_ntr
+
+    # Make masked arrays for seasonal correlation calculation
+    ntr_corr = xr.corr(ntr_obs.dataset.ntr, ntr_mod.dataset.ntr, dim="t_dim")
+    ds_stats['ntr_corr'][:,-1] = ntr_corr
+
+    ds_merge = xr.merge( (ds_merge, ds_stats, ds_ntr, ds_tide))
+
+    # Identify NTR peaks for threshold analysis
+    # Threshold statistics. (Slow)
+    #thresh_mod = tganalysis.threshold_statistics(ntr_mod.dataset, thresholds=np.arange(-2, 2, 0.1))
+    #thresh_obs = tganalysis.threshold_statistics(ntr_obs.dataset, thresholds=np.arange(-2, 2, 0.1))
     
-    # Seasonal Climatology
-    ntr_seasonal = ds_ntr.groupby('time.season')
-    ntr_seasonal_std = ntr_seasonal.std(skipna=True)
-    ntr_seasonal_mean = ntr_seasonal.mean(skipna=True)
-    ssh_seasonal = ds_ssh.groupby('time.season')
-    ssh_seasonal_std = ssh_seasonal.std(skipna=True)
+    write_ds_to_file(ds_merge, fn_out)
     
-    sii = 0
-    for ss in ntr_seasonal_std['season'].values:
-        ind = seasons.index(ss)
-        
-        ds_stats['ntr_std_mod'][:, ind] = ntr_seasonal_std.ntr_mod.sel(season=ss)
-        ds_stats['ntr_std_obs'][:, ind] = ntr_seasonal_std.ntr_obs.sel(season=ss)
-        ds_stats['ntr_err_std'][:, ind] = ntr_seasonal_std.ntr_err.sel(season=ss)
-        
-        ds_stats['ntr_mae'][:, ind] = ntr_seasonal_mean.ntr_abs_err.sel(season=ss)
-        ds_stats['ntr_rmse'][:, ind] = np.nanmean( ntr_seasonal_mean.ntr_square_err.sel(season=ss) )
-        ds_stats['ntr_me'][:, ind] = ntr_seasonal_mean.ntr_err.sel(season=ss)
-        
-        ds_stats['ssh_std_mod'][:, ind] = ssh_seasonal_std.ssh_mod.sel(season=ss)
-        ds_stats['ssh_std_obs'][:, ind] = ssh_seasonal_std.ssh_obs.sel(season=ss)
-        ds_stats['ssh_std_err'][:, ind] = ssh_seasonal_std.ssh_mod.sel(season=ss) - ssh_seasonal_std.ssh_obs.sel(season=ss)
-        sii+=1
-        
-    # Annual means and standard deviations
-    ntr_std = ds_ntr.std(dim='time', skipna=True)
-    ssh_std = ds_ssh.std(dim='time', skipna=True)
-    ntr_mean = ds_ntr.mean(dim='time', skipna=True)
-    
-    ds_stats['ntr_std_mod'][:, 4] = ntr_std.ntr_mod
-    ds_stats['ntr_std_obs'][:, 4] = ntr_std.ntr_obs
-    ds_stats['ntr_err_std'][:, 4] = ntr_std.ntr_err
-    
-    ds_stats['ntr_mae'][:, 4] = ntr_mean.ntr_abs_err
-    ds_stats['ntr_rmse'][:, 4] = np.nanmean( ntr_mean.ntr_square_err )
-    ds_stats['ntr_me'][:, 4] = ntr_mean.ntr_err
-    
-    ds_stats['ssh_std_mod'][:, 4] = ssh_std.ssh_mod
-    ds_stats['ssh_std_obs'][:, 4] = ssh_std.ssh_obs
-    ds_stats['ssh_std_err'][:, 4] = ssh_std.ssh_mod - ssh_std.ssh_obs
-    
-    ds_stats = xr.merge((ds_ssh, ds_ntr, ds_stats, ds_tide))
-    
-    write_ds_to_file(ds_stats, fn_out)
-    
-def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
+def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
                 constit_to_save = ['M2','S2','K2','N2','K1','O1','P1','Q1'], 
                 semidiurnal_constit = ['M2','S2','K2','N2'],
                 diurnal_constit = ['K1','O1','P1','Q1'],
@@ -640,70 +563,111 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
     
     # Read NEMO data
     nemo = coast.Gridded(fn_nemo_data, fn_nemo_domain, config=fn_nemo_cfg,
-                              multiple=True).dataset
-    
-    # Get NEMO landmask
-    landmask = np.array(nemo.bottom_level.values.squeeze() == 0)
-    
+                              multiple=True)
+
+    # Rename depth_0 to be depth
+    nemo.dataset = nemo.dataset.rename({"depth_0": "depth"})
+    # Create a landmask array and put it into the nemo object.
+    # Here, using the bottom_level == 0 variable from the domain file is enough.
+    nemo.dataset["landmask"] = nemo.dataset.bottom_level == 0
+
     # Read OBS data from tg file
-    obs = xr.open_dataset(fn_obs)
-    
-    # Subset obs by NEMO domain
-    lonmax = np.nanmax(nemo.longitude)
-    lonmin = np.nanmin(nemo.longitude)
-    latmax = np.nanmax(nemo.latitude)
-    latmin = np.nanmin(nemo.latitude)
-    ind = gu.subset_indices_lonlat_box(obs.longitude, obs.latitude, 
-                                       lonmin, lonmax, latmin, latmax)
-    obs = obs.isel(port=ind[0])
-    
-    # Determine spatial indices
-    ind2D = gu.nearest_indices_2d(nemo.longitude, nemo.latitude,
-                                obs.longitude, obs.latitude,
-                                mask = landmask)
-    
-    # Extract spatial time series
-    nemo_extracted = nemo.isel(x_dim = ind2D[0], y_dim = ind2D[1])
-    nemo_extracted = nemo_extracted.swap_dims({'dim_0':'port'})
-    
-    # Compute data (takes a while..)
-    with ProgressBar():
-        nemo_extracted.load()
-    
-    # Check interpolation distances
-    n_port = nemo_extracted.dims['port']
-    bad_flag = np.zeros(n_port, dtype=bool)
-    interp_dist = gu.calculate_haversine_distance(nemo_extracted.longitude, 
-                                                  nemo_extracted.latitude, 
-                                                  obs.longitude.values,
-                                                  obs.latitude.values)
-    omit_ind = interp_dist>dist_omit
-    bad_flag[omit_ind] = True
-    
-    # Align timings
-    obs = obs.interp(time = nemo_extracted.time_instant.values, method = 'linear')
-    
-    # Apply shared mask
-    ssh_mod = nemo_extracted.ssh.values.T
-    ssh_obs = obs.ssh.values
-    mask_mod = np.isnan(ssh_mod)
-    mask_obs = np.isnan(ssh_obs)
-    shared_mask = np.logical_or(mask_mod, mask_obs)
-    
-    ssh_mod[shared_mask] = np.nan
-    ssh_obs[shared_mask] = np.nan
-    
-    ext = xr.Dataset(coords = dict(
-                    longitude = ('port', obs.longitude.values),
-                    latitude = ('port', obs.latitude.values),
-                    time = ('time', nemo_extracted.time_instant.values)),
-               data_vars = dict(
-                    ssh_mod = (['port','time'], ssh_mod),
-                    ssh_obs  = (['port','time'], ssh_obs),
-                    bad_flag = (['port'], bad_flag),
-                    mask = (['port','time'], shared_mask)))
-    
-    write_ds_to_file(ext, fn_out)
+    obs = coast.Tidegauge(dataset=xr.open_dataset(fn_obs))
+    obs.dataset = obs.dataset.set_coords("time")
+    obs.dataset = obs.dataset.swap_dims({"port": "id_dim"})
+    obs.dataset = obs.dataset.swap_dims({"time": "t_dim"})  # expected dim in COAsT, though some xarray func requires time
+
+    # Then do the interpolation
+    model_timeseries = obs.obs_operator(nemo, time_interp='linear')
+
+    # Drop points that are too far away from observation
+    keep_indices = model_timeseries.dataset.interp_dist <= dist_omit
+    model_timeseries = model_timeseries.isel(id_dim=keep_indices)
+    # Also drop the unwanted observational timeseries
+    obs = obs.isel(id_dim=keep_indices)
+
+    tganalysis = coast.TidegaugeAnalysis()
+    # This routine searches for missing values in each dataset and applies them
+    # equally to each corresponding dataset
+    obs_new, model_new = tganalysis.match_missing_values(obs.dataset.ssh, model_timeseries.dataset.ssh)
+
+    # Take shared coords from obs. Merge ssh values and save
+    if np.abs(model_new.dataset.time.values - obs_new.dataset.time.values).max() == np.timedelta64(0, 'ns'):
+        #model_new.dataset['longitude'] = obs_new.dataset.longitude
+        #model_new.dataset['latitude'] = obs_new.dataset.latitude
+        #model_new.dataset['time'] = obs_new.dataset.time
+        #ds_extract = xr.merge((obs_new.dataset, model_new.dataset))
+        ds_extract = obs_new
+        ds_extract.dataset = ds_extract.dataset.rename_vars({"ssh": "ssh_obs"})
+        ds_extract.dataset['ssh_mod'] = model_new.dataset.ssh
+        write_ds_to_file(ds_extract.dataset, fn_out)
+        print(f"Extracted dataset saved to: {fn_out}")
+    else:
+        print(f"Need to fix issue with common time axis. Expected identical time values")
+        print(f"Diff: {np.abs(model_new.dataset.time.values - obs_new.dataset.time.values).max()}")
+        print(f"Extracted dataset not saved")
+
+
+    if(0):
+        print()
+
+
+        # Subset obs by NEMO domain
+        lonmax = np.nanmax(nemo.longitude)
+        lonmin = np.nanmin(nemo.longitude)
+        latmax = np.nanmax(nemo.latitude)
+        latmin = np.nanmin(nemo.latitude)
+        ind = gu.subset_indices_lonlat_box(obs.longitude, obs.latitude,
+                                           lonmin, lonmax, latmin, latmax)
+        obs = obs.isel(port=ind[0])  # only the obs in the box
+
+        # Determine spatial indices
+        ind2D = gu.nearest_indices_2d(nemo.longitude, nemo.latitude,
+                                    obs.longitude, obs.latitude,
+                                    mask = landmask)
+
+        # Extract spatial time series
+        nemo_extracted = nemo.isel(x_dim = ind2D[0], y_dim = ind2D[1])
+        nemo_extracted = nemo_extracted.swap_dims({'dim_0':'port'})
+
+        # Compute data (takes a while..)
+        with ProgressBar():
+            nemo_extracted.load()
+
+        # Check interpolation distances
+        n_port = nemo_extracted.dims['port']
+        bad_flag = np.zeros(n_port, dtype=bool)
+        interp_dist = gu.calculate_haversine_distance(nemo_extracted.longitude,
+                                                      nemo_extracted.latitude,
+                                                      obs.longitude.values,
+                                                      obs.latitude.values)
+        omit_ind = interp_dist>dist_omit
+        bad_flag[omit_ind] = True
+
+        # Align timings
+        obs = obs.interp(time = nemo_extracted.time_instant.values, method = 'linear')
+
+        # Apply shared mask
+        ssh_mod = nemo_extracted.ssh.values.T
+        ssh_obs = obs.ssh.values
+        mask_mod = np.isnan(ssh_mod)
+        mask_obs = np.isnan(ssh_obs)
+        shared_mask = np.logical_or(mask_mod, mask_obs)
+
+        ssh_mod[shared_mask] = np.nan
+        ssh_obs[shared_mask] = np.nan
+
+        ext = xr.Dataset(coords = dict(
+                        longitude = ('port', obs.longitude.values),
+                        latitude = ('port', obs.latitude.values),
+                        time = ('time', nemo_extracted.time_instant.values)),
+                   data_vars = dict(
+                        ssh_mod = (['port','time'], ssh_mod),
+                        ssh_obs  = (['port','time'], ssh_obs),
+                        bad_flag = (['port'], bad_flag),
+                        mask = (['port','time'], shared_mask)))
+
+        write_ds_to_file(ext, fn_out)
         
 class plot_single_cfg():
     
