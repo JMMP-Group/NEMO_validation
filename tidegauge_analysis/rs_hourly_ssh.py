@@ -1,6 +1,6 @@
 import os
   
-os.chdir('/home/users/jelt/dbyrne/code/model_validation/') 
+#os.chdir('/home/users/jelt/dbyrne/code/model_validation/')
 
 from analyse_ssh_hourly import analyse_ssh_hourly, plot_stats_ssh_hourly_single_cfg
 from validate_ssh_tg_hourly import extract_ssh, analyse_ssh, plot_single_cfg
