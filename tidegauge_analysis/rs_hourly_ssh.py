@@ -42,7 +42,6 @@ if(0):
                 apply_ntr_filter = True )
 if(1):  # THIS PRODUCES CORR BUT GETS STUCK WITH HARMONICS PLOTS - NO DATA.
   fn_ssh_hourly_stats = fn_analyse_out
-  #fn_ssh_hourly_stats = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/P0.0/tg_analysis/ssh_hourly_analyse_2014_P0.0.nc"
   plot_single_cfg( fn_ssh_hourly_stats, dn_out, run_name, file_type='.png')
 
 ## Use analyse_ssh_hourly.py
