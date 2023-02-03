@@ -699,20 +699,30 @@ class plot_single_cfg():
     
         stats = xr.open_dataset(fn_ssh_hourly_stats, engine="netcdf4")
         
-        print(f"stats:{stats}")
-        #print(f"stats.amp_err:{stats.amp_err}")
-        lonmax = np.max(stats.longitude)
-        lonmin = np.min(stats.longitude)
+        lonmax = np.max((stats.longitude + 180)%360 - 180)  # centre around lon=0
+        lonmin = np.min((stats.longitude + 180)%360 - 180)  # centre around lon=0
         latmax = np.max(stats.latitude)
         latmin = np.min(stats.latitude)
         lonbounds = [lonmin-4, lonmax+4]
         latbounds = [latmin-4, latmax+4]
         
+        ### HARMONIC SUMMARY
+        f,a = plt.subplots()
+        sca = a.pcolormesh( stats.a_obs )
+        f.colorbar(sca)
+        a.set_title('Harmonic amplitudes for Tide Gauge station observations', fontsize=9)
+        a.set_xticks(np.arange(len(stats['constituent']))+0.5)
+        a.set_xticklabels(stats['constituent'].values)
+        a.set_ylabel('port')
+        fn = "ssh_hourly_harmonic_amp_obs"+file_type
+        f.savefig(os.path.join(dn_out, fn))
+        plt.close('all')
+
         ### GEOGRAPHICAL SCATTER PLOTS
         # Plot correlations
         f,a = pu.create_geo_axes(lonbounds, latbounds)
         sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_corr.sel(season="All"), 
-                        vmin=.85, vmax=1,
+                        #vmin=.85, vmax=1,
                   edgecolors='k', linewidths=.5, zorder=100)
         f.colorbar(sca)
         a.set_title('Hourly NTR Correlations with Tide Gauge | {0}'.format(run_name), fontsize=9)
@@ -787,6 +797,63 @@ class plot_single_cfg():
             f.savefig(os.path.join(dn_out, fn))
             plt.close('all')
         
+        # THRESHOLD PLOTS
+        prop = stats.thresh_peak_mod/stats.thresh_peak_obs
+        plot_thresh = [5, 10, 15]
+        for pp in range(0, len(plot_thresh)):
+            prop_tmp = prop.isel(threshold=plot_thresh[pp])
+            f,a = pu.create_geo_axes(lonbounds, latbounds)
+            sca = a.scatter(stats.longitude, stats.latitude, c=prop_tmp, 
+                            #vmin=0, vmax=2,
+                      edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
+            f.colorbar(sca)
+            a.set_title('Number of model NTR peaks as a proportion of observed NTR peaks \n Threshold = {0}m | {1}'.format(prop_tmp.threshold.values, run_name), fontsize=9)
+            fn = "thresh_freq_{0}_{1}{2}".format(prop_tmp.threshold.values, run_name, file_type)
+            f.savefig(os.path.join(dn_out, fn))
+            plt.close('all')
+            
+        prop = stats.thresh_time_mod/stats.thresh_time_obs
+        plot_thresh = [5, 10, 15]
+        for pp in range(0, len(plot_thresh)):
+            prop_tmp = prop.isel(threshold=plot_thresh[pp])
+            f,a = pu.create_geo_axes(lonbounds, latbounds)
+            sca = a.scatter(stats.longitude, stats.latitude, c=prop_tmp, 
+                            #vmin=0, vmax=2,
+                      edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
+            f.colorbar(sca)
+            a.set_title('Model hours over threshold as a proportion of observed time \n Threshold = {0}m | {1}'.format(prop_tmp.threshold.values, run_name), fontsize=9)
+            fn = "thresh_int_{0}_{1}{2}".format(prop_tmp.threshold.values, run_name, file_type)
+            f.savefig(os.path.join(dn_out, fn))
+            plt.close('all')
+        
+        
+        ### THRESHOLD LINE PLOTS
+        f,a = plt.subplots() 
+        sca = a.plot(stats.threshold, stats.thresh_time_mod.mean(dim="id_dim"), label=run_name)
+        sca = a.plot(stats.threshold, stats.thresh_time_obs.mean(dim="id_dim"), label="obs")
+        a.set_title('Duration over threshold as a proportion of total duration | {0}'.format(run_name), fontsize=9)
+        a.set_xlim([0,1.5])
+        plt.xlabel("Threshold (m)")
+        plt.legend()
+        fn = "thresh_time_{0}{1}".format(run_name, file_type)
+        f.savefig(os.path.join(dn_out, fn))
+        plt.show()
+        plt.close('all')
+
+
+        f,a = plt.subplots() 
+        sca = a.plot(stats.threshold, stats.thresh_peak_mod.mean(dim="id_dim"), label=run_name)
+        sca = a.plot(stats.threshold, stats.thresh_peak_obs.mean(dim="id_dim"), label="obs")
+        a.set_title('Peak count over threshold as a proportion of total peaks | {0}'.format(run_name), fontsize=9)
+        a.set_xlim([0,1.5])
+        plt.xlabel("Threshold (m)")
+        plt.legend()
+        fn = "thresh_int_{0}{1}".format(run_name, file_type)
+        f.savefig(os.path.join(dn_out, fn))
+        plt.show()
+        plt.close('all')
+
+
         ### CLIM VAR ERROR
         # Jan
         m_ind = [0,3,6,9]
@@ -817,34 +884,6 @@ class plot_single_cfg():
         f.savefig(os.path.join(dn_out, fn))
         plt.close('all')
         
-        # THRESHOLD PLOTS
-        prop = stats.thresh_freq_ntr_mod/stats.thresh_freq_ntr_obs
-        plot_thresh = [5, 10, 15]
-        for pp in range(0, len(plot_thresh)):
-            prop_tmp = prop.isel(threshold=plot_thresh[pp])
-            f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=prop_tmp, 
-                            vmin=0, vmax=2,
-                      edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
-            f.colorbar(sca)
-            a.set_title('Number of model NTR peaks as a proportion of observed NTR peaks \n Threshold = {0}m | {1}'.format(prop_tmp.threshold.values, run_name), fontsize=9)
-            fn = "thresh_freq_{0}_{1}{2}".format(prop_tmp.threshold.values, run_name, file_type)
-            f.savefig(os.path.join(dn_out, fn))
-            plt.close('all')
-            
-        prop = stats.thresh_int_ntr_mod/stats.thresh_int_ntr_obs
-        plot_thresh = [5, 10, 15]
-        for pp in range(0, len(plot_thresh)):
-            prop_tmp = prop.isel(threshold=plot_thresh[pp])
-            f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=prop_tmp, 
-                            vmin=0, vmax=2,
-                      edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
-            f.colorbar(sca)
-            a.set_title('Model hours over threshold as a proportion of observed time \n Threshold = {0}m | {1}'.format(prop_tmp.threshold.values, run_name), fontsize=9)
-            fn = "thresh_int_{0}_{1}{2}".format(prop_tmp.threshold.values, run_name, file_type)
-            f.savefig(os.path.join(dn_out, fn))
-            plt.close('all')
         
 class plot_stats_ssh_hourly_multi_cfg():
     def __init__(self, fn_ssh_hourly_stats, dn_out, run_name, file_type='.png'):
