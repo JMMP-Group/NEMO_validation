@@ -255,13 +255,27 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     ntr_corr = xr.corr(ntr_obs.dataset.ntr, ntr_mod.dataset.ntr, dim="t_dim")
     ds_stats['ntr_corr'][:,-1] = ntr_corr
 
-    ds_merge = xr.merge( (ds_stats, ds_ntr, ds_tide))
+    #  TWL (total water level) standard deviations
+    ssh_std = ds_ssh.std(dim='time', skipna=True)
+    ds_stats['ssh_std_mod'][:, 4] = ssh_std.ssh_mod
+    ds_stats['ssh_std_obs'][:, 4] = ssh_std.ssh_obs
+    ds_stats['ssh_std_err'][:, 4] = ssh_std.ssh_mod - ssh_std.ssh_obs
 
-    # Identify NTR peaks for threshold analysis
-    # Threshold statistics. (Slow)
-    #thresh_mod = tganalysis.threshold_statistics(ntr_mod.dataset, thresholds=np.arange(-2, 2, 0.1))
-    #thresh_obs = tganalysis.threshold_statistics(ntr_obs.dataset, thresholds=np.arange(-2, 2, 0.1))
-    
+    # Threshold statistics, on NTR (Slow)
+    thresh_mod = tganalysis.threshold_statistics(ntr_mod.dataset, thresholds=thresholds)
+    thresh_obs = tganalysis.threshold_statistics(ntr_obs.dataset, thresholds=thresholds)
+
+    ds_stats['thresh_peak_mod'] = thresh_mod.peak_count_ntr
+    ds_stats['thresh_peak_obs'] = thresh_obs.peak_count_ntr
+    ds_stats['thresh_time_mod'] = thresh_mod.time_over_threshold_ntr
+    ds_stats['thresh_time_obs'] = thresh_obs.time_over_threshold_ntr
+    ds_stats['thresh_dailymax_mod'] = thresh_mod.dailymax_count_ntr
+    ds_stats['thresh_dailymax_obs'] = thresh_obs.dailymax_count_ntr
+    ds_stats['thresh_monthlymax_mod'] = thresh_mod.monthlymax_count_ntr
+    ds_stats['thresh_monthlymax_obs'] = thresh_obs.monthlymax_count_ntr
+
+    # Merge datasets and write to file
+    ds_merge = xr.merge( (ds_stats, ds_ntr, ds_tide))
     write_ds_to_file(ds_merge, fn_out)
     
 def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
