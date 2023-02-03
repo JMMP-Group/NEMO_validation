@@ -74,7 +74,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
      apply_ntr_filter     : If true, apply Savgol filter to non-tidal residuals
                             before analysis.
     '''
-    min_datapoints=700
+    min_datapoints=4380  # 6month of hrly data
 
     # Create the object and then inset the netcdf dataset
     ds_ssh = coast.Tidegauge(dataset=xr.open_dataset(fn_ext))
@@ -181,8 +181,8 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     ds = tganalysis.demean_timeseries(ds_ssh.dataset)
 
     # Harmonic analysis
-    ha_mod = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_mod, min_datapoints=1000)
-    ha_obs = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_obs, min_datapoints=1000)
+    ha_mod = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_mod, min_datapoints=min_datapoints)
+    ha_obs = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_obs, min_datapoints=min_datapoints)
 
     for pp in range(n_port):
         # save constituents (name + amp/pha)
@@ -295,7 +295,7 @@ def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
      apply_ntr_filter     : If true, apply Savgol filter to non-tidal residuals
                             before analysis.
     '''
-    min_datapoints=700 
+    min_datapoints=4380 # 6 months of hrly  
     ds_ssh = xr.open_dataset(fn_ext) 
     
     # Define Dimension Sizes
