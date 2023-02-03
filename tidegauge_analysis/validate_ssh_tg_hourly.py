@@ -256,7 +256,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     ds_stats['ntr_corr'][:,-1] = ntr_corr
 
     #  TWL (total water level) standard deviations
-    ssh_std = ds_ssh.std(dim='time', skipna=True)
+    ssh_std = ds_ssh.dataset.std(dim='t_dim', skipna=True)
     ds_stats['ssh_std_mod'][:, 4] = ssh_std.ssh_mod
     ds_stats['ssh_std_obs'][:, 4] = ssh_std.ssh_obs
     ds_stats['ssh_std_err'][:, 4] = ssh_std.ssh_mod - ssh_std.ssh_obs
