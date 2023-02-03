@@ -33,15 +33,14 @@ if(0):  # Takes 7mins for one month. 1 yr in 2.5 hrs
 
 fn_analyse_out = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/{0}/tg_analysis/ssh_hourly_analyse_{1}.nc".format(run_name.upper(), run_name)
 
-if(1):
+if(0):
   print(f"Start analyse_ssh")
-  fn_extr_out = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/P0.0/tg_analysis/ssh_hourly_extract_2014_P0.0.nc"
   analyse_ssh(fn_extr_out, fn_analyse_out, thresholds = np.arange(-.4, 2, 0.1),
                 constit_to_save = ['M2','S2','K2','N2','K1','O1','P1','Q1'],
                 semidiurnal_constit = ['M2','S2','K2','N2'],
                 diurnal_constit = ['K1','O1','P1','Q1'],
                 apply_ntr_filter = True )
-if(0):  # THIS PRODUCES CORR BUT GETS STUCK WITH HARMONICS PLOTS - NO DATA.
+if(1):  # THIS PRODUCES CORR BUT GETS STUCK WITH HARMONICS PLOTS - NO DATA.
   fn_ssh_hourly_stats = fn_analyse_out
   #fn_ssh_hourly_stats = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/P0.0/tg_analysis/ssh_hourly_analyse_2014_P0.0.nc"
   plot_single_cfg( fn_ssh_hourly_stats, dn_out, run_name, file_type='.png')

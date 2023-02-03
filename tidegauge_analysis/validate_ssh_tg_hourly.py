@@ -78,7 +78,12 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
 
     # Create the object and then inset the netcdf dataset
     ds_ssh = coast.Tidegauge(dataset=xr.open_dataset(fn_ext))
-
+    try: ds_ssh.dataset = ds_ssh.dataset.swap_dims({"port":"id_dim"})
+    except: pass
+    try: ds_ssh.dataset = ds_ssh.dataset.swap_dims({"time":"t_dim"})
+    except: pass
+    try: ds_ssh.dataset = ds_ssh.dataset.drop_vars("bad_flag")
+    except: pass
     # Drop ports that have too few points
     keep_indices = np.isfinite(ds_ssh.dataset.ssh_obs).sum(dim="t_dim") >= min_datapoints
     ds_ssh = ds_ssh.isel(id_dim=keep_indices)
@@ -171,11 +176,13 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     tganalysis = coast.TidegaugeAnalysis()
 
     # Subtract means from all time series
+    print(ds_ssh.dataset)
+    print(ds_ssh.dataset.mean(dim="t_dim"))
     ds = tganalysis.demean_timeseries(ds_ssh.dataset)
 
     # Harmonic analysis
-    ha_mod = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_mod, min_datapoints=1)
-    ha_obs = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_obs, min_datapoints=1)
+    ha_mod = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_mod, min_datapoints=1000)
+    ha_obs = tganalysis.harmonic_analysis_utide(ds.dataset.ssh_obs, min_datapoints=1000)
 
     for pp in range(n_port):
         # save constituents (name + amp/pha)
@@ -198,10 +205,6 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     tide_mod = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_mod)
     tide_obs = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_obs)
 
-    # Compute differences
-    tide_err = tganalysis.difference(tide_mod.dataset, tide_obs.dataset)
-    ds_merge = tide_err.dataset
-
     # Reconstruct partial semidiurnal tidal signal
     tide_2_obs = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_obs,
                                          constit=semidiurnal_constit)
@@ -213,12 +216,19 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
                                          constit=diurnal_constit)
     tide_1_mod = tganalysis.reconstruct_tide_utide(ds.dataset.time, ha_mod,
                                          constit=diurnal_constit)
+    
+    # Compute differences
+    tide_err = tganalysis.difference(tide_mod.dataset, tide_obs.dataset)
 
     # Store tidal reconstruction data
     for pp in range(n_port):
         # Store full tidal reconstruction
         ds_tide['tide_obs'][pp, -1, :] = tide_obs.isel(id_dim=pp).dataset.reconstructed
         ds_tide['tide_mod'][pp, -1, :] = tide_mod.isel(id_dim=pp).dataset.reconstructed
+
+        ds_tide['tide_err'][pp, -1, :] = tide_err.isel(id_dim=pp).dataset.diff_reconstructed
+        ds_tide['tide_abs_err'][pp, -1, :] = tide_err.isel(id_dim=pp).dataset.abs_diff_reconstructed
+        ds_tide['tide_square_err'][pp, -1, :] = tide_err.isel(id_dim=pp).dataset.square_diff_reconstructed
 
         # Store semidiurnal tidal reconstruction
         ds_tide['tide_obs'][pp, 1, :] = tide_2_obs.isel(id_dim=pp).dataset.reconstructed
@@ -245,7 +255,7 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     ntr_corr = xr.corr(ntr_obs.dataset.ntr, ntr_mod.dataset.ntr, dim="t_dim")
     ds_stats['ntr_corr'][:,-1] = ntr_corr
 
-    ds_merge = xr.merge( (ds_merge, ds_stats, ds_ntr, ds_tide))
+    ds_merge = xr.merge( (ds_stats, ds_ntr, ds_tide))
 
     # Identify NTR peaks for threshold analysis
     # Threshold statistics. (Slow)
