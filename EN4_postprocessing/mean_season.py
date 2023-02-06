@@ -96,8 +96,6 @@ mask_means = mask_means.drop_vars("profile_mean_bathymetry").rename({"all_mean_b
 if season == "DJF": # only save once otherwise conflicts arise if writing same file simultantously
     mask_xr.to_netcdf(config.dn_out + 'mask_xr.nc')
 
-
-
 print('Regional means calculated.')
 
 print("mask means is", mask_means)
@@ -105,4 +103,16 @@ print("mask means is", mask_means)
 # SAVE mask dataset to file
 mask_means.to_netcdf(fn_out)
 print('done')
+
+
+# Repeat regional means for model data (interpolated but not differenced)
+
+# Do mask averaging
+mask_means_model = analysis.mask_means(model_profiles_interp, mask_indices)
+# Rename averaged bathymetry variable. Drop duplicate
+mask_means_model = mask_means_model.drop_vars("profile_mean_bathymetry").rename({"all_mean_bathymetry":"bathymetry"})
+# SAVE mask dataset to file
+mask_means_model.to_netcdf(fn_out.replace("daily.nc","daily_model.nc"))
+print('done')
+
 
