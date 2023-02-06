@@ -108,11 +108,11 @@ print('done')
 # Repeat regional means for model data (interpolated but not differenced)
 
 # Do mask averaging
-mask_means_model = analysis.mask_means(model_profiles_interp, mask_indices)
+mask_stats_model = analysis.mask_stats(model_profiles_interp, mask_indices)
 # Rename averaged bathymetry variable. Drop duplicate
-mask_means_model = mask_means_model.drop_vars("profile_mean_bathymetry").rename({"all_mean_bathymetry":"bathymetry"})
+mask_stats_model = mask_stats_model.drop_vars("profile_mean_bathymetry").rename({"all_mean_bathymetry":"bathymetry"})
 # SAVE mask dataset to file
-mask_means_model.to_netcdf(fn_out.replace("daily.nc","daily_model.nc"))
+mask_stats_model.to_netcdf(fn_out.replace("daily.nc","daily_model.nc"))
 print('done')
 
 
