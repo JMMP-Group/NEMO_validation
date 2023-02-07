@@ -18,6 +18,7 @@ class config:
     def __init__(self):
         # read SHELL variables. Set in config.sh
         #self.machine = environ.get('MACHINE')
+        self.coast_repo = self.get_shell_var('COAST_REPO', True)
         self.run_name = self.get_shell_var('RUN_NAME', True)
         self.mass     = self.get_shell_var('MASS', True)
         self.fn_nemo_data = self.get_shell_var('FN_NEMO_DATA', True)
