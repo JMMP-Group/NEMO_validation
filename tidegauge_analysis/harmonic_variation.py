@@ -1,4 +1,9 @@
 """
+WORK IN PROGRESS
+Harmonic analysis as a function of window length.
+Investigation of how confident should you be of an M2 amplitude taken from a 30 day observational record as an unknown
+phase of the nodal cycle.
+
 module add jaspy
 export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
 source activate $CONDA_ENV
