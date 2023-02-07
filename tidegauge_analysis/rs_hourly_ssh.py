@@ -19,7 +19,7 @@ import time
 from validate_ssh_tg_hourly import extract_ssh, analyse_ssh, plot_single_cfg
 import numpy as np
 
-constit = ['M2','S2','N2','K1','O1','P1','M4']
+#constit = ['M2','S2','N2','K1','O1','P1','M4']
 
 
 ## Use validate_ssh_tg_hourly.py
