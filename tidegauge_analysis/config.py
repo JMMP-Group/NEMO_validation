@@ -22,6 +22,7 @@ class config:
         self.run_name = self.get_shell_var('RUN_NAME', True)
         self.mass     = self.get_shell_var('MASS', True)
         self.fn_nemo_data = self.get_shell_var('FN_NEMO_DATA', True)
+        self.fn_nemo_domain  = self.get_shell_var('FN_NEMO_DOMAIN', True)
         self.fn_nemo_cfg  = self.get_shell_var('FN_NEMO_CFG', True)
         self.fn_out = self.get_shell_var('FN_OUT', True)
         self.fn_obs = self.get_shell_var('FN_OBS', True)

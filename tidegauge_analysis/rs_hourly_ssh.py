@@ -23,14 +23,14 @@ import numpy as np
 
 
 ## Use validate_ssh_tg_hourly.py
-if(0):  # Takes 7mins for one month. 1 yr in 2.5 hrs
+if(1):  # Takes 7mins for one month. 1 yr in 2.5 hrs
   print(f"Start extract_ssh")
   extract_ssh(config.fn_nemo_data, config.fn_nemo_domain, config.fn_nemo_cfg,
 		config.fn_obs, config.fn_extr_out,
                 chunks = {'time_counter':100}, dist_omit = 5)
 
 
-if(0):
+if(1):
   print(f"Start analyse_ssh")
   analyse_ssh(config.fn_extr_out, config.fn_analyse_out, thresholds = np.arange(-.4, 2, 0.1),
                 constit_to_save = ['M2','S2','K2','N2','K1','O1','P1','Q1'],
