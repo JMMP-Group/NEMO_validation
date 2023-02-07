@@ -99,3 +99,12 @@ print(ds_stats)
 # Look at M2 analysis
 ds_stats.a_obs.isel(constituent=0).plot()
 plt.show()
+
+# A look at the port locations
+plt.plot( (ds_ssh.dataset.longitude+180)% 360 - 180, ds_ssh.dataset.latitude, '.')
+for i in np.arange(n_port):
+    try:
+        plt.text(float((ds_ssh.dataset.longitude[i].values+180)% 360 - 180), float(ds_ssh.dataset.latitude[i].values), str(i))
+    except:
+        print(float((ds_ssh.dataset.longitude[i].values+180)% 360 - 180), float(ds_ssh.dataset.latitude[i].values), str(i))
+plt.show()
