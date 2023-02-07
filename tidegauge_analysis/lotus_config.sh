@@ -11,7 +11,7 @@ export MASS="xu-cb676"
 # 2014 P0.0
 export FN_NEMO_DATA="/gws/nopw/j04/jmmp/MASS/"$MASS"/shelftmb/2014*_shelftmb_grid_T.nc"
 # 10 years P0.0
-export FN_NEMO_DATA="/gws/nopw/j04/jmmp_collab/AMM15/OUTPUTS/P0.0/NC3_SSH/20*_shelftmb_grid_t.nc"
+export FN_NEMO_DATA="/gws/nopw/j04/jmmp_collab/AMM15/OUTPUTS/P0.0/NC3_SSH/20*_shelftmb_grid_T.nc"
 
 export FN_NEMO_DOMAIN="/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/CO7_EXACT_CFG_FILE.nc"
 export FN_NEMO_CFG="/home/users/jelt/GitHub/COAsT/config/example_nemo_grid_t.json"
