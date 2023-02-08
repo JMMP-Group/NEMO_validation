@@ -8,4 +8,5 @@
 module add jaspy
 source activate $CONDA_ENV
 
-python ./rs_hourly_ssh.py > LOGS/OUT.log
+echo $1  # port number
+python ./rs_hourly_ssh.py $1 > LOGS/OUT_$1.log

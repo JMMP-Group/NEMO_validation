@@ -21,22 +21,34 @@ import numpy as np
 
 #constit = ['M2','S2','N2','K1','O1','P1','M4']
 
+args = sys.argv
+
+port_id = args[1]  # index of analysis location
 
 ## Use validate_ssh_tg_hourly.py
+fn_extr_out = config.fn_extr_out.replace(".nc", '%02d'%port_id+".nc")
 if(1):  # Takes 7mins for one month. 1 yr in 2.5 hrs
   print(f"Start extract_ssh")
   extract_ssh(config.fn_nemo_data, config.fn_nemo_domain, config.fn_nemo_cfg,
-		config.fn_obs, config.fn_extr_out,
+		config.fn_obs.isel(id_dim=port_id), fn_extr_out,
                 chunks = {'time_counter':100}, dist_omit = 5)
 
-
-if(1):
+fn_analyse_out = config.fn_analyse_out.replace(".nc", '%02d'%port_id+".nc")
+if(0):
   print(f"Start analyse_ssh")
-  analyse_ssh(config.fn_extr_out, config.fn_analyse_out, thresholds = np.arange(-.4, 2, 0.1),
+  analyse_ssh(fn_extr_out, fn_analyse_out, thresholds = np.arange(-.4, 2, 0.1),
                 constit_to_save = ['M2','S2','K2','N2','K1','O1','P1','Q1'],
                 semidiurnal_constit = ['M2','S2','K2','N2'],
                 diurnal_constit = ['K1','O1','P1','Q1'],
                 apply_ntr_filter = True )
 
-if(1):  # THIS PRODUCES CORR BUT GETS STUCK WITH HARMONICS PLOTS - NO DATA.
+
+if(0):
+  # Merge the analysis across ports. Load all files, merge and save.
+  ds = xr.open_mfdataset( config.fn_analyse_out.replace(".nc", "*.nc"),
+                            combine='nested', concat_dim="id_dim", parallel=True)
+  ds.to_netcdf( config.fn_analyse_out )
+
+# Set output file, unless edited fn_ssh_hourly_stats==fn_extr_out
+if(0):  # THIS PRODUCES CORR BUT GETS STUCK WITH HARMONICS PLOTS - NO DATA.
   plot_single_cfg( config.fn_ssh_hourly_stats, config.dn_out, config.run_name, file_type='.png')

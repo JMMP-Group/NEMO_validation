@@ -18,6 +18,7 @@ export FN_NEMO_CFG="/home/users/jelt/GitHub/COAsT/config/example_nemo_grid_t.jso
 
 export FN_OUT="/gws/nopw/j04/jmmp/CO9_AMM15_validation/"$RUN_NAME"/tg_analysis/ssh_hourly_"$RUN_NAME".nc"
 export FN_OBS="/gws/nopw/j04/jmmp/CO9_AMM15/obs/tg_amm15.nc"
+export N_PORTS=61 # number of ports in $FN_OBS
 
 export DN_OUT="/home/users/jelt/GitHub/NEMO_validation/tidegauge_analysis/FIGS"
 
