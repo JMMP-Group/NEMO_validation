@@ -560,7 +560,7 @@ def analyse_ssh_old(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     write_ds_to_file(ds_stats, fn_out)
     
 def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
-                     chunks = {'time_counter':100}, dist_omit = 5):
+                     chunks = {'time_counter':100}, dist_omit = 5, port_id=0):
                      
     '''
     Routine for extraction of model ssh at obs locations.
@@ -576,6 +576,7 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
      fn_out          : Absolute path to output file
      chunks          : xarray chunking dictionary
      dist_omit       : Distance (km) from obs point to reject nearest model point
+     port_id         : (int) id_dim index to process
     '''
     
     # Read NEMO data
@@ -594,6 +595,9 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
     obs.dataset = obs.dataset.swap_dims({"port": "id_dim"})
     obs.dataset = obs.dataset.swap_dims({"time": "t_dim"})  # expected dim in COAsT, though some xarray func requires time
 
+    # Extract the port_id
+    obs.dataset = obs.dataset.isel(id_dim=port_id)
+    
     # Then do the interpolation
     model_timeseries = obs.obs_operator(nemo, time_interp='linear')
 

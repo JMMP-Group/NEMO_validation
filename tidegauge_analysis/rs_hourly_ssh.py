@@ -23,15 +23,16 @@ import numpy as np
 
 args = sys.argv
 
-port_id = args[1]  # index of analysis location
+port_id = int(args[1])  # index of analysis location
 
 ## Use validate_ssh_tg_hourly.py
 fn_extr_out = config.fn_extr_out.replace(".nc", '%02d'%port_id+".nc")
 if(1):  # Takes 7mins for one month. 1 yr in 2.5 hrs
   print(f"Start extract_ssh")
   extract_ssh(config.fn_nemo_data, config.fn_nemo_domain, config.fn_nemo_cfg,
-		config.fn_obs.isel(id_dim=port_id), fn_extr_out,
-                chunks = {'time_counter':100}, dist_omit = 5)
+		config.fn_obs, fn_extr_out,
+                chunks = {'time_counter':100}, dist_omit = 5,
+		port_id=port_id)
 
 fn_analyse_out = config.fn_analyse_out.replace(".nc", '%02d'%port_id+".nc")
 if(0):
