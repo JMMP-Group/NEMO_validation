@@ -733,7 +733,7 @@ class plot_single_cfg():
         a.set_xticks(np.arange(len(stats['constituent']))+0.5)
         a.set_xticklabels(stats['constituent'].values)
         a.set_ylabel('port')
-        fn = "ssh_hourly_harmonic_amp_obs"+file_type
+        fn = "ssh_hourly_harmonic_amp_obs"+run_name+file_type
         f.savefig(os.path.join(dn_out, fn))
         plt.close('all')
 
