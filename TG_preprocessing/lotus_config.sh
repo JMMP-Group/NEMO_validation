@@ -10,9 +10,9 @@ export COAST_REPO="/home/users/jelt/GitHub/COAsT"
 
 
 export RUN_NAME="P0.0"
-export RUN_NAME="P1.5c"
 export RUN_NAME="P1.5b"
 export RUN_NAME="P1.5"
+export RUN_NAME="P1.5c"
 
 ## 2014 P0.0
 #export MASS="xu-cb676"
