@@ -910,6 +910,7 @@ class plot_single_cfg():
         
         
 class plot_stats_ssh_hourly_multi_cfg():
+    """ Overlay plots from multi cfgs"""
     def __init__(self, fn_ssh_hourly_stats, dn_out, run_name, file_type='.png'):
         
         if type(fn_ssh_hourly_stats) is not list:
@@ -965,6 +966,7 @@ class plot_stats_ssh_hourly_multi_cfg():
         
         
 class plot_stats_ssh_hourly_compare_cfgs():
+    """ Plot differences between two configs"""
     def __init__(self, fn_ssh_hourly_stats1, fn_ssh_hourly_stats2, dn_out, 
                  run_name1, run_name2, file_type='.png'):
     
@@ -979,107 +981,97 @@ class plot_stats_ssh_hourly_compare_cfgs():
         latbounds = [latmin-4, latmax+4]
         
         ### GEOGRAPHICAL SCATTER PLOTS
-        # Plot correlations
+        # Plot difference in NTR correlations
         f,a = pu.create_geo_axes(lonbounds, latbounds)
-        sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_corr, 
-                        vmin=.85, vmax=1,
+        sca = a.scatter(stats1.longitude, stats1.latitude, c=stats1.ntr_corr-stats2.ntr_corr,
+                        vmin=-.1, vmax=.1,
                   edgecolors='k', linewidths=.5, zorder=100)
         f.colorbar(sca)
-        a.set_title('Hourly NTR Correlations with Tide Gauge | {0}'.format(run_name), fontsize=9)
-        fn = "ssh_hourly_ntr_correlations_"+run_name+file_type
+        a.set_title('Hourly NTR Correlations with Tide Gauge difference | corr({0}) - corr({1})'.format(run_name1,run_name2), fontsize=9)
+        fn = "ssh_hourly_ntr_correlations_difference"+run_name1+"-"+run_name2+file_type
         f.savefig(os.path.join(dn_out, fn))
         plt.close('all')
         
-        # Plot std_err
+        # Plot difference in std_err
         f,a = pu.create_geo_axes(lonbounds, latbounds)
-        sca = a.scatter(stats.longitude, stats.latitude, c=stats.std_err, 
+        sca = a.scatter(stats1.longitude, stats1.latitude, c=stats1.std_err-stats2.std_err,
                         vmin=-.15, vmax=.15,
                   edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
         f.colorbar(sca)
-        a.set_title('Hourly SSH St. Dev Error (m) | {0}'.format(run_name), fontsize=9)
-        fn = "ssh_hourly_stderr_"+run_name+file_type
+        a.set_title('Hourly SSH St. Dev Error (m) difference | std({0}) - std({1})'.format(run_name1,run_name2), fontsize=9)
+        fn = "ssh_hourly_stderr_difference"+run_name1+"-"+run_name2+file_type
         f.savefig(os.path.join(dn_out, fn))
         plt.close('all')
         
-        # Plot mae
+        # Plot difference in mae
         f,a = pu.create_geo_axes(lonbounds, latbounds)
-        sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_mae, 
-                        vmin=-.05, vmax=.05,
+        sca = a.scatter(stats1.longitude, stats1.latitude, c=stats1.ntr_mae-stats2.ntr_mae,
+                        #vmin=-.05, vmax=.05,
                   edgecolors='k', linewidths=.5, zorder=100)
         f.colorbar(sca)
-        a.set_title('Hourly NTR MAE (m) | {0}'.format(run_name), fontsize=9)
-        fn = "ssh_hourly_ntr_mae_"+run_name+file_type
+        a.set_title('Hourly NTR MAE (m) difference | {0} - {1}'.format(run_name1,run_name2), fontsize=9)
+        fn = "ssh_hourly_ntr_mae_difference"+run_name1+"-"+run_name2+file_type
         f.savefig(os.path.join(dn_out, fn))
         plt.close('all')
         
         ### HARMONIC ERRORS 
-        constit = stats.constituent.values
+        constit = stats1.constituent.values
         n_constit = len(constit)
         
         for cc in range(0,n_constit):
-            # AMPLITUDE MAP
+            # AMPLITUDE MAP DIFF of ABS; (abs_err1 - abs_err2)
             f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=stats.a_err[:,cc], 
-                            vmin=-.2, vmax=.2,
-                      edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
-            f.colorbar(sca)
-            a.set_title('Amplitude Error (m) | {1} - Obs | {0}'.format(constit[cc], run_name), fontsize=9)
-            fn = "ssh_hourly_amp_err_{0}_{1}{2}".format(constit[cc],run_name,file_type)
-            f.savefig(os.path.join(dn_out, fn))
-            plt.close('all')
-            
-            # PHASE MAP
-            f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=stats.g_err[:,cc], 
-                            vmin=-15, vmax=15,
-                      edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
-            f.colorbar(sca)
-            a.set_title('Phase Error (deg) | {1} - Obs | {0}'.format(constit[cc], run_name), fontsize=9)
-            fn = "ssh_hourly_pha_err_{0}_{1}{2}".format(constit[cc],run_name,file_type)
-            f.savefig(os.path.join(dn_out, fn))
-            plt.close('all')
-            
-            # AMPLITUDE SCATTER
-            f,a = pu.scatter_with_fit(stats.a_mod[:,cc], stats.a_obs[:,cc])
-            a.set_title('Amplitude Comparison | {0} | {1}'.format(constit[cc], run_name), fontsize=9)
-            a.set_xlabel("Model Amplitude (m)")
-            a.set_ylabel("Observed Amplitude (m)")
-            fn = "ssh_hourly_scatter_amp_{0}_{1}{2}".format(constit[cc], run_name, file_type)
-            f.savefig(os.path.join(dn_out, fn))
-            plt.close('all')
-            
-            # PHASE SCATTER
-            f,a = pu.scatter_with_fit(stats.g_mod[:,cc], stats.g_obs[:,cc])
-            a.set_title('Phase Comparison | {0} | {1}'.format(constit[cc], run_name), fontsize=9)
-            a.set_xlabel("Model Phase(deg)")
-            a.set_ylabel("Observed Phase (deg)")
-            fn = "ssh_hourly_scatter_pha_{0}_{1}{2}".format(constit[cc], run_name, file_type)
-            f.savefig(os.path.join(dn_out, fn))
-            plt.close('all')
-        
-        ### CLIM VAR ERROR
-        # Jan
-        m_ind = [0,3,6,9]
-        m_str = ['Jan','Mar','Jul','Oct']
-        n_m = len(m_ind)
-        for mm in range(0,n_m):
-            f,a = pu.create_geo_axes(lonbounds, latbounds)
-            sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_mod_clim_var[:,m_ind[mm]] - stats.ntr_obs_clim_var[:,m_ind[mm]], 
+            sca = a.scatter(stats1.longitude, stats1.latitude, c=np.abs(stats1.a_err[:,cc])-np.abs(stats2.a_err[:,cc]),
                             vmin=-.05, vmax=.05,
                       edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
             f.colorbar(sca)
-            a.set_title('Climatological Variance Error | {1} | var({0}) - var(Obs)'.format(run_name, m_str[mm]), fontsize=9)
-            fn = "ssh_hourly_clim_var_error_{0}_{1}{2}".format(m_str[mm],run_name,file_type)
+            a.set_title('Amplitude Error (m). Abs diff | {1} - {3} | {0}'.format(constit[cc], run_name1, run_name2), fontsize=9)
+            fn = "ssh_hourly_amp_err_absdiff_{0}_{1}-{2}{3}".format(constit[cc], run_name1, run_name2, file_type)
             f.savefig(os.path.join(dn_out, fn))
             plt.close('all')
+            
+            if(0):
+                # PHASE MAP
+                f,a = pu.create_geo_axes(lonbounds, latbounds)
+                sca = a.scatter(stats1.longitude, stats1.latitude, c=stats.g_err[:,cc],
+                                vmin=-15, vmax=15,
+                          edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
+                f.colorbar(sca)
+                a.set_title('Phase Error (deg) | {1} - Obs | {0}'.format(constit[cc], run_name), fontsize=9)
+                fn = "ssh_hourly_pha_err_{0}_{1}{2}".format(constit[cc],run_name,file_type)
+                f.savefig(os.path.join(dn_out, fn))
+                plt.close('all')
+            else:
+                if cc == 0: print(f"Diff of phase maps not plotted")
+
+            if(0):
+                ### CLIM VAR ERROR
+                # Jan
+                m_ind = [0,3,6,9]
+                m_str = ['Jan','Mar','Jul','Oct']
+                n_m = len(m_ind)
+                for mm in range(0,n_m):
+                    f,a = pu.create_geo_axes(lonbounds, latbounds)
+                    sca = a.scatter(stats.longitude, stats.latitude, c=stats.ntr_mod_clim_var[:,m_ind[mm]] - stats.ntr_obs_clim_var[:,m_ind[mm]],
+                                    vmin=-.05, vmax=.05,
+                              edgecolors='k', linewidths=.5, zorder=100, cmap='seismic')
+                    f.colorbar(sca)
+                    a.set_title('Climatological Variance Error | {1} | var({0}) - var(Obs)'.format(run_name, m_str[mm]), fontsize=9)
+                    fn = "ssh_hourly_clim_var_error_{0}_{1}{2}".format(m_str[mm],run_name,file_type)
+                    f.savefig(os.path.join(dn_out, fn))
+                    plt.close('all')
+            else:
+                if cc == 0: print(f"Diff of climatological NTR not plotted")
         
-        ### FITTED SCATTER PLOTS
-        # Plot st.dev comparisons
-        f,a = pu.scatter_with_fit(stats.skew_mod, stats.skew_obs)
-        a.set_title('Skew Surge Comparison | {0}'.format(run_name), fontsize=9)
-        a.set_xlabel("{0} SSH st. dev (m)".format(run_name))
-        a.set_ylabel("PSMSL SSH st. dev (m)")
-        fn = "ssh_hourly_skew_scatter_{0}{1}".format(run_name, file_type)
-        f.savefig(os.path.join(dn_out, fn))
-        plt.close('all')
+        if(0):
+            ### FITTED SCATTER PLOTS
+            f,a = pu.scatter_with_fit(stats.skew_mod, stats.skew_obs)
+            a.set_title('Skew Surge Comparison | {0}'.format(run_name), fontsize=9)
+            a.set_xlabel("{0} SSH st. dev (m)".format(run_name))
+            a.set_ylabel("PSMSL SSH st. dev (m)")
+            fn = "ssh_hourly_skew_scatter_{0}{1}".format(run_name, file_type)
+            f.savefig(os.path.join(dn_out, fn))
+            plt.close('all')
+        else:
+            print(f"Diff of scatter skew not plotted")
         return
