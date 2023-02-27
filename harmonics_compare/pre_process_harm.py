@@ -89,9 +89,9 @@ obs.dataset['A'] = xr.zeros_like(obs.dataset.M2x)
 obs.dataset['G'] = xr.zeros_like(obs.dataset.M2x)
 obs.dataset['A'].values, obs.dataset['G'].values = amp_pha_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
 
-# Load model data
-#################
-if config.run_name == "fes2014":
+# Load and save model data
+##########################
+if config.run_name.lower() == "fes2014":
     print(f"run_name: {config.run_name}")
     tg = load_and_save_fes2014()
 else:
