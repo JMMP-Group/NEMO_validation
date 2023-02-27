@@ -26,14 +26,23 @@ import numpy as np
 #year = int(args[1])
 #month  = int(args[2])
 
-def amp_pha_from_re_im(creal,cimag):
+def amp_from_re_im(creal,cimag):
     """
     Example usage: amp,pha = amp_pha_from_re_im(ds.M2x,ds.M2y)
     """
     cc=creal+cimag*1j
     amp=np.abs(cc)
     pha=np.angle(cc)*180/np.pi
-    return(amp,pha)
+    return amp
+
+def pha_from_re_im(creal,cimag):
+    """
+    Example usage: amp,pha = amp_pha_from_re_im(ds.M2x,ds.M2y)
+    """
+    cc=creal+cimag*1j
+    amp=np.abs(cc)
+    pha=np.angle(cc)*180/np.pi
+    return pha
 
 def load_and_save_nemo():
     nemo = coast.Gridded(config.fn_nemo_data, config.fn_nemo_domain, config=config.fn_nemo_cfg, multiple=True)  # , chunks=chunks)
@@ -42,7 +51,8 @@ def load_and_save_nemo():
     # print("nemo.dataset['M2y'] = -nemo.dataset.M2y  # Not particularly happy about this fix... ")
     nemo.dataset['A'] = xr.zeros_like(nemo.dataset.M2x)
     nemo.dataset['G'] = xr.zeros_like(nemo.dataset.M2x)
-    nemo.dataset['A'], nemo.dataset['G'] = amp_pha_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
+    nemo.dataset['A'] = amp_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
+    nemo.dataset['G'] = pha_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
 
     # Create a landmask array in Gridded
     nemo.dataset["landmask"] = nemo.dataset.bottom_level == 0
@@ -86,7 +96,8 @@ obs.dataset = obs.dataset.rename_vars({"z1":"M2x", "z2":"M2y"})
 #obs.dataset['G'] = -np.arctan2(obs.dataset.M2x, obs.dataset.M2y)  # z1=M2x=a.sin(g); z2=M2y=a.cos(g). Phase increasing _clockwise_ from 'noon'
 obs.dataset['A'] = xr.zeros_like(obs.dataset.M2x)
 obs.dataset['G'] = xr.zeros_like(obs.dataset.M2x)
-obs.dataset['A'], obs.dataset['G'] = amp_pha_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
+obs.dataset['A'] = amp_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
+obs.dataset['G'] = pha_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
 
 # Load model data
 #################
