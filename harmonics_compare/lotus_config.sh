@@ -1,6 +1,6 @@
 #export MACHINE="LOTUS"  # resource on JASMIN. Already set
 
-## Years to loop over during monthly preprocessing: called in iter_tg_analysis.sh
+## Years to loop over during preprocessing: called in ...
 export STARTYEAR=2004 #1980  # 2004
 export ENDYEAR=2014 #1980    # 2014
 
@@ -8,8 +8,8 @@ export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
 # location of COAsT repo, if using a particular branch
 export COAST_REPO="/home/users/jelt/GitHub/COAsT"
 
-## RUN_NAME set in ${MACHINE,,}_pre_process_tg_monthly.sh from a passed variable
-# E.g. ${MACHINE,,}_pre_process_tg_monthly.sh $config
+## RUN_NAME set in ${MACHINE,,}_pre_process_harm.sh from a passed variable
+# E.g. ${MACHINE,,}_pre_process_harm.sh $config
 #export RUN_NAME="GS1p1_tide"
 #export RUN_NAME="GS1p2_full"
 #export RUN_NAME="fes2014"

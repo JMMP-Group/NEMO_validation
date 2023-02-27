@@ -16,4 +16,4 @@ export RUN_NAME=$1
 source config.sh  # sets paths for config given #RUN_NAME
 
 # pass config string
-python ./pre_process_tg_monthly.py > LOGS/OUT_$1.log
+python ./pre_process_harm.py > LOGS/OUT_$1.log
