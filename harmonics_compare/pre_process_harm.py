@@ -51,8 +51,8 @@ def load_and_save_nemo():
     # print("nemo.dataset['M2y'] = -nemo.dataset.M2y  # Not particularly happy about this fix... ")
     nemo.dataset['A'] = xr.zeros_like(nemo.dataset.M2x)
     nemo.dataset['G'] = xr.zeros_like(nemo.dataset.M2x)
-    nemo.dataset['A'] = amp_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
-    nemo.dataset['G'] = pha_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
+    nemo.dataset['A'].values = amp_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
+    nemo.dataset['G'].values = pha_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
 
     # Create a landmask array in Gridded
     nemo.dataset["landmask"] = nemo.dataset.bottom_level == 0
@@ -96,8 +96,8 @@ obs.dataset = obs.dataset.rename_vars({"z1":"M2x", "z2":"M2y"})
 #obs.dataset['G'] = -np.arctan2(obs.dataset.M2x, obs.dataset.M2y)  # z1=M2x=a.sin(g); z2=M2y=a.cos(g). Phase increasing _clockwise_ from 'noon'
 obs.dataset['A'] = xr.zeros_like(obs.dataset.M2x)
 obs.dataset['G'] = xr.zeros_like(obs.dataset.M2x)
-obs.dataset['A'] = amp_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
-obs.dataset['G'] = pha_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
+obs.dataset['A'].values = amp_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
+obs.dataset['G'].values = pha_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
 
 # Load model data
 #################
