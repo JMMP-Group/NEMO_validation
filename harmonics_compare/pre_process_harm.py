@@ -36,7 +36,7 @@ def amp_pha_from_re_im(creal,cimag):
     return(amp,pha)
 
 def load_and_save_nemo():
-    nemo = coast.Gridded(fn_nemo_data, fn_nemo_domain, config=fn_nemo_cfg, multiple=True)  # , chunks=chunks)
+    nemo = coast.Gridded(config.fn_nemo_data, config.fn_nemo_domain, config=config.fn_nemo_cfg, multiple=True)  # , chunks=chunks)
 
     # nemo.dataset['M2y'] = -nemo.dataset.M2y  # Not particularly happy about this fix...
     # print("nemo.dataset['M2y'] = -nemo.dataset.M2y  # Not particularly happy about this fix... ")
@@ -48,16 +48,16 @@ def load_and_save_nemo():
     # Find nearest NEMO geographic neighbours to observation locations
     print(f"Implementing the obs_operator: obs.obs_operator(nemo)")
     tg = obs.obs_operator(nemo)
-    print(f"Write processed file to {fn_analysis_out}")
-    tg.to_netcdf(fn_analysis_out)
+    print(f"Write processed file to {config.fn_analysis_out}")
+    tg.to_netcdf(config.fn_analysis_out)
     return tg
 
 def load_and_save_fes2014():
     ## Load FES model harmonics data
 
     # Load FES data
-    fes = coast.Gridded(fn_fes_amp, fn_nemo_domain, config=fn_nemo_cfg)
-    fes_pha = coast.Gridded(fn_fes_pha, fn_nemo_domain, config=fn_nemo_cfg)
+    fes     = coast.Gridded(config.fn_fes_amp, config.fn_nemo_domain, config=config.fn_nemo_cfg)
+    fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
     fes.dataset['A'] = fes.dataset.M2amp
     fes.dataset['G'] = fes_pha.dataset.M2pha
 
@@ -68,15 +68,15 @@ def load_and_save_fes2014():
     # Find nearest NEMO geographic neighbours to observation locations
     print(f"Implementing the obs_operator: obs.obs_operator(nemo)")
     tg = obs.obs_operator(fes)
-    print(f"Write processed file to {fn_analysis_out}")
-    tg.to_netcdf(fn_analysis_out)
+    print(f"Write processed file to {config.fn_analysis_out}")
+    tg.to_netcdf(config.fn_analysis_out)
     return tg
 
 
 
 # Load obs data
 ###############
-obs = coast.Tidegauge(dataset=xr.open_dataset(fn_harm_obs))
+obs = coast.Tidegauge(dataset=xr.open_dataset(config.fn_harm_obs))
 obs.dataset = obs.dataset.rename_dims({"locs":"id_dim"})  # coast tidegauge object expects dims {id_dim, t_dim}
 obs.dataset = obs.dataset.rename_vars({"z1":"M2x", "z2":"M2y"})
 
@@ -87,9 +87,9 @@ obs.dataset['A'], obs.dataset['G'] = amp_pha_from_re_im(obs.dataset.M2x, obs.dat
 # Load model data
 #################
 if run_name == "fes2014":
-    print(f"run_name: {run_name}")
+    print(f"run_name: {config.run_name}")
     tg = load_and_save_fes2014()
 else:
-    print(f"run_name: {run_name}")
+    print(f"run_name: {config.run_name}")
     tg = load_and_save_nemo()
 
