@@ -86,7 +86,7 @@ obs.dataset['A'], obs.dataset['G'] = amp_pha_from_re_im(obs.dataset.M2x, obs.dat
 
 # Load model data
 #################
-if run_name == "fes2014":
+if config.run_name == "fes2014":
     print(f"run_name: {config.run_name}")
     tg = load_and_save_fes2014()
 else:
