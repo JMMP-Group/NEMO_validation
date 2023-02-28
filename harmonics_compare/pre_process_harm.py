@@ -42,8 +42,8 @@ def re_im_from_amp_pha(amp, pha):
     """
     if np.max(np.abs(pha)) <= 2*np.pi:
         print(f"Warning. Check phase units. Expected degrees. Max: {np.max(pha)}. Min: {np.min(pha)}")
-    re = amp*cos(pha*np.pi/180)
-    im = amp*sin(pha*np.pi/180)
+    re = amp*np.cos(pha*np.pi/180)
+    im = amp*np.sin(pha*np.pi/180)
     return re, im
 
 def load_and_save_nemo():
