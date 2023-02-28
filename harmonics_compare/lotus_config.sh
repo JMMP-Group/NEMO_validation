@@ -37,7 +37,7 @@ export FN_NEMO_CFG="/home/users/jelt/GitHub/COAsT/config/example_nemo_grid_t.jso
 
 export DN_OUT="/gws/nopw/j04/class_vol2/senemo/jelt/"
 
-export FN_ANALYSE_OUT=$DN_OUT"PROCESSED/"$RUN_NAME".nc"
+export FN_ANALYSIS_OUT=$DN_OUT"PROCESSED/"$RUN_NAME".nc"
 
 
 
