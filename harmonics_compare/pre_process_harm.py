@@ -52,7 +52,7 @@ def load_and_save_nemo():
     print(f"Implementing the obs_operator: obs.obs_operator(nemo)")
     tg = obs.obs_operator(nemo)
     print(f"Write processed file to {config.fn_analysis_out}")
-    tg.to_netcdf(config.fn_analysis_out)
+    tg.dataset.to_netcdf(config.fn_analysis_out)
     return tg
 
 def load_and_save_fes2014():
@@ -72,7 +72,7 @@ def load_and_save_fes2014():
     print(f"Implementing the obs_operator: obs.obs_operator(nemo)")
     tg = obs.obs_operator(fes)
     print(f"Write processed file to {config.fn_analysis_out}")
-    tg.to_netcdf(config.fn_analysis_out)
+    tg.dataset.to_netcdf(config.fn_analysis_out)
     return tg
 
 
