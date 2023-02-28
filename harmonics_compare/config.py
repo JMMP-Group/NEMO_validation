@@ -27,7 +27,7 @@ class config:
         self.fn_nemo_data = self.get_shell_var('FN_NEMO_DATA', True)
         self.fn_nemo_domain  = self.get_shell_var('FN_NEMO_DOMAIN', True)
         self.fn_nemo_cfg  = self.get_shell_var('FN_NEMO_CFG', True)
-        self.fn_analyse_out      = self.get_shell_var('FN_ANALYSE_OUT', True)
+        self.fn_analysis_out      = self.get_shell_var('FN_ANALYSIS_OUT', True)
 
     def get_shell_var(self, var:str, debug=False):
         try:
