@@ -71,7 +71,7 @@ def load_and_save_fes2014():
     # Load FES data
     fes     = coast.Gridded(config.fn_fes_amp, config.fn_nemo_domain, config=config.fn_nemo_cfg)
     fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
-    fes.dataset['A'] = fes.dataset.M2amp
+    fes.dataset = fes.dataset.rename({"M2amp": "A"})
     fes.dataset['G'] = fes_pha.dataset.M2pha
 
     fes.dataset['M2x'] = xr.zeros_like(fes.dataset.A)
