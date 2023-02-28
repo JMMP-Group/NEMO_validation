@@ -26,15 +26,25 @@ import numpy as np
 #year = int(args[1])
 #month  = int(args[2])
 
-def amp_pha_from_re_im(creal,cimag):
+def amp_pha_from_re_im(creal, cimag):
     """
-    Example usage: amp,pha = amp_pha_from_re_im(ds.M2x,ds.M2y)
+    Example usage: amp,pha = amp_pha_from_re_im(ds.M2x, ds.M2y)
     """
     cc=creal+cimag*1j
     amp=np.abs(cc)
     pha=np.angle(cc)*180/np.pi
     return amp, pha
 
+def re_im_from_amp_pha(amp, pha):
+    """
+    Assumes phase in degrees
+    Example usage: amp,pha = amp_pha_from_re_im(ds.amp, ds.pha)
+    """
+    if np.max(np.abs(pha)) <= 2*np.pi:
+        print(f"Warning. Check phase units. Expected degrees. Max: {np.max(pha)}. Min: {np.min(pha)}")
+    re = amp*cos(pha*np.pi/180)
+    im = amp*sin(pha*np.pi/180)
+    return re, im
 
 def load_and_save_nemo():
     nemo = coast.Gridded(config.fn_nemo_data, config.fn_nemo_domain, config=config.fn_nemo_cfg, multiple=True)  # , chunks=chunks)
@@ -63,6 +73,10 @@ def load_and_save_fes2014():
     fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
     fes.dataset['A'] = fes.dataset.M2amp
     fes.dataset['G'] = fes_pha.dataset.M2pha
+
+    fes.dataset['M2x'] = xr.zeros_like(fes.dataset.A)
+    fes.dataset['M2y'] = xr.zeros_like(fes.dataset.A)
+    fes.dataset['M2x'], fes.dataset['M2y'] = re_im_from_amp_pha(fes.dataset['A'], fes.dataset['G'])
 
     # Create a landmask array in Gridded
     fes.dataset["landmask"] = fes.dataset.bottom_level == 0
