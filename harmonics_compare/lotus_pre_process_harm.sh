@@ -10,7 +10,7 @@ source activate $CONDA_ENV
 
 #export RUN_NAME="GS1p1_tide"
 #export RUN_NAME="GS1p2_full"
-#export RUN_NAME="fes2014"
+#export RUN_NAME="FES2014"
 
 export RUN_NAME=$1
 source config.sh  # sets paths for config given #RUN_NAME

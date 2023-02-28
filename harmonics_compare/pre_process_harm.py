@@ -91,7 +91,7 @@ obs.dataset['A'].values, obs.dataset['G'].values = amp_pha_from_re_im(obs.datase
 
 # Load and save model data
 ##########################
-if config.run_name.lower() == "fes2014":
+if config.run_name.lower() == "FES2014":
     print(f"run_name: {config.run_name}")
     tg = load_and_save_fes2014()
 else:
