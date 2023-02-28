@@ -109,7 +109,7 @@ if config.run_name.upper() == "FES2014":
     print(f"run_name: {config.run_name}")
     tg = load_and_save_fes2014()
     # Save obs data only when processing FES2014 data
-    obs.dataset.to_netcdf(config.fn_analysis_out.replace(run_name,'obs'))
+    obs.dataset.to_netcdf(config.fn_analysis_out.replace(config.run_name,'obs'))
 else:
     print(f"run_name: {config.run_name}")
     tg = load_and_save_nemo()
