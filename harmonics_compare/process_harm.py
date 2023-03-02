@@ -25,6 +25,7 @@ import numpy as np
 import time
 #from validate_ssh_tg_hourly import extract_ssh, analyse_ssh, plot_single_cfg
 import numpy as np
+from taylor_harmonic_tide_plot import TaylorTide
 
 
 def modulo_align_phases_to_x(x, y, deg=True):
@@ -410,9 +411,37 @@ print(label)
 
 ## Check cosine rule consistency
 A = rms_amp
-B = rms_amp[0]
 C = rms_err
 costheta = R
 
-for i in range(len(R)):
+B = rms_amp[0]
+for i in range(0,4):
     print(f"{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i]**2 + B**2 - 2*A[i]*B*costheta[i])}. C={C[i]}")
+B = rms_amp[5]
+for i in range(4,8):
+    print(f"{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i]**2 + B**2 - 2*A[i]*B*costheta[i])}. C={C[i]}")
+
+
+
+# Create TaylorTide plot template
+tt = TaylorTide(
+    r_obs=rms_amp[0],
+    rms_amp_max=0.7,
+    rms_amp_contours=[0.2, 0.4, 0.6],
+    rms_err_contours=[0.2, 0.4, 0.6],
+    cos_theta_lines=[0.3, 0.6, 0.9],
+    )
+# Add data to axes
+tt.ax.scatter( rms_amp[1:4] * R[1:4], rms_amp[1:4] * np.sqrt(1 - R[1:4]**2) , s=10, c='r')
+
+# Create TaylorTide plot template
+tt = TaylorTide(
+    r_obs = rms_amp[4],
+    rms_amp_max=0.61,
+    rms_amp_contours=[0.2, 0.4, 0.6],
+    rms_err_contours=[0.2, 0.4, 0.6],
+    cos_theta_lines=[0.3, 0.6, 0.9],
+    )
+# Add data to axes
+tt.ax.scatter( rms_amp[5::] * R[5::], rms_amp[5::] * np.sqrt(1 - R[5::]**2) , s=10, c='r')
+plt.show()
