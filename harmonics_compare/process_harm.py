@@ -331,16 +331,18 @@ for EXP in ["GS1P1", "GS1P2", "FES2014"]:
 #%% Compute Taylor diagram stats
 count = 0
 for subset in ['shal', 'deep']:
+    try: del II, z1obs, z2obs, z1mod, z2mod
+    except: pass
     if subset == 'deep':
         # separate observations by depth
-        I = fes.dataset.bathymetry.values > 200
+        II = fes.dataset.bathymetry.values > 200
     elif subset == 'shal':
-        I = fes.dataset.bathymetry.values <= 200
+        II = fes.dataset.bathymetry.values <= 200
     else:
         print(f"Not expecting that {subset}")
 
-    z1obs, z2obs = obs.dataset.M2x[I], obs.dataset.M2y[I]
-    if(1):
+    z1obs, z2obs = obs.dataset.M2x[II], obs.dataset.M2y[II]
+    if(0):
         # %%  Plot distributions of depth at observation locations
         plt.close('all')
         plt.figure()
@@ -359,11 +361,11 @@ for subset in ['shal', 'deep']:
         rms_err = np.array([0])  # err for obs
     else:
         R = np.hstack((R, 1))
-        rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
+        rms_amp = np.hstack((rms_amp, rms_abs_amp(z1obs, z2obs)))
         rms_err = np.hstack((rms_err, 0))
 
     # FES
-    z1mod, z2mod = fes.dataset.M2x[I], fes.dataset.M2y[I]
+    z1mod, z2mod = fes.dataset.M2x[II], fes.dataset.M2y[II]
     # obs_new, mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_fes.dataset.M2x)
     # z1obs_new = obs_new.dataset.M2x
     # z1mod_new = mod_new.dataset.M2x
@@ -376,7 +378,8 @@ for subset in ['shal', 'deep']:
     rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
 
     # GS1P1
-    z1mod, z2mod = gs1p1.dataset.M2x[I], gs1p1.dataset.M2y[I]
+    del z1mod, z2mod
+    z1mod, z2mod = gs1p1.dataset.M2x[II], gs1p1.dataset.M2y[II]
     # z1obs_new, z1mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_mx2.dataset.M2x)
     # z2obs_new, z2mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_mx2.dataset.M2y)
 
@@ -385,7 +388,8 @@ for subset in ['shal', 'deep']:
     rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
 
     # GS1P2
-    z1mod, z2mod = gs1p2.dataset.M2x[I], gs1p2.dataset.M2y[I]
+    del z1mod, z2mod
+    z1mod, z2mod = gs1p2.dataset.M2x[II], gs1p2.dataset.M2y[II]
     # z1obs_new, z1mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_mv2.dataset.M2x)
     # z2obs_new, z2mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_mv2.dataset.M2y)
     R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
