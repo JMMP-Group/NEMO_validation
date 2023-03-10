@@ -12,7 +12,7 @@ export COAST_REPO="/home/users/jelt/GitHub/COAsT"
 
 
 if [ $RUN_NAME = "GS1p1_tide" ]; then
- export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/cwilso01/ZPS_REF_TIDE/OUTPUTS/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
+ export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/cwilso01/ZPS_REF_TIDE/OUTPUTS/SENEMO_1y_20190101_20191231_grid_T_2D.nc"
 
 elif [ $RUN_NAME = "GS1p2_full" ]; then
  export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/jdha/FINAL_TESTING/EXP_MESv2_NOTAPER_WAV_DJC_NTM_TDISSx2/output/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
