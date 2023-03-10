@@ -48,12 +48,12 @@ def re_im_from_amp_pha(amp, pha):
 
 def load_and_save_nemo():
     nemo = coast.Gridded(config.fn_nemo_data, config.fn_nemo_domain, config=config.fn_nemo_cfg, multiple=True)  # , chunks=chunks)
-
-    # nemo.dataset['M2y'] = -nemo.dataset.M2y  # Not particularly happy about this fix...
-    # print("nemo.dataset['M2y'] = -nemo.dataset.M2y  # Not particularly happy about this fix... ")
-    nemo.dataset['A'] = xr.zeros_like(nemo.dataset.M2x)
-    nemo.dataset['G'] = xr.zeros_like(nemo.dataset.M2x)
-    nemo.dataset['A'].values, nemo.dataset['G'].values = amp_pha_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
+    for count, constit in enumerate(constit_list):
+        nemo.dataset[constit+'y'] = -nemo.dataset[constit+'y']  # Not particularly happy about this fix...
+        print("nemo.dataset['M2y'] = -nemo.dataset.M2y  # Not particularly happy about this fix... ")
+        #nemo.dataset['A'] = xr.zeros_like(nemo.dataset.M2x)
+        #nemo.dataset['G'] = xr.zeros_like(nemo.dataset.M2x)
+        #nemo.dataset['A'].values, nemo.dataset['G'].values = amp_pha_from_re_im(nemo.dataset[constit+'x'], nemo.dataset[constit+'y'])
 
     # Create a landmask array in Gridded
     nemo.dataset["landmask"] = nemo.dataset.bottom_level == 0
