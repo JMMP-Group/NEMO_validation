@@ -143,7 +143,7 @@ for count, constit in enumerate(constit_list):
         obs.dataset = xr.merge((obs.dataset,ds.dataset), compat="override")
     except:
         print(f"load and save obs: Skipped constituent: {constit}")
-    print(f"Write processed file to {config.fn_analysis_out.replace(config.run_name,'obs')}")
+    print(f"obs constit {constit} processed")
     obs.dataset.attrs['title'] = "Observations used for GTM DA. (Reprocessed using https://github.com/JMMP-Group/NEMO_validation)"
     obs.dataset.attrs['history'] = obs.dataset.attrs['history'] + ". Reprocessed "+str(np.datetime64('now'))
 
@@ -154,6 +154,7 @@ if config.run_name.upper() == "FES2014":
     print(f"run_name: {config.run_name}")
     tg = load_and_save_fes2014()
     # Save obs data only when processing FES2014 data
+    print(f"Write processed file to {config.fn_analysis_out.replace(config.run_name,'obs')}")
     obs.dataset.to_netcdf(config.fn_analysis_out.replace(config.run_name,'obs'))
 else:
     print(f"run_name: {config.run_name}")
