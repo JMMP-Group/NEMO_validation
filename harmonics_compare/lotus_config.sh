@@ -18,8 +18,9 @@ elif [ $RUN_NAME = "GS1p2_full" ]; then
  export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/jdha/FINAL_TESTING/EXP_MESv2_NOTAPER_WAV_DJC_NTM_TDISSx2/output/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
 
 elif [ $RUN_NAME = "FES2014" ]; then
-  export FN_FES_AMP="/gws/nopw/j04/class_vol2/senemo/shared/FES2014_M2_amp_on_SENEMO_grid.nc"
-  export FN_FES_PHA="/gws/nopw/j04/class_vol2/senemo/shared/FES2014_M2_pha_on_SENEMO_grid.nc"
+  export DN_FES="/gws/nopw/j04/class_vol2/senemo/shared/FES2014/"
+  #export FN_FES_AMP="/gws/nopw/j04/class_vol2/senemo/shared/FES2014_M2_amp_on_SENEMO_grid.nc"
+  #export FN_FES_PHA="/gws/nopw/j04/class_vol2/senemo/shared/FES2014_M2_pha_on_SENEMO_grid.nc"
 #else #
 
 fi

@@ -19,7 +19,7 @@ import time
 #from validate_ssh_tg_hourly import extract_ssh, analyse_ssh, plot_single_cfg
 import numpy as np
 
-#constit = ['M2','S2','N2','K1','O1','P1','M4']
+#constit = ['M2','S2','N2','K1','O1','Q1','P1','K2','M4','MS4']
 
 #args = sys.argv
 
@@ -65,22 +65,24 @@ def load_and_save_nemo():
     tg.dataset.to_netcdf(config.fn_analysis_out)
     return tg
 
-def load_and_save_fes2014():
+def load_and_save_fes2014(constit="M2"):
     ## Load FES model harmonics data
 
     # Load FES data
-    fes     = coast.Gridded(config.fn_fes_amp, config.fn_nemo_domain, config=config.fn_nemo_cfg)
-    fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
-    fes.dataset = fes.dataset.rename({"M2amp": "A"})
-    fes.dataset['G'] = fes_pha.dataset.M2pha
+    #fes     = coast.Gridded(config.fn_fes_amp, config.fn_nemo_domain, config=config.fn_nemo_cfg)
+    #fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
+    ds = xr.open_dataset(config.dn_fes+constit+"_z.nc")
+    fes = coast.Gridded(dataset=ds)
 
-    fes.dataset['M2x'] = xr.zeros_like(fes.dataset.A)
-    fes.dataset['M2y'] = xr.zeros_like(fes.dataset.A)
-    fes.dataset['M2x'], fes.dataset['M2y'] = re_im_from_amp_pha(fes.dataset['A'], fes.dataset['G'])
+    fes.dataset = fes.dataset.rename({"amplitude": "A", "phase": "G"})
+
+    fes.dataset[constit+'x'] = xr.zeros_like(fes.dataset.A)
+    fes.dataset[constit+'y'] = xr.zeros_like(fes.dataset.A)
+    fes.dataset[constit+'x'], fes.dataset[constit+'y'] = re_im_from_amp_pha(fes.dataset['A'], fes.dataset['G'])
 
     # Create a landmask array in Gridded
-    fes.dataset["landmask"] = fes.dataset.bottom_level == 0
-    fes.dataset = fes.dataset.rename({"depth_0": "depth"})
+    #fes.dataset["landmask"] = fes.dataset.bottom_level == 0
+    #fes.dataset = fes.dataset.rename({"depth_0": "depth"})
 
     # Find nearest NEMO geographic neighbours to observation locations
     print(f"Implementing the obs_operator: obs.obs_operator(nemo)")
