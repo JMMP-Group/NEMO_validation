@@ -19,7 +19,7 @@ import time
 #from validate_ssh_tg_hourly import extract_ssh, analyse_ssh, plot_single_cfg
 import numpy as np
 
-#constit = ['M2','S2','N2','K1','O1','Q1','P1','K2','M4','MS4']
+constit_list = ['M2','S2','N2','K1','O1','Q1','P1','K2'] #,'M4','MS4']
 
 #args = sys.argv
 
@@ -67,38 +67,41 @@ def load_and_save_nemo():
 
 def load_and_save_fes2014(constit="M2"):
     ## Load FES model harmonics data
+    for count, constit in enumerate(constit_list):
+	    # Load FES data
+	    #fes     = coast.Gridded(config.fn_fes_amp, config.fn_nemo_domain, config=config.fn_nemo_cfg)
+	    #fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
+	    # Rename coords + dims. Convert to 2d lat/lon for COAsT interpolation to work
+	    ds = xr.open_dataset(config.dn_fes+constit+"_z.nc")
+	    ds = ds.rename_dims({'latitude':'y_dim', 'longitude':'x_dim'})
+	    #ds_latitude, ds_longitude = np.meshgrid(ds.latitude.values, ds.longitude.values)
+	    lat, lon = ds.latitude, ds.longitude
+	    ds_latitude, ds_longitude = xr.broadcast(lat, lon)
+	    ds = ds.drop_vars(["latitude", "longitude"])
+	    ds['latitude'] = xr.DataArray(ds_latitude, dims=["y_dim", "x_dim"], coords=[lat, lon])
+	    ds['longitude'] = xr.DataArray(ds_longitude, dims=["y_dim", "x_dim"], coords=[lat, lon])
+	    ds = ds.set_coords(['latitude', 'longitude'])
+	    ds = ds.drop_vars(["x_dim", "y_dim"])
+	    #print(ds.latitude) 
+	    #ds['latitude'], ds['longitude'] = np.meshgrid(ds.latitude.values, ds.longitude.values)
+	    
+	    if (count == 0) and (constit == "M2"):
+	      fes = coast.Gridded()
+	      fes.dataset = ds
+	      fes.dataset = fes.dataset.rename({"amplitude":"M2amp", "phase":"M2pha"})
 
-    # Load FES data
-    #fes     = coast.Gridded(config.fn_fes_amp, config.fn_nemo_domain, config=config.fn_nemo_cfg)
-    #fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
-    # Rename coords + dims. Convert to 2d lat/lon for COAsT interpolation to work
-    ds = xr.open_dataset(config.dn_fes+constit+"_z.nc")
-    ds = ds.rename_dims({'latitude':'y_dim', 'longitude':'x_dim'})
-    #ds_latitude, ds_longitude = np.meshgrid(ds.latitude.values, ds.longitude.values)
-    lat, lon = ds.latitude, ds.longitude
-    ds_latitude, ds_longitude = xr.broadcast(lat, lon)
-    ds = ds.drop_vars(["latitude", "longitude"])
-    ds['latitude'] = xr.DataArray(ds_latitude, dims=["y_dim", "x_dim"], coords=[lat, lon])
-    ds['longitude'] = xr.DataArray(ds_longitude, dims=["y_dim", "x_dim"], coords=[lat, lon])
-    ds = ds.set_coords(['latitude', 'longitude'])
-    ds = ds.drop_vars(["x_dim", "y_dim"])
-    #print(ds.latitude) 
-    #ds['latitude'], ds['longitude'] = np.meshgrid(ds.latitude.values, ds.longitude.values)
-    fes = coast.Gridded()
-    fes.dataset = ds
+	    #print(fes.dataset)
+	    #print(ds)
 
-    #print(fes.dataset)
-    #print(ds)
+	    #nemo = coast.Gridded(config.fn_nemo_data, config.fn_nemo_domain, config=config.fn_nemo_cfg, multiple=True)  # , chunks=chunks)
+	    #print(f'\n')
+	    #print(nemo.dataset)
 
-    #nemo = coast.Gridded(config.fn_nemo_data, config.fn_nemo_domain, config=config.fn_nemo_cfg, multiple=True)  # , chunks=chunks)
-    #print(f'\n')
-    #print(nemo.dataset)
+	    #fes.dataset = fes.dataset.rename({"amplitude": "A", "phase": "G"})
 
-    fes.dataset = fes.dataset.rename({"amplitude": "A", "phase": "G"})
-
-    fes.dataset[constit+'x'] = xr.zeros_like(fes.dataset.A)
-    fes.dataset[constit+'y'] = xr.zeros_like(fes.dataset.A)
-    fes.dataset[constit+'x'], fes.dataset[constit+'y'] = re_im_from_amp_pha(fes.dataset['A'], fes.dataset['G'])
+	    fes.dataset[constit+'x'] = xr.zeros_like(ds.amplitude)
+	    fes.dataset[constit+'y'] = xr.zeros_like(ds.amplitude)
+	    fes.dataset[constit+'x'], fes.dataset[constit+'y'] = re_im_from_amp_pha(ds['amplitude'], ds['phase'])
 
     # Create a landmask array in Gridded
     #fes.dataset["landmask"] = fes.dataset.bottom_level == 0
@@ -108,6 +111,8 @@ def load_and_save_fes2014(constit="M2"):
     print(f"Implementing the obs_operator: obs.obs_operator(nemo)")
     tg = obs.obs_operator(fes)
     print(f"Write processed file to {config.fn_analysis_out}")
+    tg.dataset.attrs['title'] = "FES2014 complex harmonics at observation locations. (Using https://github.com/JMMP-Group/NEMO_validation)"    
+    tg.dataset.attrs['history'] = "Created "+str(np.datetime64('now'))
     tg.dataset.to_netcdf(config.fn_analysis_out)
     return tg
 
