@@ -71,8 +71,28 @@ def load_and_save_fes2014(constit="M2"):
     # Load FES data
     #fes     = coast.Gridded(config.fn_fes_amp, config.fn_nemo_domain, config=config.fn_nemo_cfg)
     #fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
+    # Rename coords + dims. Convert to 2d lat/lon for COAsT interpolation to work
     ds = xr.open_dataset(config.dn_fes+constit+"_z.nc")
-    fes = coast.Gridded(dataset=ds)
+    ds = ds.rename_dims({'latitude':'y_dim', 'longitude':'x_dim'})
+    #ds_latitude, ds_longitude = np.meshgrid(ds.latitude.values, ds.longitude.values)
+    lat, lon = ds.latitude, ds.longitude
+    ds_latitude, ds_longitude = xr.broadcast(lat, lon)
+    ds = ds.drop_vars(["latitude", "longitude"])
+    ds['latitude'] = xr.DataArray(ds_latitude, dims=["y_dim", "x_dim"], coords=[lat, lon])
+    ds['longitude'] = xr.DataArray(ds_longitude, dims=["y_dim", "x_dim"], coords=[lat, lon])
+    ds = ds.set_coords(['latitude', 'longitude'])
+    ds = ds.drop_vars(["x_dim", "y_dim"])
+    #print(ds.latitude) 
+    #ds['latitude'], ds['longitude'] = np.meshgrid(ds.latitude.values, ds.longitude.values)
+    fes = coast.Gridded()
+    fes.dataset = ds
+
+    #print(fes.dataset)
+    #print(ds)
+
+    #nemo = coast.Gridded(config.fn_nemo_data, config.fn_nemo_domain, config=config.fn_nemo_cfg, multiple=True)  # , chunks=chunks)
+    #print(f'\n')
+    #print(nemo.dataset)
 
     fes.dataset = fes.dataset.rename({"amplitude": "A", "phase": "G"})
 
