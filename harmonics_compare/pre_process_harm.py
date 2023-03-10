@@ -50,7 +50,7 @@ def load_and_save_nemo():
     nemo = coast.Gridded(config.fn_nemo_data, config.fn_nemo_domain, config=config.fn_nemo_cfg, multiple=True)  # , chunks=chunks)
     for count, constit in enumerate(constit_list):
         nemo.dataset[constit+'y'] = -nemo.dataset[constit+'y']  # Not particularly happy about this fix...
-        print("nemo.dataset['M2y'] = -nemo.dataset.M2y  # Not particularly happy about this fix... ")
+        print(f"nemo.dataset['{constit}y'] = -nemo.dataset.{constit}y  # Not particularly happy about this fix... ")
         #nemo.dataset['A'] = xr.zeros_like(nemo.dataset.M2x)
         #nemo.dataset['G'] = xr.zeros_like(nemo.dataset.M2x)
         #nemo.dataset['A'].values, nemo.dataset['G'].values = amp_pha_from_re_im(nemo.dataset[constit+'x'], nemo.dataset[constit+'y'])
@@ -124,15 +124,25 @@ def load_and_save_fes2014():
 
 # Load obs data
 ###############
-obs = coast.Tidegauge(dataset=xr.open_dataset(config.fn_harm_obs))
-obs.dataset = obs.dataset.rename_dims({"locs":"id_dim"})  # coast tidegauge object expects dims {id_dim, t_dim}
-obs.dataset = obs.dataset.rename_vars({"z1":"M2x", "z2":"M2y"})
+for count, constit in enumerate(constit_list):
 
-#obs.dataset['A'] = np.sqrt(np.square(obs.dataset.M2x) + np.square(obs.dataset.M2y))
-#obs.dataset['G'] = -np.arctan2(obs.dataset.M2x, obs.dataset.M2y)  # z1=M2x=a.sin(g); z2=M2y=a.cos(g). Phase increasing _clockwise_ from 'noon'
-obs.dataset['A'] = xr.zeros_like(obs.dataset.M2x)
-obs.dataset['G'] = xr.zeros_like(obs.dataset.M2x)
-obs.dataset['A'].values, obs.dataset['G'].values = amp_pha_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
+    try:
+        ds = coast.Tidegauge(dataset=xr.open_dataset(config.fn_harm_obs.replace("M2",constit)))
+        ds.dataset = ds.dataset.rename_dims({"locs":"id_dim"})  # coast tidegauge object expects dims {id_dim, t_dim}
+        ds.dataset = ds.dataset.rename_vars({"z1":constit+"x", "z2":constit+"y"})
+
+        if(0):
+            #obs.dataset['A'] = np.sqrt(np.square(obs.dataset.M2x) + np.square(obs.dataset.M2y))
+            #obs.dataset['G'] = -np.arctan2(obs.dataset.M2x, obs.dataset.M2y)  # z1=M2x=a.sin(g); z2=M2y=a.cos(g). Phase increasing _clockwise_ from 'noon'
+            ds.dataset['A'] = xr.zeros_like(ds.dataset.M2x)
+            ds.dataset['G'] = xr.zeros_like(ds.dataset.M2x)
+            ds.dataset['A'].values, ds.dataset['G'].values = amp_pha_from_re_im(ds.dataset.M2x, ds.dataset.M2y)
+
+        if (count == 0) and (constit == "M2"):
+            obs = ds
+        obs.dataset = xr.merge((obs.dataset,ds.dataset), compat="override")
+    except:
+        print(f"load and save obs: Skipped constituent: {constit}")
 
 # Load and save model data
 ##########################
