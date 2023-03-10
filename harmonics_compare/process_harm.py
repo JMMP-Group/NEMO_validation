@@ -13,6 +13,7 @@ sys.path.append(config.coast_repo)
 import coast
 import xarray as xr
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import matplotlib
 matplotlib.use('TkAgg')
 import numpy as np
@@ -27,6 +28,31 @@ import time
 import numpy as np
 from taylor_harmonic_tide_plot import TaylorTide
 
+constit_list = ['M2','S2','N2','K1','O1','Q1','P1','K2'] #,'M4','MS4']
+
+
+def amp_pha_from_re_im(creal, cimag):
+    """
+    Example usage: amp,pha = amp_pha_from_re_im(ds.M2x, ds.M2y)
+    """
+    if type(creal) == xr.DataArray:
+        amp = xr.zeros_like(creal)
+        pha = xr.zeros_like(creal)
+    cc=creal+cimag*1j
+    amp=np.abs(cc)
+    pha=np.angle(cc)*180/np.pi
+    return amp, pha
+
+def re_im_from_amp_pha(amp, pha):
+    """
+    Assumes phase in degrees
+    Example usage: amp,pha = amp_pha_from_re_im(ds.amp, ds.pha)
+    """
+    if np.max(np.abs(pha)) <= 2*np.pi:
+        print(f"Warning. Check phase units. Expected degrees. Max: {np.max(pha)}. Min: {np.min(pha)}")
+    re = amp*np.cos(pha*np.pi/180)
+    im = amp*np.sin(pha*np.pi/180)
+    return re, im
 
 def modulo_align_phases_to_x(x, y, deg=True):
     """ Use modulo arithmetic to align y values with x in order to be able to calculate regression """
@@ -166,15 +192,19 @@ def plot_scatter_score(X1, Y1, X2, Y2, subtitle_str=["", ""], title_str: str = "
 ## Harmonise definitions: negate M2y (and phase) in NEMO
 ################################
 obs = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/obs_extracted.nc"))
+obs.dataset['A'], obs.dataset['G'] = amp_pha_from_re_im(obs.dataset.M2x, obs.dataset.M2y)
 obs.dataset['longitude'] = ((obs.dataset.longitude%360) + 180)%360 - 180  # set longitude : [-180,180]
 obs.dataset['G'] = (obs.dataset.G+180)%360-180  # set phase: -180,180
 
 fes = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/FES2014_extracted.nc"))
+fes.dataset['A'], fes.dataset['G'] = amp_pha_from_re_im(fes.dataset.M2x, fes.dataset.M2y)
 fes.dataset['G'] = (fes.dataset.G+180)%360-180  # set phase: -180,180
 
 gs1p1 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/GS1p1_tide_extracted.nc"))
-gs1p1.dataset['G'] = -(gs1p1.dataset.G+180)%360-180  # set phase: -180,180
-gs1p1.dataset['M2y'] = - gs1p1.dataset.M2y
+gs1p1.dataset['A'], gs1p1.dataset['G'] = amp_pha_from_re_im(gs1p1.dataset.M2x, gs1p1.dataset.M2y)
+
+gs1p1.dataset['G'] = (gs1p1.dataset.G+180)%360-180  # set phase: -180,180
+gs1p1.dataset['M2y'] = +gs1p1.dataset.M2y
 gs1p1.dataset = gs1p1.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
 
 gs1p2 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/GS1p2_full_extracted.nc"))
@@ -304,7 +334,11 @@ for EXP in ["GS1P1", "GS1P2", "FES2014"]:
     if EXP == "FES2014": tg_mod = fes
 
     # separate observations by depth
-    ind_deep = tg_mod.dataset.bathymetry.values > 200
+    try:
+        ind_deep = tg_mod.dataset.bathymetry.values > 200
+    except:
+        ind_deep = gs1p1.dataset.bathymetry.values > 200
+        print(f"Issue with bathy in {EXP}. Use bathy from GS1p1")
 
     X1, Y1 = obs.dataset.M2x, tg_mod.dataset.M2x
     X2, Y2 = obs.dataset.M2y, tg_mod.dataset.M2y
@@ -319,129 +353,157 @@ for EXP in ["GS1P1", "GS1P2", "FES2014"]:
     if EXP == "GS1P1": tg_mod = gs1p1
     if EXP == "GS1P2": tg_mod = gs1p2
     if EXP == "FES2014": tg_mod = fes
+    print(f"Plot amplitude and phase errors (deg): {EXP}")
 
     # separate observations by depth
-    ind_deep = tg_mod.dataset.bathymetry.values > 200
+    try:
+        ind_deep = tg_mod.dataset.bathymetry.values > 200
+    except:
+        ind_deep = gs1p1.dataset.bathymetry.values > 200
+        print(f"Issue with bathy in {EXP}. Use bathy from GS1p1")
 
     X1, Y1 = obs.dataset.A, tg_mod.dataset.A
-    X2, Y2 = modulo_align_phases_to_x(obs.dataset.G, tg_mod.dataset.G, deg=True)  # preprocess w/ modulo arithmetic
+    X2, Y2 = modulo_align_phases_to_x(obs.dataset.G.values, tg_mod.dataset.G.values, deg=True)  # preprocess w/ modulo arithmetic
 
     plot_scatter_score(X1,Y1, X2,Y2, subtitle_str=["Amplitude (m)","Phase (deg)"], title_str=EXP+"_amp_pha")
 
 
 #%% Compute Taylor diagram stats
-count = 0
-for subset in ['shal', 'deep']:
-    try: del II, z1obs, z2obs, z1mod, z2mod
-    except: pass
-    if subset == 'deep':
-        # separate observations by depth
-        II = fes.dataset.bathymetry.values > 200
-    elif subset == 'shal':
-        II = fes.dataset.bathymetry.values <= 200
-    else:
-        print(f"Not expecting that {subset}")
+for constit in constit_list:
 
-    z1obs, z2obs = obs.dataset.M2x[II], obs.dataset.M2y[II]
-    if(0):
-        # %%  Plot distributions of depth at observation locations
-        plt.close('all')
-        plt.figure()
-        plt.plot(np.sort(obs.dataset.A[I].values))
-        plt.xlabel('count')
-        plt.ylabel('M2 Amp (m))')
-        plt.title("distribution of A at observation sites")
-        plt.legend()
-        plt.savefig(config.dn_out + "PROCESSED/FIGS/dist_obsA_"+subset+".png")
+    count = 0
+    for subset in ['shal', 'deep']:
+        try: del II, z1obs, z2obs, z1mod, z2mod
+        except: pass
+        if subset == 'deep':
+            # separate observations by depth
+            II = gs1p1.dataset.bathymetry.values > 200
+        elif subset == 'shal':
+            II = gs1p1.dataset.bathymetry.values <= 200
+        else:
+            print(f"Not expecting that {subset}")
 
-
-    # Obs
-    if count == 0:
-        R = np.array([1])  # R for obs
-        rms_amp = np.array([rms_abs_amp(z1obs, z2obs)])
-        rms_err = np.array([0])  # err for obs
-    else:
-        R = np.hstack((R, 1))
-        rms_amp = np.hstack((rms_amp, rms_abs_amp(z1obs, z2obs)))
-        rms_err = np.hstack((rms_err, 0))
-
-    # FES
-    z1mod, z2mod = fes.dataset.M2x[II], fes.dataset.M2y[II]
-    # obs_new, mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_fes.dataset.M2x)
-    # z1obs_new = obs_new.dataset.M2x
-    # z1mod_new = mod_new.dataset.M2x
-    # obs_new, mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_fes.dataset.M2y)
-    # z2obs_new = obs_new.dataset.M2y
-    # z2mod_new = mod_new.dataset.M2y
-
-    R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
-    rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
-    rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
-
-    # GS1P1
-    del z1mod, z2mod
-    z1mod, z2mod = gs1p1.dataset.M2x[II], gs1p1.dataset.M2y[II]
-    # z1obs_new, z1mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_mx2.dataset.M2x)
-    # z2obs_new, z2mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_mx2.dataset.M2y)
-
-    R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
-    rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
-    rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
-
-    # GS1P2
-    del z1mod, z2mod
-    z1mod, z2mod = gs1p2.dataset.M2x[II], gs1p2.dataset.M2y[II]
-    # z1obs_new, z1mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_mv2.dataset.M2x)
-    # z2obs_new, z2mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_mv2.dataset.M2y)
-    R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
-    rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
-    rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
+        z1obs, z2obs = obs.dataset[constit+'x'][II], obs.dataset[constit+'y'][II]
+        if(0):
+            # %%  Plot distributions of depth at observation locations
+            plt.close('all')
+            plt.figure()
+            plt.plot(np.sort(obs.dataset.A[I].values))
+            plt.xlabel('count')
+            plt.ylabel(constit+' Amp (m))')
+            plt.title("distribution of A at observation sites")
+            plt.legend()
+            plt.savefig(config.dn_out + "PROCESSED/FIGS/dist_obsA_"+subset+".png")
 
 
-    count = count + 1
-label = ['obs:s', 'fes:s', 'gs1p1:s', 'gs1p2:s',
-         'obs:d', 'fes:d', 'gs1p1:d', 'gs1p2:d']
+        # Obs
+        if count == 0:
+            R = np.array([1])  # R for obs
+            rms_amp = np.array([rms_abs_amp(z1obs, z2obs)])
+            rms_err = np.array([0])  # err for obs
+        else:
+            R = np.hstack((R, 1))
+            rms_amp = np.hstack((rms_amp, rms_abs_amp(z1obs, z2obs)))
+            rms_err = np.hstack((rms_err, 0))
+
+        # FES
+        z1mod, z2mod = fes.dataset[constit+'x'][II], fes.dataset[constit+'y'][II]
+        # obs_new, mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_fes.dataset.M2x)
+        # z1obs_new = obs_new.dataset.M2x
+        # z1mod_new = mod_new.dataset.M2x
+        # obs_new, mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_fes.dataset.M2y)
+        # z2obs_new = obs_new.dataset.M2y
+        # z2mod_new = mod_new.dataset.M2y
+
+        R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
+        rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
+        rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
+
+        # GS1P1
+        del z1mod, z2mod
+        z1mod, z2mod = gs1p1.dataset[constit+'x'][II], gs1p1.dataset[constit+'y'][II]
+        # z1obs_new, z1mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_mx2.dataset.M2x)
+        # z2obs_new, z2mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_mx2.dataset.M2y)
+
+        R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
+        rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
+        rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
+
+        # GS1P2
+        del z1mod, z2mod
+        try:
+            z1mod, z2mod = gs1p2.dataset[constit+'x'][II], gs1p2.dataset[constit+'y'][II]
+        except:
+            z1mod = np.nan
+            z2mod = np.nan
+        # z1obs_new, z1mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_mv2.dataset.M2x)
+        # z2obs_new, z2mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_mv2.dataset.M2y)
+        R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
+        rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
+        rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
 
 
-print(f"R= {[format(R[i],'.2f') for i in range(len(R))]}")
-print(f"rms_amp= {[format(rms_amp[i],'.2f') for i in range(len(R))]}")
-print(f"rms_err= {[format(rms_err[i],  '.2f') for i in range(len(R))]}")
-print(label)
+        count = count + 1
+
+    label = ['obs:s', 'fes:s', 'gs1p1:s', 'gs1p2:s',
+             'obs:d', 'fes:d', 'gs1p1:d', 'gs1p2:d']
 
 
-## Check cosine rule consistency
-A = rms_amp
-C = rms_err
-costheta = R
-
-B = rms_amp[0]
-for i in range(0,4):
-    print(f"{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i]**2 + B**2 - 2*A[i]*B*costheta[i])}. C={C[i]}")
-B = rms_amp[5]
-for i in range(4,8):
-    print(f"{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i]**2 + B**2 - 2*A[i]*B*costheta[i])}. C={C[i]}")
+    print(f"R= {[format(R[i],'.2f') for i in range(len(R))]}")
+    print(f"rms_amp= {[format(rms_amp[i],'.2f') for i in range(len(R))]}")
+    print(f"rms_err= {[format(rms_err[i],  '.2f') for i in range(len(R))]}")
+    print(label)
 
 
+    ## Check cosine rule consistency
+    A = rms_amp
+    C = rms_err
+    costheta = R
 
-# Create TaylorTide plot template
-tt = TaylorTide(
-    r_obs=rms_amp[0],
-    rms_amp_max=0.7,
-    rms_amp_contours=[0.2, 0.4, 0.6],
-    rms_err_contours=[0.2, 0.4, 0.6],
-    cos_theta_lines=[0.3, 0.6, 0.9],
-    )
-# Add data to axes
-tt.ax.scatter( rms_amp[1:4] * R[1:4], rms_amp[1:4] * np.sqrt(1 - R[1:4]**2) , s=10, c='r')
+    B = rms_amp[0]
+    for i in range(0,4):
+        print(f"{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i]**2 + B**2 - 2*A[i]*B*costheta[i])}. C={C[i]}")
+    B = rms_amp[5]
+    for i in range(4,8):
+        print(f"{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i]**2 + B**2 - 2*A[i]*B*costheta[i])}. C={C[i]}")
 
-# Create TaylorTide plot template
-tt = TaylorTide(
-    r_obs = rms_amp[4],
-    rms_amp_max=0.61,
-    rms_amp_contours=[0.2, 0.4, 0.6],
-    rms_err_contours=[0.2, 0.4, 0.6],
-    cos_theta_lines=[0.3, 0.6, 0.9],
-    )
-# Add data to axes
-tt.ax.scatter( rms_amp[5::] * R[5::], rms_amp[5::] * np.sqrt(1 - R[5::]**2) , s=10, c='r')
-plt.show()
+
+
+    # Create TaylorTide plot template
+    tt = TaylorTide(
+        r_obs=rms_amp[0],
+        rms_amp_max=0.7,
+        rms_amp_contours=[0.2, 0.4, 0.6],
+        rms_err_contours=[0.2, 0.4, 0.6],
+        cos_theta_lines=[0.3, 0.6, 0.9],
+        )
+    # Add data to axes
+    tt.ax.scatter( rms_amp[1:4] * R[1:4], rms_amp[1:4] * np.sqrt(1 - R[1:4]**2), s=10, c=['r','k','g'])
+    # manual legend
+    colors = ['red', 'black', 'green']
+    lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='dotted') for c in colors]
+    labels = ["FES2014", "GS1p1", "GS1p2"]
+    plt.legend(lines, labels)
+
+    plt.title(constit+':shallow')
+    plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_"+constit+"_shallow.png")
+
+    # Create TaylorTide plot template
+    tt = TaylorTide(
+        r_obs = rms_amp[4],
+        rms_amp_max=0.61,
+        rms_amp_contours=[0.2, 0.4, 0.6],
+        rms_err_contours=[0.2, 0.4, 0.6],
+        cos_theta_lines=[0.3, 0.6, 0.9],
+        )
+    # Add data to axes
+    tt.ax.scatter( rms_amp[5::] * R[5::], rms_amp[5::] * np.sqrt(1 - R[5::]**2), s=10, c=['r','k','g'])
+    # manual legend
+    colors = ['red', 'black', 'green']
+    lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='dotted') for c in colors]
+    labels = ["FES2014", "GS1p1", "GS1p2"]
+    plt.legend(lines, labels)
+
+    plt.title(constit+':deep')
+    plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_"+constit+"_deep.png")
+
