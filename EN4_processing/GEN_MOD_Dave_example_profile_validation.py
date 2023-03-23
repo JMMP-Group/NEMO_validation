@@ -157,7 +157,7 @@ def surface_crps_process(gridded_mod_surf, prof_obs_surf):
 
     """
     gridded_mod_surf  xr.Dataset with temperature and salinity xr.Dataarrays
-    prof_obs_surf  xr.Dataset with temperature and salinity xr.Dataarrays and latotide, longitude, time coords (or variables)
+    prof_obs_surf  xr.Dataset with temperature and salinity xr.Dataarrays and latitude, longitude, time coords (or variables)
 
     """
     radius_list = [0, 8, 14, 20]  # evaluate CRPS over radii (km)
@@ -442,7 +442,10 @@ NOW = time.perf_counter()
 ALLTIME = NOW-starttime
 DT = NOW-BEFORE
 print("THIS FAR D %s %s ",ALLTIME,DT)
-surface_data = xr.merge((surface_errors.dataset, model_profiles_surface.dataset, obs_profiles_surface.dataset),
+surface_data = xr.merge((surface_errors.dataset,
+                         model_profiles_surface.dataset.rename(['temperature':'temperature_model',
+                                                                'salinity':'salinity_model']),
+                         obs_profiles_surface.dataset),
 			   compat='override')
 # Try Mid water, aiming for 1500m centered say 1200,1700
 model_profiles_mid = analysis.depth_means(model_profiles_interp_ref, [1200, 1700])
@@ -504,7 +507,7 @@ ALLTIME = NOW-starttime
 DT = NOW-BEFORE
 print("THIS FAR G %s %s ",ALLTIME,DT)
 
-if(0):
+if(1):
 
 
   print('CRPS analysis')
