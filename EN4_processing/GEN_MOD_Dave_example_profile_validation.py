@@ -443,8 +443,8 @@ ALLTIME = NOW-starttime
 DT = NOW-BEFORE
 print("THIS FAR D %s %s ",ALLTIME,DT)
 surface_data = xr.merge((surface_errors.dataset,
-                         model_profiles_surface.dataset.rename(['temperature':'temperature_model',
-                                                                'salinity':'salinity_model']),
+                         model_profiles_surface.dataset.rename({'temperature','temperature_model',
+                                                                'salinity','salinity_model'}),
                          obs_profiles_surface.dataset),
 			   compat='override')
 # Try Mid water, aiming for 1500m centered say 1200,1700
