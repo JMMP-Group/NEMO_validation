@@ -18,11 +18,13 @@ analysis) and two directories that are temporary.
 Prior to computing diagnostics, the EN4 data is preprocessed into monthly COAsT-ready files for a restricted geographic domain.
 To make it easier to work across sites and architectures two config files are used to control python and bash processes.
 
-1 . `config.sh` must both be edited for path, conda environment, and machine choices.
+1. `cd EN4_preprocessing`
+
+2. `config.sh` and `<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
 
 Then preprocesing is triggered with:
 
-2. Execute `. ./iter_en4_proc.sh`
+3. Execute `. ./iter_en4_proc.sh`
 
 which calls a machine dependant scheduler script `$MACHINE_pre_process_en4_monthly.sh` to invoke `pre_process_en4_monthly.py`
 
@@ -30,6 +32,10 @@ Output files are stored in the directory `config.sh: DOUT_EN4` with file structu
 `AMM15_processed_201410.nc`
 
 ## Process monthly data to generate model error profiles with respect to EN4 profiles
+
+1. `cd EN4_processing`
+
+2. `config.sh` and `<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
 
 We use `iter_sub_METEST.sh`  to submit over all years and months separately. This allows for simple parallelisation 
 as each month can be independently processed. This script sets the paths and variable names and launches a machine specific
@@ -69,7 +75,7 @@ mask_means_daily_p0_200401_2005.nc
 
 However, some months have many profiles and some months few, so they take differing times to complete on different nodes.
 Experience found that most months were completed in 20mins, about 10% needed 1hr, 5% 2hr and a couple needed 3hrs.
-A short script with commandline control of the allocated walltime can see the slowest jobs, which previous ran out of 
+A short script with commandline control of the allocated walltime can see the slowest jobs, which previously ran out of 
 walltime, through. For example:
 ```
 #!/bin/bash
@@ -88,6 +94,10 @@ sbatch -J 200905 --time=3:00:00 lotus_ana_MOD_METEST.sh P0.0 2009 5 2010 CO7_EXA
 ```
 
 ## Postprocessing
+
+1. `cd EN4_postprocessing`
+
+2. `config.sh` and `<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
 
 ### Concatenate error profiles (merge seasons)
 
