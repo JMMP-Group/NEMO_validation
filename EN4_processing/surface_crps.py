@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 #
-# This script will use all of the available analysis tools in COAsT for
-# comparison of observed profile data to model data.
-#
-# At the top, please check the start and end dates, reference depths to
-# interpolate data onto the the run_name, which is essentially the name
-# of the output files.
+# This script will use CRPS analysis tools in COAsT for
+# comparison between observed profile data to model data.
 #
 # I don't recommend applying this script to a whole dataset if the model
 # run is long. I found it best to implement this script as part of a 
@@ -14,11 +10,7 @@
 # all that needs to change between processes).
 #
 # To run: e.g.
-# python GEN_MOD_Dave_example_profile_validation.py P0.0 2004 2005 
-# or
-# python GEN_MOD_Dave_example_profile_validation.py P0.0 2004 2005 debug
-#
-# last field "debug" restricts the number profiles to make manageable for debugging
+# python surface_crps.py P0.0 2004 1 2005 CO7_EXACT_CFG_FILE.nc
 
 from config import config
 import sys
@@ -507,7 +499,7 @@ if(0):
 
 
 if(1):
-surface_data = xr.open_dataset(dn_out+"surface_data_{0}.nc".format(run_name), chunks={'id_dim': 10000})
+  surface_data = xr.open_dataset(dn_out+"surface_data_{0}.nc".format(run_name), chunks={'id_dim': 10000})
 
   print('CRPS analysis')
 
