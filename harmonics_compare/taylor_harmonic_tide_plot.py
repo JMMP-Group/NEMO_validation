@@ -14,9 +14,12 @@ class TaylorTide():
                 rms_amp_contours = [0.2, 0.4, 0.6],
                 rms_err_contours=[0.2, 0.4, 0.6],
                 cos_theta_lines = [0.3, 0.6, 0.9],
+                err_contour_flag = True,
                 ):
 
-        self.fig, self.ax = self.plot_frame(r_obs, rms_amp_max, rms_amp_contours, rms_err_contours, cos_theta_lines)
+        self.fig, self.ax = self.plot_frame(r_obs, rms_amp_max, rms_amp_contours,
+                                            rms_err_contours, cos_theta_lines,
+                                            err_contour_flag)
 
     # This custom formatter removes trailing zeros, e.g. "1.0" becomes "1", and
     def rms_fmt(self,x):
@@ -25,7 +28,8 @@ class TaylorTide():
             s = f"{x:.0f}"
         return rf"{s}"
 
-    def plot_frame(self, r_obs, rms_amp_max, rms_amp_contours, rms_err_contours, cos_theta_lines):
+    def plot_frame(self, r_obs, rms_amp_max, rms_amp_contours, rms_err_contours, cos_theta_lines,
+                   err_contour_flag):
 
         fig = plt.figure()
         ax =fig.add_subplot(111)
@@ -44,21 +48,23 @@ class TaylorTide():
         # Obs point, arc through obs, RMS error arcs
         if r_obs is not None:
             ax.scatter(r_obs, 0, s=30, color='blue')  # obs point
-            ax.plot( r_obs*np.cos(theta), r_obs*np.sin(theta), '-', color='blue')  # arc through obs
 
-            # RMS error arc from obs as origin
-            mask = X**2 + Y**2 > rms_amp_max**2
-            C = np.ma.masked_where(mask, np.sqrt((X-r_obs)**2 + Y**2))
-            Cerr = ax.contour(X, Y, C, levels=rms_err_contours, colors='grey',
-                              linestyles='dashed')
-            ax.clabel(Cerr, Cerr.levels, inline=True, fmt=self.rms_fmt, fontsize=10)
+            if err_contour_flag is True:
+                ax.plot(r_obs * np.cos(theta), r_obs * np.sin(theta), '-', color='blue')  # arc through obs
 
-            # Add text contour label. THIS WILL BE A PROBLEM IF MORE THAN 3 LEVELS ARE DEFINED
-            fmt = {}
-            strs = ['rms error', '', '']
-            for l, s in zip(rms_err_contours, strs):
-                fmt[l] = s
-            ax.clabel(Cerr, Cerr.levels, inline=True, fmt=fmt, fontsize=10)
+                # RMS error arc from obs as origin
+                mask = X**2 + Y**2 > rms_amp_max**2
+                C = np.ma.masked_where(mask, np.sqrt((X-r_obs)**2 + Y**2))
+                Cerr = ax.contour(X, Y, C, levels=rms_err_contours, colors='grey',
+                                  linestyles='dashed')
+                ax.clabel(Cerr, Cerr.levels, inline=True, fmt=self.rms_fmt, fontsize=10)
+
+                # Add text contour label. THIS WILL BE A PROBLEM IF MORE THAN 3 LEVELS ARE DEFINED
+                fmt = {}
+                strs = ['rms error', '', '']
+                for l, s in zip(rms_err_contours, strs):
+                    fmt[l] = s
+                ax.clabel(Cerr, Cerr.levels, inline=True, fmt=fmt, fontsize=10)
 
 
         # Bounding lines - black
