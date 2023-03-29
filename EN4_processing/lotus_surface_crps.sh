@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --partition=short-serial
+#SBATCH --partition=long-serial
 #SBATCH --mem=40000
 #SBATCH -o LOGS/%A_%a.out
 #SBATCH -e LOGS/%A_%a.err
-#SBATCH --time=60:00
+#SBATCH --time=48:00:00
 #SBATCH --ntasks=1
 module add jaspy
 source activate $CONDA_ENV

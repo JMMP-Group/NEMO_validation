@@ -8,7 +8,8 @@ rm LOGS/OUT* LOGS/*.err LOGS/*.out
 #GRID=$2 #   "GEG_SF12.nc" CO7_EXACT_CFG_FILE.nc
 for (( start=$STARTYEAR; start<$(expr $ENDYEAR + 1); start++ ))
 do
-  for (( month=1; month<13; month++ ))
+  #for (( month=1; month<13; month++ ))
+  for (( month=1; month<2; month++ ))
   do 
      end=$(expr $start + 1 )
      echo "sbatch "${MACHINE,,}"_surface_crps.sh $MOD $start $month $end $GRID"

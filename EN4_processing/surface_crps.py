@@ -52,6 +52,7 @@ def surface_crps_process(gridded_mod_surf, prof_obs_surf):
         crps_points = np.zeros((n_var, n_rad, n_id), dtype=int)
         crps_land_flags = np.full((n_var, n_rad, n_id), True)
         for r_count, nh_radius in enumerate(radius_list):
+            print(f"{var_str}: **Radius**: {nh_radius} in {radius_list}")
             crps_vals[v_count, r_count,:], \
             crps_points[v_count, r_count,:], \
             crps_land_flags[v_count, r_count,:] = cu.crps_sonf_moving(gridded_mod_surf[var_str],
@@ -125,7 +126,7 @@ fn_cfg_prof = config.fn_cfg_prof
 # CREATE NEMO OBJECT and read in NEMO data. Extract latitude and longitude array
 print('Reading model data..')
 print(f"nemo = coast.Gridded({fn_dat}, {fn_dom}, multiple=True, config={fn_cfg_nemo})")
-nemo = coast.Gridded(fn_dat, fn_dom, multiple=True, config=fn_cfg_nemo)
+nemo = coast.Gridded(fn_data=fn_dat, fn_domain=fn_dom, multiple=True, config=fn_cfg_nemo)
 print(nemo.dataset)
 lon = nemo.dataset.longitude.values.squeeze()
 lat = nemo.dataset.latitude.values.squeeze()
@@ -160,12 +161,15 @@ surface_def = 5
 
 
 if(1):
-  surface_data = xr.open_dataset(dn_out+"surface_data_{0}.nc".format(run_name), chunks={'id_dim': 10000})
+  #surface_data = xr.open_dataset(dn_out+"surface_data_{0}.nc".format(run_name), chunks={'id_dim': 10000})
+  surface_data = xr.open_dataset(dn_out+"surface_data_{0}.nc".format(run_name))
 
   print('CRPS analysis')
+  print(f"\n surface_data:\n {dn_out+'surface_data_{0}.nc'.format(run_name)}\n {surface_data}")
 
   # CRPS analysis of surface fields
   gridded_mod_surf = nemo.dataset.where(nemo.dataset.depth <= surface_def).mean(dim="z_dim")
+  print(f"\n gridded_mod_surf:\n {gridded_mod_surf}")
 
   BEFORE = NOW
   NOW = time.perf_counter()

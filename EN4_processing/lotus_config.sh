@@ -8,8 +8,8 @@ export STARTYEAR=2004 #1980  # 2004
 export ENDYEAR=2014 #1980    # 2014
 
 ## Process monthly data. Required in iter_sub_METEST.sh
-#export MOD="P0.0"  # Model reference name
-export MOD="co7"  # Model reference name
+export MOD="P0.0"  # Model reference name
+#export MOD="co7"  # Model reference name
 
 export GRID="CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
 # options?: "domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
