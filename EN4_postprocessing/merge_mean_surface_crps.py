@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from config import config
 import sys
+import numpy as np
 
 config = config() # initialise variables in python
 
