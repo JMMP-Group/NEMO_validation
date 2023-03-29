@@ -9,13 +9,13 @@ sys.path.append(config.coast_repo)
 
 import xarray as xr
 from dask.diagnostics import ProgressBar
-from coast import general_utils
+import coast
 
 
 def extract_season(ds, season=None):
     # Extract season if needed
     if season is not None:
-        season_array = general_utils.determine_season(ds.time)
+        season_array = coast.general_utils.determine_season(ds.time)
         s_ind = season_array == season
         ds = ds.isel(id_dim=s_ind)
     return ds
