@@ -153,49 +153,6 @@ def reduce_resolution(profile_mod, profile_obs):
 
 ###########################################################
 
-def surface_crps_process(gridded_mod_surf, prof_obs_surf):
-
-    """
-    gridded_mod_surf  xr.Dataset with temperature and salinity xr.Dataarrays
-    prof_obs_surf  xr.Dataset with temperature and salinity xr.Dataarrays and latitude, longitude, time coords (or variables)
-
-    """
-    radius_list = [0, 8, 14, 20]  # evaluate CRPS over radii (km)
-
-    var_list = ["temperature", "salinity"]
-    n_id = prof_obs_surf.dims['id_dim']
-    n_rad = len(radius_list)
-    n_var = len(var_list)
-
-    for v_count, var_str in enumerate(var_list):
-        crps_vals = np.zeros((n_var, n_rad, n_id))*np.nan
-        crps_points = np.zeros((n_var, n_rad, n_id), dtype=int)
-        crps_land_flags = np.full((n_var, n_rad, n_id), True)
-        for r_count, nh_radius in enumerate(radius_list):
-            crps_vals[v_count, r_count,:], \
-            crps_points[v_count, r_count,:], \
-            crps_land_flags[v_count, r_count,:] = cu.crps_sonf_moving(gridded_mod_surf[var_str],
-                            prof_obs_surf.longitude, prof_obs_surf.latitude, prof_obs_surf[var_str], prof_obs_surf.obs_time,
-                            nh_radius,
-                            'nearest')
-
-
-    print(f"CRPS values: {crps_vals}")
-    #print(f"Number of points used: {b}")
-    #print(f"Land present?: {~land_flags}")
-    #print(f"Average {var_str} CRPS (rad:{nh_radius}) where no land: {np.nanmean(crps_vals[~land_flags])}")
-
-    # Add the crps metrics along new dimension
-    for v_count, var_str in enumerate(var_list):
-        prof_obs_surf[var_str+"_crps"] = (['radius','id_dim'], np.array(crps_vals[v_count,:,:]))
-        prof_obs_surf[var_str+"_crps_pts"] = (['radius','id_dim'], np.array(crps_points[v_count,:,:]))
-        prof_obs_surf[var_str+"_crps_land_flags"] = (['radius','id_dim'], np.array(crps_land_flags[v_count,:,:]))
-    # Add coords to new dimension
-    prof_obs_surf = prof_obs_surf.assign_coords({"radius": np.array(radius_list)})
-
-    #print(prof_obs_surf.temperature_crps)
-    print(prof_obs_surf)
-    return prof_obs_surf
 
 
 starttime =time.perf_counter()
@@ -507,7 +464,7 @@ ALLTIME = NOW-starttime
 DT = NOW-BEFORE
 print("THIS FAR G %s %s ",ALLTIME,DT)
 
-if(1):
+if(0):
 
 
   print('CRPS analysis')
