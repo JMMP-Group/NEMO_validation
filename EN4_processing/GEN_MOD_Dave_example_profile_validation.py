@@ -464,27 +464,3 @@ ALLTIME = NOW-starttime
 DT = NOW-BEFORE
 print("THIS FAR G %s %s ",ALLTIME,DT)
 
-if(0):
-
-
-  print('CRPS analysis')
-
-  # CRPS analysis of surface fields
-  gridded_mod_surf = nemo.dataset.where(nemo.dataset.depth <= surface_def).mean(dim="z_dim")
-
-  BEFORE = NOW
-  NOW = time.perf_counter()
-  ALLTIME = NOW-starttime
-  DT = NOW-BEFORE
-  print("THIS FAR H %s %s ",ALLTIME,DT)
-
-  surface_data_crps = surface_crps_process(gridded_mod_surf, surface_data)
-  surface_data_crps.to_netcdf(dn_out+"surface_crps_data_{0}.nc".format(run_name))
-
-  BEFORE = NOW
-  NOW = time.perf_counter()
-  ALLTIME = NOW-starttime
-  DT = NOW-BEFORE
-  print("THIS FAR I %s %s ",ALLTIME,DT)
-  print('CRPS Analysis done and datasets written to file')
-
