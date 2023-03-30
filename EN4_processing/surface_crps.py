@@ -47,10 +47,11 @@ def surface_crps_process(gridded_mod_surf, prof_obs_surf):
     n_rad = len(radius_list)
     n_var = len(var_list)
 
+    crps_vals = np.zeros((n_var, n_rad, n_id))*np.nan
+    crps_points = np.zeros((n_var, n_rad, n_id), dtype=int)
+    crps_land_flags = np.full((n_var, n_rad, n_id), True)
+
     for v_count, var_str in enumerate(var_list):
-        crps_vals = np.zeros((n_var, n_rad, n_id))*np.nan
-        crps_points = np.zeros((n_var, n_rad, n_id), dtype=int)
-        crps_land_flags = np.full((n_var, n_rad, n_id), True)
         for r_count, nh_radius in enumerate(radius_list):
             print(f"{var_str}: **Radius**: {nh_radius} in {radius_list}")
             crps_vals[v_count, r_count,:], \
@@ -185,5 +186,5 @@ if(1):
   ALLTIME = NOW-starttime
   DT = NOW-BEFORE
   print("THIS FAR I %s %s ",ALLTIME,DT)
-  print('CRPS Analysis done and datasets written to file: {dn_out+"surface_crps_data_{0}.nc".format(run_name)}')
+  print(f'CRPS Analysis done and datasets written to file: {dn_out+"surface_crps_data_{0}.nc".format(run_name)}')
   print("Next merge and compute regional averages. E.g. merge_mean_surface_crps.py")
