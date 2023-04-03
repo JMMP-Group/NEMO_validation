@@ -10,6 +10,10 @@ config.dn_out = "/Users/jelt/Downloads/"
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+
+sys.path.append(config.coast_repo)
+import coast
 
 #%% File settings
 fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
@@ -49,6 +53,7 @@ print("Size of names is ", len(masks_names[:]))
 mask_xr = mm.make_mask_dataset(lon, lat, masks_list, masks_names)
 
 
-mm.quick_plot(mask_list)
+mm.quick_plot(mask_xr)
+plt.contourf(lon,lat,bath, levels=(0,10))
 plt.savefig("FIGS/maskmaker_quick_plot.png")
 plt.close("all")
