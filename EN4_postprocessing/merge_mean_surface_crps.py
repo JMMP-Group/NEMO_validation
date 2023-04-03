@@ -110,7 +110,7 @@ print("mask means is", mask_means)
 
 # SAVE mask dataset to file
 mask_means.to_netcdf(fn_out)
-print('done')
+print(f"Done. Saved mask_means to {fn_out}")
 
 
 
