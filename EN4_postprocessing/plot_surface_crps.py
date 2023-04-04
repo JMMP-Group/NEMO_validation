@@ -18,7 +18,9 @@ config.dn_out = "/Users/jelt/Downloads/"
 
 import xarray as xr
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
+matplotlib.use('Agg')
 
 #%% File settings
 analysis_str = "CRPS"
@@ -74,7 +76,6 @@ title_fontweight = "bold"                  # Fontweight to use for title
 ds_list = [xr.open_dataset(dd) for dd in fn_list]
 n_ds = len(ds_list)
 n_reg = len(region_ind)
-n_ax = n_r*n_c
 
 print(f"Check region names specified are consistent with mask file")
 for i in range(n_reg):
@@ -82,24 +83,19 @@ for i in range(n_reg):
 
 # Loop over variable to plot
 for var_str in ["Temperature", "Salinity"]:
- if var_str == "Temperature":
+    # Settings that could be in a dictionary
+    if var_str == "Temperature":
      max_crps = max_crps_temp
      units = "(deg C)"
- if var_str == "Salinity":
+    if var_str == "Salinity":
      max_crps = max_crps_sal
      units = "(psu)"
-
-
- if(1):
-    # Patch in MAE for radius = 0
+    # variable to patch in MAE for radius = 0
     mae_var_name = "profile_mean_abs_diff_{0}".format(var_str.lower())  # profile_mean_abs_diff_temperature
-
-
 
     # Labels and Titles
     xlabel = "{0} (units)".format(analysis_str)           # Xlabel string
     fig_title = "Regional {0} || {1}".format(analysis_str, var_str)  # Whole figure title
-
 
     var_name = "profile_mean_{0}_crps".format(var_str.lower())  # profile_mean_temperature_crps
 
@@ -108,7 +104,7 @@ for var_str in ["Temperature", "Salinity"]:
 
     # Create plot and flatten axis array
     f,a = plt.subplots(n_r, n_c, figsize = figsize, sharey = sharey)
-    a_flat = a.flatten()
+    #a_flat = a.flatten()
     a_flat = a
 
     # Loop over regions
@@ -133,29 +129,27 @@ for var_str in ["Temperature", "Salinity"]:
         a_flat[ii].set_ylim(0, max_crps)
         a_flat[ii].set_xlim(0, 20)
 
- if(1):
-  # Make legend
-  #a_flat[legend_index].legend(p, legend_str, loc=7, fontsize = legend_fontsize)
-  f.legend(p, legend_str, fontsize = legend_fontsize,  bbox_to_anchor=(1.0,0.58))
+    # Make legend
+    f.legend(p, legend_str, fontsize = legend_fontsize,  bbox_to_anchor=(1.0,0.58))
 
-  # Set Figure title and labels axes
-  f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
-  f.text(0.5, 0.01, 'radius (km)', ha='center')
-  f.text(0.01, 0.5, 'CRPS' + " " + units, rotation=90, va='center')
+    # Set Figure title and labels axes
+    f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
+    f.text(0.5, 0.01, 'radius (km)', ha='center')
+    f.text(0.01, 0.5, 'CRPS' + " " + units, rotation=90, va='center')
 
 
-  # Set x and y labels
-  f.text(xlabelpos[0], xlabelpos[1], xlabel, 
-       va = 'center', rotation = 'horizontal', 
+    # Set x and y labels
+    f.text(xlabelpos[0], xlabelpos[1], xlabel,
+       va = 'center', rotation = 'horizontal',
        fontweight = label_fontweight, fontsize = label_fontsize)
 
-  # Set tight figure layout
-  f.tight_layout(w_pad = subplot_padding, h_pad= subplot_padding)
-  f.subplots_adjust(left   = (fig_pad[0]), 
+    # Set tight figure layout
+    f.tight_layout(w_pad = subplot_padding, h_pad= subplot_padding)
+    f.subplots_adjust(left   = (fig_pad[0]),
                   bottom = (fig_pad[1]),
                   right  = (1-fig_pad[2]),
                   top    = (1-fig_pad[3]))
 
-  # Save plot maybe
-  if save_plot: 
+    # Save plot maybe
+    if save_plot:
       f.savefig(fn_out)
