@@ -1,35 +1,46 @@
 #!/usr/bin/env python3
-#
-# This script will use all of the available analysis tools in COAsT for
-# comparison of observed profile data to model data.
-#
-# At the top, please check the start and end dates, reference depths to
-# interpolate data onto the the run_name, which is essentially the name
-# of the output files.
-#
-# I don't recommend applying this script to a whole dataset if the model
-# run is long. I found it best to implement this script as part of a
-# parallelised routine using a slurm job array or similar. Each
-# process will do a different time period (so start and end dates is
-# all that needs to change between processes).
-
 from config import config
 import sys
+import numpy as np
 
 config = config() # initialise variables in python
+
 # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
 sys.path.append(config.coast_repo)
 
-import coast
 import xarray as xr
-import numpy as np
-import datetime
-import pandas as pd
+from dask.diagnostics import ProgressBar
+import coast
+
+
+def extract_season(ds, season=None):
+    # Extract season if needed
+    if season is not None:
+        season_array = coast.general_utils.determine_season(ds.time)
+        s_ind = season_array == season
+        ds = ds.isel(id_dim=s_ind)
+    return ds
 
 args = sys.argv
+model = args[1]  # MOD. Already loaded into config.dn_out directory path
+season = "All"
 
-model = args[1]
-season = str(args[2])
+# Merge over all available years: "*" are e.g._200501_2006. "p0" is undesirable but superceded by parent directory in config.dn_out
+ds_index = xr.open_mfdataset(config.dn_out +
+                             'surface_crps_data_p0_*.nc',
+                             combine='nested', concat_dim="id_dim", parallel=True)
+#ds_index = extract_season(ds_index, season)
+
+
+with ProgressBar():
+  ds_index.to_netcdf(config.dn_out+"%03s_CRPS_MERGED.nc"%(season))
+
+print(f'File written to {config.dn_out+"%03s_CRPS_MERGED.nc"%(season)}')
+
+
+
+#######
+####### Regional Means
 
 # File paths (All)
 fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
@@ -37,15 +48,12 @@ fn_dat_nemo = "%s%s%02d*T.nc"%(config.dn_dat, "2004", 1)  # NB config.dn_dat con
 print(fn_dat_nemo)
 fn_cfg_nemo = config.fn_cfg_nemo
 fn_cfg_prof = config.fn_cfg_prof
-fn_analysis_diff = "%s%03s_PRO_DIFF.nc"%(config.dn_out, season)
-fn_analysis_index = "%s%03s_PRO_INDEX.nc"%(config.dn_out, season)
-fn_out = "%s%03s_mask_means_daily.nc"%(config.dn_out, season)
+fn_analysis_crps = "%s%03s_CRPS_MERGED.nc"%(config.dn_out, season)
+fn_out = "%s%03s_mask_means_crps_daily_%s.nc"%(config.dn_out, season, model)
 
-differences = coast.Profile(config=fn_cfg_prof) 
-differences.dataset = xr.open_dataset(fn_analysis_diff, chunks={'id_dim':10000})
-model_profiles_interp = coast.Profile(config=fn_cfg_prof)
-model_profiles_interp.dataset = xr.open_dataset(fn_analysis_index, chunks={'id_dim':10000})
-
+## Load the CRPS data as a profile object
+crps = coast.Profile(config=fn_cfg_prof)
+crps.dataset = xr.open_dataset(fn_analysis_crps, chunks={'id_dim':10000})
 
 print('Doing regional analysis..')
 
@@ -82,19 +90,19 @@ mask_xr = mm.make_mask_dataset(lon, lat, masks_list, masks_names)
 
 ## Perform analysis
 analysis = coast.ProfileAnalysis()
-mask_indices = analysis.determine_mask_indices(model_profiles_interp, mask_xr)
+mask_indices = analysis.determine_mask_indices(crps, mask_xr)
 
 # Add bathymetry data to profiles before mask averaging
-differences.dataset['bathymetry'] = model_profiles_interp.dataset.bathymetry
+#differences.dataset['bathymetry'] = model_profiles_interp.dataset.bathymetry
 
 # Do mask averaging
-mask_means = analysis.mask_means(differences, mask_indices)
+mask_means = analysis.mask_means(crps, mask_indices)
 # Rename averaged bathymetry variable. Drop duplicate
-mask_means = mask_means.drop_vars("profile_mean_bathymetry").rename({"all_mean_bathymetry":"bathymetry"})
+#mask_means = mask_means.drop_vars("profile_mean_bathymetry").rename({"all_mean_bathymetry":"bathymetry"})
 
 # SAVE mask dataset to file
-if season == "DJF": # only save once otherwise conflicts arise if writing same file simultantously
-    mask_xr.to_netcdf(config.dn_out + 'mask_xr.nc')
+#if season == "DJF": # only save once otherwise conflicts arise if writing same file simultantously
+#    mask_xr.to_netcdf(config.dn_out + 'mask_xr.nc')
 
 print('Regional means calculated.')
 
@@ -102,17 +110,11 @@ print("mask means is", mask_means)
 
 # SAVE mask dataset to file
 mask_means.to_netcdf(fn_out)
-print('done')
+print(f"Done. Saved mask_means to {fn_out}")
 
 
-# Repeat regional means for model data (interpolated but not differenced)
 
-# Do mask averaging
-mask_stats_model = analysis.mask_stats(model_profiles_interp, mask_indices)
-# Rename averaged bathymetry variable. Drop duplicate
-mask_stats_model = mask_stats_model.drop_vars("profile_mean_bathymetry").rename({"all_mean_bathymetry":"bathymetry"})
-# SAVE mask dataset to file
-mask_stats_model.to_netcdf(fn_out.replace("daily.nc","daily_model.nc"))
-print('done')
+
+
 
 

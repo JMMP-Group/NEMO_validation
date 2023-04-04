@@ -24,46 +24,12 @@ run_name = "test"
 
 # List of analysis output files. Profiles from each will be plotted
 # on each axis of the plot
-#fn_list = ["/Users/dbyrne/transfer/mask_means_daily_test.nc",
-#           "/Users/dbyrne/transfer/mask_means_daily_test.nc"]
-#fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/mi-bd207/analysis/mask_means_daily_p0_2003_2004.nc", "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/rosie_mi-an561_1990/analysis/mask_means_daily_p0_2003_2004.nc"]
-#fn_list = ["/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.9/analysis/ALL_mask_means_daily.nc","/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysis/ALL_mask_means_daily.nc"]
-fn_list_DJF = [config.dn_out+"DJF_mask_means_daily.nc"]#
-fn_list_JJA = [config.dn_out+"JJA_mask_means_daily.nc"]#
-#           "%s%03s_mask_means_daily.nc"%(config.dn_out, "JJA")]#
-tt=[           "%s%02d_mask_means_daily.nc"%(config.dn_out, 3),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 4),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 5),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 6),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 7),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 8),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 9),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 10),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 11),
-           "%s%02d_mask_means_daily.nc"%(config.dn_out, 12)]
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/01_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/02_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/03_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/04_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/06_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/07_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/08_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/10_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/11_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.0/analysisb/12_mask_means_daily.nc"]
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.6/analysis/ALL_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.7/analysis/ALL_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.8/analysis/ALL_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cr503/analysis/ALL_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cr504/analysis/ALL_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cr535/analysis/ALL_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cr545/analysis/ALL_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cr934/analysis/ALL_mask_means_daily.nc",
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/P0.5.c/analysis/ALL_mask_means_daily.nc"]
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cq846/analysis/ALL_mask_means_daily.nc"]
-#           "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cp812/analysis/ALL_mask_means_daily.nc"]
-##          "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cp815/analysis/ALL_mask_means_daily.nc",
-#          "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/u-cq846/analysis/ALL_mask_means_daily.nc"]#
+
+# Assuming loading two configs: co7 and the P0.0. HARD WIRING. NOT IDEAL
+fn_list_DJF = [config.dn_out+"DJF_mask_means_daily.nc", config.dn_out.replace('co7','P0.0')+"DJF_mask_means_daily.nc"]#
+fn_list_JJA = [config.dn_out+"JJA_mask_means_daily.nc", config.dn_out.replace('co7','P0.0')+"JJA_mask_means_daily.nc"]#
+#fn_list_DJF = [config.dn_out+"DJF_mask_means_daily.nc"] 
+#fn_list_JJA = [config.dn_out+"JJA_mask_means_daily.nc"]
 
 #%% General Plot Settings
 ## Specify the specific regions, their labels and order of appearance to plot. Region indexing to match EN4_postprocessing mean_season.py
@@ -91,7 +57,7 @@ figsize = (9,7)       # Figure size
 sharey = True         # Align y axes
 sharex = False        # Align x axes
 subplot_padding = .5  # Amount of vertical and horizontal padding between plots
-fig_pad = (.075, .075, .075, .1)   # Whole figure padding as % (left, top, right, bottom)
+fig_pad = (.075, .075, .15, .1)   # Whole figure padding as % (left, top, right, bottom)
 #max_depth = 50                    # Maximum plot depth
 #max_depth = 4000                   # Maximum plot depth
 #max_depth = 800                   # Maximum plot depth
@@ -103,14 +69,15 @@ max_depth = 150                   # Maximum plot depth
 #legend_str = ["P0.0","GLS","ERA5","GLS+ERA5","GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","GLS","ERA5","GLS+ERA5","P0.0NERCWAD","P0.0NERCNOWAD","GEG_FES_ME"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.0NERCWAD","P0.0NERCNOWAD","p0 GEG OLDBDY 0.69", "p0 GEG OLD BDY 0.7","P0.0_NERC_GEG"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
-legend_str = ["P0.0","P0.6","P0.7","P0.8","503","504","535","545","P0.5.c"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
+#legend_str = ["P0.0","P0.6","P0.7","P0.8","503","504","535","545","P0.5.c"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
+legend_str = ["CO7","CO9p0"]
 #legend_str = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","OCT","NOV","DEC"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.1b","P0.6","P0.7","P0.8","u-cp812","u-cp815","u-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","FES_P0.1b","TPX_GLS_P0.6","TPX_ERA5_P0.7","TPX_GLS_ERA5_P0.8","FES_MEu-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
 legend_index = 6 #11          # Axis index to put legend (flattened index, start from 0).
                           # Good to place in an empty subplot
 legend_pos = 'upper right' # Position for legend, using matplitlib legend string
-legend_fontsize =  6
+legend_fontsize = 10
 
 # Labels and Titles
 xlabelpos = (figsize[0]/2, 0)              # (x,y) position of xlabel
@@ -141,6 +108,9 @@ for i in range(n_reg):
 
 # Loop over variable to plot
 for var_str in ["Temperature", "Salinity"]:
+ if var_str == "Temperature": units = "(deg C)"
+ if var_str == "Salinity": units = "(psu)"
+
  #for analysis_str in ["MAE", "STD", "BIAS"]:
  for analysis_str in ["MAE", "BIAS"]:
   # Labels and Titles
@@ -210,10 +180,14 @@ for var_str in ["Temperature", "Salinity"]:
         a_flat[row,ii].invert_yaxis()
 
   # Make legend
-  a_flat[0,legend_index].legend(p, legend_str, fontsize = legend_fontsize)
+  #a_flat[0,legend_index].legend(p, legend_str, fontsize = legend_fontsize, bbox_to_anchor=(1.2, 0.6))
+  f.legend(p, legend_str, fontsize = legend_fontsize,  bbox_to_anchor=(1.0,0.5))
 
-  # Set Figure title
+
+  # Set Figure title and label axes
   f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
+  f.text(0.5, 0.01, var_str + " " + units, ha='center')
+  f.text(0.01, 0.5, 'depth (m)', va='center', rotation=90)
 
   # Set x and y labels
   f.text(xlabelpos[0], xlabelpos[1], xlabel, 

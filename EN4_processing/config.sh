@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ## Set the machine to be used. Pick one.
-#export MACHINE="LOTUS"  # resource on JASMIN
-export MACHINE="SPICE"  # resource at MO
+export MACHINE="LOTUS"  # resource on JASMIN
+#export MACHINE="SPICE"  # resource at MO
 
 
 ## SETTINGS FOR JASMIN LOTUS PROCESSING
