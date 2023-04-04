@@ -1,5 +1,5 @@
 '''
-For plotting analysis data from a netcdf file created using COAsT.ProfileAnalysis.mask_means().
+For plotting analysis data from a netcdf file created using COAsT.MaskMaker() class.
 This will plot multiple datasets onto a set of subplots. Each subplot is for
 a different averaging region.
 
