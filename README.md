@@ -7,13 +7,15 @@ EN4_preprocessing
 EN4_processing
 EN4_postprocessing
 ```
+and
+```
+Tidegauge_processing
+```
 
-There are also original files that are under review (in `review_in_progress_Orig_files`, which includes sea level
-analysis) and two directories that are temporary.
 
 # Steps for processing EN4 and model data 
 
-## Preprocess the EN4 data
+## 1.Preprocess the EN4 data
 
 Prior to computing diagnostics, the EN4 data is preprocessed into monthly COAsT-ready files for a restricted geographic domain.
 To make it easier to work across sites and architectures two config files are used to control python and bash processes.
@@ -31,7 +33,7 @@ which calls a machine dependant scheduler script `$MACHINE_pre_process_en4_month
 Output files are stored in the directory `config.sh: DOUT_EN4` with file structure: `<region>_processed_yyyymm.nc`. E.g.
 `AMM15_processed_201410.nc`
 
-## Process monthly data to generate model error profiles with respect to EN4 profiles
+## 2.Process monthly data to generate model error profiles with respect to EN4 profiles
 
 1. `cd EN4_processing`
 
@@ -116,7 +118,7 @@ Output files take the form: `surface_crps_data_p0_201101_2012.nc`
 
 Next merge and compute regional averages. E.g. merge_mean_surface_crps.py in EN4_postprocessing.
 
-## Postprocessing
+## 3.Postprocessing
 
 1. `cd EN4_postprocessing`
 
