@@ -108,6 +108,9 @@ for i in range(n_reg):
 
 # Loop over variable to plot
 for var_str in ["Temperature", "Salinity"]:
+ if var_str == "Temperature": units = "(deg C)"
+ if var_str == "Salinity": units = "(psu)"
+
  #for analysis_str in ["MAE", "STD", "BIAS"]:
  for analysis_str in ["MAE", "BIAS"]:
   # Labels and Titles
@@ -179,8 +182,10 @@ for var_str in ["Temperature", "Salinity"]:
   # Make legend
   a_flat[0,legend_index].legend(p, legend_str, fontsize = legend_fontsize)
 
-  # Set Figure title
+  # Set Figure title and label axes
   f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
+  f.text(0.5, 0.01, var_str + " " + units)
+  f.text(0.01, 0.5, 'depth (m)', rotation=90)
 
   # Set x and y labels
   f.text(xlabelpos[0], xlabelpos[1], xlabel, 
