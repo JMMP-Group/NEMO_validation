@@ -11,7 +11,7 @@ This slices makes the entire process fast on JASMIN, though a little harder to f
 
 Workflow:
 
-Pitch machine in config.sh
+Set machine in config.sh
 Ensure paths are correctly set in <machine>_config.sh
 
 Execute with
