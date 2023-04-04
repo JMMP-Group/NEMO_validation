@@ -93,6 +93,29 @@ sbatch -J 201109 --time=3:00:00 lotus_ana_MOD_METEST.sh P0.0 2011 9 2012 CO7_EXA
 sbatch -J 200905 --time=3:00:00 lotus_ana_MOD_METEST.sh P0.0 2009 5 2010 CO7_EXACT_CFG_FILE.nc
 ```
 
+### CRPS values
+There is a separate processing step to generate the surface CRPS values as a function of distance from the
+observation locations. The CRPS algorithm loops over each observation, find the model indices with prescribed radii, and 
+then calculates the CRPS. This is poorly optimised so is computed as a separate (optional) process. Each month is 
+calculated individually, then merged and averaged over regions.
+
+Execute: `. ./iter_surface_crps.sh`
+This deploy monthly processes on ${MACHINE} (currently only tested on JASMIN's lotus)
+
+```
+sbatch "${MACHINE,,}"_surface_crps.sh $MOD $start $month $end $GRID"
+```
+which in turn launches the python script
+
+```
+python  surface_crps.py $1 $2 $3 $4 $5
+```
+
+following the appropriate header commands for the batch scheduler.
+Output files take the form: `surface_crps_data_p0_201101_2012.nc`
+
+Next merge and compute regional averages. E.g. merge_mean_surface_crps.py in EN4_postprocessing.
+
 ## Postprocessing
 
 1. `cd EN4_postprocessing`
@@ -166,3 +189,37 @@ This also iterates over variables (temperature, salinity) and diagnostics (MAE, 
 
 
 Outputs e.g. `FIGS/regional_means_abs_diff_salinity_test.svg`
+
+
+### CRPS values
+
+If CRPS outputs are calculated these can be postprocessed in this folder.
+
+```
+. ./iter_merge_mean_surface_crps.sh
+```
+
+sets machine specific paths and variables and launches
+
+```
+sbatch ${MACHINE,,}_merge_mean_surface_crps.sbatch $MOD
+```
+
+which submits the following machine independent script
+```
+python merge_mean_surface_crps.py $1 > LOGS/merge_mean_surface_crps_$1.log
+```
+
+Finally the plots can be made with 
+```
+python plot_surface_crps.py
+```
+
+### Regional map
+
+There is a simple script to plot the regions used for the decompostion, which uses the COAsT example
+files:
+
+```
+python plot_regions.py
+```
