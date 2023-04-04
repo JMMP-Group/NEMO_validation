@@ -77,7 +77,7 @@ legend_str = ["CO7","CO9p0"]
 legend_index = 6 #11          # Axis index to put legend (flattened index, start from 0).
                           # Good to place in an empty subplot
 legend_pos = 'upper right' # Position for legend, using matplitlib legend string
-legend_fontsize =  10
+legend_fontsize = 10
 
 # Labels and Titles
 xlabelpos = (figsize[0]/2, 0)              # (x,y) position of xlabel
