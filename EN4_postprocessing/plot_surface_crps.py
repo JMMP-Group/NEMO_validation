@@ -29,17 +29,13 @@ analysis_str = "CRPS"
 # on each axis of the plot
 
 # Assuming loading two configs: co7 and the P0.0. HARD WIRING. NOT IDEAL
-#fn_list = [config.dn_out+"All_mask_means_crps_co7.nc", config.dn_out.replace('co7','P0.0')+"All_mask_means_crps_P0.0.nc"]#
-fn_list = [config.dn_out.replace('co7','P0.0')+"All_mask_means_crps_daily_P0.0.nc",
+fn_list = [config.dn_out+"All_mask_means_crps_daily_co7.nc",
            config.dn_out.replace('co7','P0.0')+"All_mask_means_crps_daily_P0.0.nc"]#
 
 #%% General Plot Settings
 ## Specify the specific regions, their labels and order of appearance to plot. Region indexing to match EN4_postprocessing mean_season.py
 region_ind = [ 1, 7, 3, 2, 9, 5, 4, 6, 8]              # Region indices (in analysis) to plot
 region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Irish Sea', 'Kattegat', 'Nor. Trench', 'FSC', 'Off-shelf']
-
-#region_ind = [ 1, 7, 2, 8, 4, 3, 5, 7]              # Region indices (in analysis) to plot
-#region_names = [ 'N. North Sea','S. North Sea','Outer Shelf', 'Irish Sea', 'Kattegat', 'Nor. Trench', 'FSC', 'Off-shelf']
 
 
 save_plot = True                # Boolean to save plot or not
