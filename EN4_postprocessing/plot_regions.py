@@ -1,19 +1,16 @@
 '''
-For plotting the analysis regions
+For plotting the analysis regions.
+Uses COAsT example data
 '''
 
-from config import config
-config = config() # initialise variables in python
 
-config.dn_out = "/Users/jelt/Downloads/"
-config.coast_repo = "/Users/jelt/GitHub/COAsT"
 
 import xarray as xr
 import matplotlib.pyplot as plt
-import numpy as np
 import sys
 
-sys.path.append(config.coast_repo)
+coast_repo = "/Users/jelt/GitHub/COAsT"
+sys.path.append(coast_repo)
 import coast
 
 
@@ -22,7 +19,6 @@ def region_plot(mask: xr.Dataset):
     Plot a map of masks in the MaskMaker object
     Add labels
     """
-	import matplotlib.pyplot as plt
 
 	n_mask = mask.dims["dim_mask"]
 	offset = 10  # nonzero offset to make scaled-boolean-masks [0, >offset]
@@ -47,9 +43,6 @@ def region_plot(mask: xr.Dataset):
 	plt.title(None)
 
 #%% File settings
-#fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
-#fn_cfg_nemo = config.fn_cfg_nemo
-
 fn_dom_nemo = "/Users/jelt/GitHub/COAsT/example_files/coast_example_nemo_domain.nc"
 fn_cfg_nemo = "/Users/jelt/GitHub/COAsT/config/example_nemo_grid_t.json"
 
@@ -92,7 +85,7 @@ region_plot(mask_xr)
 plt.contourf(lon,lat,bath, levels=(0,10), colors="w")
 plt.contour(lon,lat,bath, levels=(0,10), colors="k")
 
-## Append regions for contour
+## Append regions for contouring. These overlap shaded regions
 masks_list.append(mm.region_def_nws_norwegian_trench(lon, lat, bath))  # 5
 masks_list.append(mm.region_def_nws_fsc(lon, lat, bath))  # 6
 masks_names = [ 'N North Sea', 'Outer shelf', 'Eng Channel', 'Kattegat',
