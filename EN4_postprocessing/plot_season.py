@@ -184,7 +184,7 @@ for var_str in ["Temperature", "Salinity"]:
 
   # Set Figure title and label axes
   f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
-  f.text(0.5, 0.01, var_str + " " + units, va='center')
+  f.text(0.5, 0.01, var_str + " " + units, ha='center')
   f.text(0.01, 0.5, 'depth (m)', va='center', rotation=90)
 
   # Set x and y labels
