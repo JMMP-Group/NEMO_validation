@@ -57,7 +57,7 @@ figsize = (9,7)       # Figure size
 sharey = True         # Align y axes
 sharex = False        # Align x axes
 subplot_padding = .5  # Amount of vertical and horizontal padding between plots
-fig_pad = (.075, .075, .075, .1)   # Whole figure padding as % (left, top, right, bottom)
+fig_pad = (.075, .075, .15, .1)   # Whole figure padding as % (left, top, right, bottom)
 #max_depth = 50                    # Maximum plot depth
 #max_depth = 4000                   # Maximum plot depth
 #max_depth = 800                   # Maximum plot depth
@@ -70,14 +70,14 @@ max_depth = 150                   # Maximum plot depth
 #legend_str = ["P0.0","GLS","ERA5","GLS+ERA5","P0.0NERCWAD","P0.0NERCNOWAD","GEG_FES_ME"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.0NERCWAD","P0.0NERCNOWAD","p0 GEG OLDBDY 0.69", "p0 GEG OLD BDY 0.7","P0.0_NERC_GEG"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.6","P0.7","P0.8","503","504","535","545","P0.5.c"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
-legend_str = ["CO7","P0.0"]
+legend_str = ["CO7","CO9p0"]
 #legend_str = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","OCT","NOV","DEC"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.1b","P0.6","P0.7","P0.8","u-cp812","u-cp815","u-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","FES_P0.1b","TPX_GLS_P0.6","TPX_ERA5_P0.7","TPX_GLS_ERA5_P0.8","FES_MEu-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
 legend_index = 6 #11          # Axis index to put legend (flattened index, start from 0).
                           # Good to place in an empty subplot
 legend_pos = 'upper right' # Position for legend, using matplitlib legend string
-legend_fontsize =  6
+legend_fontsize =  10
 
 # Labels and Titles
 xlabelpos = (figsize[0]/2, 0)              # (x,y) position of xlabel
@@ -180,7 +180,9 @@ for var_str in ["Temperature", "Salinity"]:
         a_flat[row,ii].invert_yaxis()
 
   # Make legend
-  a_flat[0,legend_index].legend(p, legend_str, fontsize = legend_fontsize)
+  #a_flat[0,legend_index].legend(p, legend_str, fontsize = legend_fontsize, bbox_to_anchor=(1.2, 0.6))
+  f.legend(p, legend_str, fontsize = legend_fontsize,  bbox_to_anchor=(1.0,0.5))
+
 
   # Set Figure title and label axes
   f.suptitle(fig_title, fontsize = title_fontsize, fontweight = title_fontweight)
