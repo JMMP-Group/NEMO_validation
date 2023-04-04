@@ -20,7 +20,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
-matplotlib.use('Agg')
+matplotlib.use('agg')
 
 #%% File settings
 analysis_str = "CRPS"
