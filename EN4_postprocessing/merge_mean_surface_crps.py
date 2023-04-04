@@ -49,7 +49,7 @@ print(fn_dat_nemo)
 fn_cfg_nemo = config.fn_cfg_nemo
 fn_cfg_prof = config.fn_cfg_prof
 fn_analysis_crps = "%s%03s_CRPS_MERGED.nc"%(config.dn_out, season)
-fn_out = "%s%03s_mask_means_crps_daily.nc"%(config.dn_out, season)
+fn_out = "%s%03s_mask_means_crps_daily_%s.nc"%(config.dn_out, season, model)
 
 ## Load the CRPS data as a profile object
 crps = coast.Profile(config=fn_cfg_prof)
