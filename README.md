@@ -286,8 +286,7 @@ mkdir /gws/nopw/j04/jmmp/CO9_AMM15_validation/P1.5c/tg_analysis/
 mkdir /gws/nopw/j04/jmmp/CO9_AMM15_validation/P1.5c/tg_analysis/FIGS/
 ```
 
-Other files:
-============
+### Other files
 
 `analyse_ssh_hourly.py`
         A partial clone and maybe parent of validate_ssh_tg_hourly.py
