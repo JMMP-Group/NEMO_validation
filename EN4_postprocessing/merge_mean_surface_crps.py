@@ -26,11 +26,14 @@ model = args[1]  # MOD. Already loaded into config.dn_out directory path
 season = "All"
 
 # Merge over all available years: "*" are e.g._200501_2006. "p0" is undesirable but superceded by parent directory in config.dn_out
-ds_index = xr.open_mfdataset(config.dn_out +
-                             'surface_crps_data_p0_*.nc',
-                             combine='nested', concat_dim="id_dim", parallel=True)
-#ds_index = extract_season(ds_index, season)
+base_dir = config.dn_out
+if(1):
+    # Hack to read files common to specified (P0.0) directory
+    base_dir = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/P0.0/profiles/"
+file_paths = [base_dir+f for f in os.listdir(base_dir) if f.startswith('surface_crps_data_p0_')]
 
+ds_index = xr.open_mfdataset(file_paths,
+                             combine='nested', concat_dim="id_dim", parallel=True)
 
 with ProgressBar():
   ds_index.to_netcdf(config.dn_out+"%03s_CRPS_MERGED.nc"%(season))
