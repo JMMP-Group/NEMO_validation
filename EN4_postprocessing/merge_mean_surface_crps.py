@@ -31,9 +31,9 @@ base_dir = config.dn_out
 if(1):
     # Hack to read files common to specified (P0.0) directory
     base_dir = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/P0.0/profiles/"
-file_paths = [base_dir+f for f in os.listdir(base_dir) if f.startswith('surface_crps_data_p0_')]
+file_names = [f for f in os.listdir(base_dir) if f.startswith('surface_crps_data_p0_')]
 
-ds_index = xr.open_mfdataset(file_paths,
+ds_index = xr.open_mfdataset([config.dn_out + f for f in file_names],
                              combine='nested', concat_dim="id_dim", parallel=True)
 
 with ProgressBar():
