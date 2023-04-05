@@ -2,6 +2,7 @@
 from config import config
 import sys
 import numpy as np
+import os
 
 config = config() # initialise variables in python
 
