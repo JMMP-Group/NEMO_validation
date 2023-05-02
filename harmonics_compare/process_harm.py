@@ -479,12 +479,14 @@ def plot_overlay_taylor_tides():
     # Loop over harmonic species.
     # Plot Taylor Tide diag of model and obs for each harmonic. Overlay on two (deep/shallow) plots as trees
     for subset in ['shal', 'deep']:
-
-        R = np.zeros((4, len(constit_list)))
-        rms_amp = np.zeros((4, len(constit_list)))
-        rms_err = np.zeros((4, len(constit_list)))
+      for constit_family_list in [["M2", "S2", "N2", "K2"], ["O1", "Q1", "P1"]]:
+        if "M2" in constit_family_list: family_str = "semi-diurnal"
+        if "O1" in constit_family_list: family_str = "diurnal"
+        R = np.zeros((4, len(constit_family_list)))
+        rms_amp = np.zeros((4, len(constit_family_list)))
+        rms_err = np.zeros((4, len(constit_family_list)))
         label = {}
-        for count, constit in enumerate(constit_list):
+        for count, constit in enumerate(constit_family_list):
             try:
                 del II, z1obs, z2obs, z1mod, z2mod
             except:
@@ -516,49 +518,43 @@ def plot_overlay_taylor_tides():
             rms_err[0,count] = 0
             label[0,count] = 'obs:'+constit
 
-            # FES
-            z1mod, z2mod = fes.dataset[constit + 'x'][II], fes.dataset[constit + 'y'][II]
+
+            # GS1P1
+            try:
+                del z1mod, z2mod
+            except:
+                pass
+            z1mod, z2mod = gs1p1.dataset[constit + 'x'][II], gs1p1.dataset[constit + 'y'][II]
 
             R[1,count] = pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)
             rms_amp[1,count] = rms_abs_amp(z1mod, z2mod)
             rms_err[1,count] = rms_abs_error(z1obs, z2obs, z1mod, z2mod)
-            label[1,count] = 'fes:'+constit
+            label[1,count] = 'gs1p1:'+constit
 
-            #R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
-            #rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
-            #rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
 
-            # GS1P1
+
+            # GS1P2
             del z1mod, z2mod
-            z1mod, z2mod = gs1p1.dataset[constit + 'x'][II], gs1p1.dataset[constit + 'y'][II]
+            #try:
+            z1mod, z2mod = gs1p2.dataset[constit + 'x'][II], gs1p2.dataset[constit + 'y'][II]
+            #except:
+            #    z1mod = np.nan
+            #    z2mod = np.nan
 
             R[2,count] = pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)
             rms_amp[2,count] = rms_abs_amp(z1mod, z2mod)
             rms_err[2,count] = rms_abs_error(z1obs, z2obs, z1mod, z2mod)
-            label[2,count] = 'gs1p1:'+constit
+            label[2,count] = 'gs1p2:'+constit
 
-            #R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
-            #rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
-            #rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
 
-            # GS1P2
+            # FES
             del z1mod, z2mod
-            try:
-                z1mod, z2mod = gs1p2.dataset[constit + 'x'][II], gs1p2.dataset[constit + 'y'][II]
-            except:
-                z1mod = np.nan
-                z2mod = np.nan
+            z1mod, z2mod = fes.dataset[constit + 'x'][II], fes.dataset[constit + 'y'][II]
 
             R[3,count] = pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)
             rms_amp[3,count] = rms_abs_amp(z1mod, z2mod)
             rms_err[3,count] = rms_abs_error(z1obs, z2obs, z1mod, z2mod)
-            label[3,count] = 'gs1p2:'+constit
-
-            #R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
-            #rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
-            #rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
-
-
+            label[3,count] = 'fes:'+constit
 
         print(subset)
         #print(f"R= {[format(R[i], '.2f') for i in range(len(R))]}")
@@ -567,7 +563,7 @@ def plot_overlay_taylor_tides():
         print(label)
 
         ## Check cosine rule consistency
-        for i in range(len(constit_list)):
+        for i in range(len(constit_family_list)):
             B = rms_amp[0,i]
             A = rms_amp[1:4,i]
             C = rms_err[1:4,i]
@@ -592,27 +588,29 @@ def plot_overlay_taylor_tides():
         )
 
         ## Loop over constituents to create plot
-        for i in range(len(constit_list)):
+        for i in range(len(constit_family_list)):
             # Add data to axes
             tt.ax.scatter(rms_amp[0:4,i] * R[0:4,i],
                           rms_amp[0:4,i] * np.sqrt(1 - R[0:4,i] ** 2),
-                          s=10, c=['b', 'r', 'k', 'g'])
+                          s=20, c=['b', 'k', 'g', 'r'])
             # Add vectors between points and obs
             tt.ax.plot([np.repeat(rms_amp[0,i],3), rms_amp[1:4,i] * R[1:4,i]],
                        [np.zeros(3), rms_amp[1:4,i] * np.sqrt(1 - R[1:4,i] ** 2)])
-            tt.ax.lines[-3].set_color('r')
-            tt.ax.lines[-2].set_color('k')
-            tt.ax.lines[-1].set_color('g')
+            tt.ax.lines[-3].set_color('k')
+            tt.ax.lines[-2].set_color('g')
+            tt.ax.lines[-1].set_color('r')
+
+            tt.ax.text( rms_amp[0,i], -0.025, constit_family_list[i], rotation=0, color='b')
 
 
         # manual legend
-        colors = ['red', 'black', 'green']
-        lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='dotted') for c in colors]
-        labels = ["FES2014", "GS1p1", "GS1p2"]
-        plt.legend(lines, labels)
+        colors = ['black', 'green', 'red', 'blue']
+        lines = [Line2D([], [], color=c, markersize=5, marker='o', linestyle='None') for c in colors]
+        labels = ["GS1p1", "GS1p2", "FES2014", "obs"]
+        plt.legend(lines, labels, loc='upper left')
 
-        plt.title(subset)
-        plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_" + "_" + subset + "_tree.png")
+        plt.title(subset + ":" + family_str)
+        plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_" + "_" + subset + "_" + family_str + "_tree.png")
 
 def plot_cloud():
     # Taylor Tide with cloud of all data points
@@ -732,11 +730,11 @@ gs1p1.dataset['M2y'] = +gs1p1.dataset.M2y
 gs1p1.dataset = gs1p1.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
 
 gs1p2 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/GS1p2_full_extracted.nc"))
-gs1p2.dataset = gs1p2.dataset.drop_vars(["G", "A"]) # Unlabelled amp/pha parts should not be in the file
+#gs1p2.dataset = gs1p2.dataset.drop_vars(["G", "A"]) # Unlabelled amp/pha parts should not be in the file
 gs1p2.dataset['A'], gs1p2.dataset['G'] = amp_pha_from_re_im(gs1p2.dataset.M2x, gs1p2.dataset.M2y)
 
 gs1p2.dataset['G'] = -(gs1p2.dataset.G+180)%360-180  # set phase: -180,180
-gs1p2.dataset['M2y'] = - gs1p2.dataset.M2y
+gs1p2.dataset['M2y'] = +gs1p2.dataset.M2y
 gs1p2.dataset = gs1p2.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
 
 
@@ -858,7 +856,7 @@ plt.savefig(config.dn_out+"PROCESSED/FIGS/dist_bathy.png")
 #plot_all_complex_harmonic_errors()
 
 #%% Plot the set of vector differences between model and obs for each constituent, coloured by depth
-plot_all_complex_harmonic_stick_errors()
+#plot_all_complex_harmonic_stick_errors()
 
 #%% ## Plot amplitude and phase errors (deg)
 #plot_all_amp_pha_errors()
@@ -867,7 +865,7 @@ plot_all_complex_harmonic_stick_errors()
 #plot_all_taylor_tides()
 
 #%% Compute Taylor diagrams. Overlay on deep and shallow plots as error trees
-#plot_overlay_taylor_tides()
+plot_overlay_taylor_tides()
 
 #%% Attempt to do Taylor Tide with cloud of all data points
 #plot_cloud()
