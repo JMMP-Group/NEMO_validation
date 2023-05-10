@@ -15,6 +15,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib
+import cartopy.crs as ccrs
 matplotlib.use('TkAgg')
 import numpy as np
 #import datetime
@@ -710,6 +711,46 @@ def plot_cloud():
         plt.title(EXP + " " + constit + ':dots')
         plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_" + constit + "_" + EXP + "_shallow_SPECIAL.png")
 
+def plot_east_coast_usa():
+    ylims = [35, 45]  # [-80,80] #[45,60]
+    xlims = [-76, -60]  # [-180,180] #[-60, -25]
+
+    plt.close('all')
+    #plt.figure()
+    fig, axs = plt.subplots(2, 2, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
+    axs[0,0].coastlines()
+    axs[0,0].scatter(obs.dataset.longitude, obs.dataset.latitude, c=obs.dataset['A'], s=20,
+                     vmin=0, vmax=0.45, cmap='Spectral')
+    axs[0,0].set_title('obs')
+
+    axs[0,1].coastlines()
+    axs[0,1].scatter(fes.dataset.longitude, fes.dataset.latitude, c=fes.dataset['A'], s=20,
+                     vmin=0, vmax=0.45, cmap='Spectral')
+    axs[0,1].set_title('FES')
+
+
+    axs[1,0].coastlines()
+    axs[1,0].scatter(gs1p1.dataset.longitude, gs1p1.dataset.latitude, c=gs1p1.dataset['A'], s=20,
+                     vmin=0, vmax=0.45, cmap='Spectral')
+    axs[1,0].set_title('GS1P1')
+
+
+    axs[1,1].coastlines()
+    im = axs[1,1].scatter(gs1p2.dataset.longitude, gs1p2.dataset.latitude, c=gs1p2.dataset['A'], s=20,
+                     vmin=0, vmax=0.45, cmap='Spectral')
+    axs[1,1].set_title('GS1P2')
+
+
+    plt.setp(axs, xlim=xlims, ylim=ylims)
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+    fig.colorbar(im, cax=cbar_ax)
+
+    plt.suptitle("M2 amp")
+    # plt.show()
+    plt.savefig(config.dn_out + "PROCESSED/FIGS/scatter_amp_on_map.png")
+
 # Load data as tidegauge objects
 ## Harmonise definitions: negate M2y (and phase) in NEMO - done in preprocessing.
 ################################
@@ -745,6 +786,9 @@ if(0):
  obs.plot_on_map_multiple([obs], color_var_str="G")
  #plt.savefig(config.dn_out+"PROCESSED/FIGS/obs_phase_on_map.png")
 
+ylims = [-80,80] #[45,60]
+xlims = [-180,180] #[-60, -25]
+
 if(0):
     # definitions for M2x and M2y are opposite to NEMO, but work:
     fig, [ax0, ax1] = plt.subplots(ncols=2)
@@ -754,8 +798,6 @@ if(0):
 
 ## Basic map plot of phases
 # Phase alignment
-ylims = [-80,80] #[45,60]
-xlims = [-180,180] #[-60, -25]
 
 plt.close('all')
 plt.figure()
@@ -850,7 +892,8 @@ plt.title("distribution of depths at observation sites")
 plt.legend()
 plt.savefig(config.dn_out+"PROCESSED/FIGS/dist_bathy.png")
 
-
+#%% Plot eaat coast of USA
+plot_east_coast_usa()
 
 #%% ## Plot complex harmonic errors
 #plot_all_complex_harmonic_errors()
@@ -865,7 +908,7 @@ plt.savefig(config.dn_out+"PROCESSED/FIGS/dist_bathy.png")
 #plot_all_taylor_tides()
 
 #%% Compute Taylor diagrams. Overlay on deep and shallow plots as error trees
-plot_overlay_taylor_tides()
+#plot_overlay_taylor_tides()
 
 #%% Attempt to do Taylor Tide with cloud of all data points
 #plot_cloud()
