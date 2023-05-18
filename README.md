@@ -1,3 +1,6 @@
+[![DOI](https://zenodo.org/badge/370984643.svg)](https://zenodo.org/badge/latestdoi/370984643)
+
+
 # NEMO_validation
 Scripts for validation of Coastal Ocean NEMO output.
 
