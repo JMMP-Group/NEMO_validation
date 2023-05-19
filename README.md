@@ -4,7 +4,17 @@
 # NEMO_validation
 Scripts for validation of Coastal Ocean NEMO output.
 
-This is split into a number of sections with corresponding directories:
+There are currently two components to these analyses given here:
+* Assessment against a global dataset (EN4) of temperature and salinity profiles.
+The workflow computes in "profile space" - extracting synthetic profiles from the simulation to match the observations 
+and then computing statistics and metrics between the observed and simulated profile datasets.
+
+* Assessment against a dataset of tidegauge sealevel timeseries:
+The workflow computes in "tideguage space" - extracting synthetic tidegauge timeseries from the simulation to match the
+observations and then computing statistics and metrics between the observed and simulated timeseries datasets.
+
+
+The scripts are split into a number of sections with corresponding directories:
 ```
 EN4_preprocessing
 EN4_processing
@@ -191,7 +201,8 @@ which submits the following machine independent script
 
 This plots multiple panels of area meaned profiles. One panel per region. Top row DJF and lower row JJA.
 This also iterates over variables (temperature, salinity) and diagnostics (MAE, Bias).
-
+E.g.
+![](FIGS/plot_seasaon_sal_mae.png)
 
 Outputs e.g. `FIGS/regional_means_abs_diff_salinity_test.svg`
 
@@ -219,16 +230,19 @@ Finally the plots can be made with
 ```
 python plot_surface_crps.py
 ```
+For example (Byrne et al. 2023):
+![](FIGS/crps_sst.png)
+![](FIGS/crps_sss.png)
 
 ### Regional map
 
-There is a simple script to plot the regions used for the decompostion, which uses the COAsT example
+There is a simple script to plot the regions used for the decomposition, which uses the COAsT example
 files:
 
 ```
 python plot_regions.py
 ```
-
+![](FIGS/maskmaker_quick_plot.png)
 
 # Steps for processing Tidegauge and model data 
 
@@ -239,8 +253,9 @@ All of the tidegauge analysis is done in one directory.
 This directory contains scripts which perform validation against hourly ssh data.
 
 Overview:
-There are 3 elements, extract (SSH from model at obs locations); analyse (concurrent ssh and threshld analysis 
-on model and obs data); plot. For short timeseries these can and where done as a single (slow) job. However with 10 years of data it makes sense to slice the stages to spread them across parallel tasks.
+There are 3 elements, extract (SSH from model at obs locations); analyse (concurrent ssh and threshold analysis 
+on model and obs data); plot. For short timeseries these can and where done as a single (slow) job. However with 10 
+years of data it makes sense to slice the stages to spread them across parallel tasks.
 The extract stage can be sliced across monthly jobs
 The analysis stage can be sliced across the port dimension.
 This slices makes the entire process fast on JASMIN, though a little harder to follow.
