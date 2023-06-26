@@ -21,13 +21,16 @@ import numpy as np
 #%% File settings
 run_name = "test"
 
-
 # List of analysis output files. Profiles from each will be plotted
 # on each axis of the plot
 
 # Assuming loading two configs: co7 and the P0.0. HARD WIRING. NOT IDEAL
-fn_list_DJF = [config.dn_out+"DJF_mask_means_daily.nc", config.dn_out.replace('co7','P0.0')+"DJF_mask_means_daily.nc"]#
-fn_list_JJA = [config.dn_out+"JJA_mask_means_daily.nc", config.dn_out.replace('co7','P0.0')+"JJA_mask_means_daily.nc"]#
+co7_path = '/gws/nopw/j04/jmmp/CO9_AMM15_validation/co7/profiles/'
+fn_list_DJF = [config.dn_out+"DJF_mask_means_daily.nc",
+               co7_path+"DJF_mask_means_daily.nc"]#
+fn_list_JJA = [config.dn_out+"JJA_mask_means_daily.nc",
+               co7_path+"JJA_mask_means_daily.nc"]#
+print (fn_list_JJA)
 #fn_list_DJF = [config.dn_out+"DJF_mask_means_daily.nc"] 
 #fn_list_JJA = [config.dn_out+"JJA_mask_means_daily.nc"]
 
@@ -70,7 +73,7 @@ max_depth = 150                   # Maximum plot depth
 #legend_str = ["P0.0","GLS","ERA5","GLS+ERA5","P0.0NERCWAD","P0.0NERCNOWAD","GEG_FES_ME"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.0NERCWAD","P0.0NERCNOWAD","p0 GEG OLDBDY 0.69", "p0 GEG OLD BDY 0.7","P0.0_NERC_GEG"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.6","P0.7","P0.8","503","504","535","545","P0.5.c"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
-legend_str = ["CO7","CO9p0"]
+legend_str = ["CO9p2","CO7"]
 #legend_str = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","OCT","NOV","DEC"]# ,"GEG_TPX_SF12","GEG_FES_SF12","GEG_FES_ME" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","P0.1b","P0.6","P0.7","P0.8","u-cp812","u-cp815","u-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
 #legend_str = ["P0.0","FES_P0.1b","TPX_GLS_P0.6","TPX_ERA5_P0.7","TPX_GLS_ERA5_P0.8","FES_MEu-cq846" ]     # List of strings to use in legend (match with fn_list ordering)
@@ -131,7 +134,6 @@ for var_str in ["Temperature", "Salinity"]:
 
   # Create plot and flatten axis array
   f,a = plt.subplots(n_r, n_c, figsize = figsize, sharex = sharex, sharey = sharey)
-  a_flat = a.flatten()
   a_flat = a
 
   # Loop over regions
@@ -167,6 +169,12 @@ for var_str in ["Temperature", "Salinity"]:
         a_flat[row,ii].set_title(f"{region_names[ii]}:\n{season}", fontsize=8)
         a_flat[row,ii].grid()
         a_flat[row,ii].set_ylim(0, max_depth)
+
+        # set x lims
+        if var_str == 'Salinity':
+            a_flat[row,ii].set_xlim(-0.1, 0.5)
+        if var_str == 'Temperature':
+            a_flat[row,ii].set_xlim(-0.1, 2.5)
 
         # Plot fixed lines at 0 and mean depth
         if plot_zero_line:
