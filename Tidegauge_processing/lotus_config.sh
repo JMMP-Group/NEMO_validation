@@ -13,6 +13,7 @@ export RUN_NAME="P0.0"
 export RUN_NAME="P1.5b"
 export RUN_NAME="P1.5"
 export RUN_NAME="P1.5c"
+export RUN_NAME="co7"
 
 ## 2014 P0.0
 #export MASS="xu-cb676"
@@ -22,13 +23,16 @@ export RUN_NAME="P1.5c"
 if [ $RUN_NAME = "P0.0" ]; then
  export FN_NEMO_DATA="/gws/nopw/j04/jmmp_collab/AMM15/OUTPUTS/"$RUN_NAME"/NC3_SSH/YYYYMM*_shelftmb_grid_T.nc"
 
+elif [ $RUN_NAME = "co7" ]; then
+ export FN_NEMO_DATA="/gws/nopw/j04/jmmp/MASS/rosie_mi-ao113_2004/field.nc.file/YYYYMM*_shelftmb_grid_T.nc"
+
 else # elif [ $RUN_NAME = "P1.5" ]; then
  export FN_NEMO_DATA="/gws/nopw/j04/jmmp_collab/AMM15/OUTPUTS/"$RUN_NAME"/SSH/YYYYMM*_shelftmb_grid_T.nc.ppc3"
 fi
 
 
 
-export FN_NEMO_DOMAIN="/gws/nopw/j04/jmmp_collab/CO9_AMM15/inputs/domains/CO7_EXACT_CFG_FILE.nc"
+export FN_NEMO_DOMAIN="/gws/nopw/j04/jmmp/jmmp_collab/AMM15/DOMAIN_CFG/CO7_EXACT_CFG_FILE.nc"
 export FN_NEMO_CFG="/home/users/jelt/GitHub/COAsT/config/example_nemo_grid_t.json"
 
 export FN_OUT="/gws/nopw/j04/jmmp/CO9_AMM15_validation/"$RUN_NAME"/tg_analysis/ssh_hourly_"$RUN_NAME".nc"

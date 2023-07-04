@@ -27,7 +27,7 @@ year = int(args[1])
 month  = int(args[2])
 
 ## Use validate_ssh_tg_hourly.py
-fn_nemo_data = config.fn_nemo_data.replace("YYYYMM*_shelftmb", '%04d%02d'%(year,month)+"*_shelftmb")
+fn_nemo_data = config.fn_nemo_data.replace("YYYYMM*_shelftmb", '%04d%02d'%(year,month)+"??_shelftmb")
 fn_extr_out = config.fn_extr_out.replace(".nc", '_%04d%02d'%(year,month)+".nc")
 
 if(1):  # Takes 7mins for one month. 1 yr in 2.5 hrs
