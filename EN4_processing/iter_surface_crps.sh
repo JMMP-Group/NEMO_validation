@@ -12,7 +12,7 @@ do
   for (( month=1; month<13; month++ ))
   do 
      end=$(expr $start + 1 )
-     echo "sbatch "${MACHINE,,}"_surface_crps.sh $MOD $start $month $end $GRID"
-     sbatch -J ${start}${month}${MOD} ${MACHINE,,}_surface_crps.sh $MOD $start $month $end $GRID
+     echo "sbatch "${MACHINE,,}"_surface_crps.sh $start $month"
+     sbatch -J ${start}${month}${MOD} ${MACHINE,,}_surface_crps.sh $start $month
   done
 done
