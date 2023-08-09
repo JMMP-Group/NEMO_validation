@@ -14,8 +14,6 @@ comments. Edit this as much as you like or even go into the plotting code below.
 from config import config
 config = config() # initialise variables in python
 
-config.dn_out = "/Users/jelt/Downloads/"
-
 import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib
@@ -28,9 +26,10 @@ analysis_str = "CRPS"
 # List of analysis output files. Profiles from each will be plotted
 # on each axis of the plot
 
+
 # Assuming loading two configs: co7 and the P0.0. HARD WIRING. NOT IDEAL
-fn_list = [config.dn_out+"All_mask_means_crps_daily_co7.nc",
-           config.dn_out.replace('co7','P0.0')+"All_mask_means_crps_daily_P0.0.nc"]#
+fn_list = [config.dn_out+"All_mask_means_crps_daily.nc",
+           config.dn_out.replace(config.case,'co7')+"All_mask_means_crps_daily_co7.nc"]#
 
 #%% General Plot Settings
 ## Specify the specific regions, their labels and order of appearance to plot. Region indexing to match EN4_postprocessing mean_season.py
@@ -49,11 +48,11 @@ sharex = False        # Align x axes
 subplot_padding = .5  # Amount of vertical and horizontal padding between plots
 fig_pad = (.075, .125, .12, .15)   # Whole figure padding as % (left, bottom, right, top)
 
-max_crps_sal = 2.25
+max_crps_sal = 2.75
 max_crps_temp = 1.2
 
 # Legend settings, List of strings to use in legend (match with fn_list ordering)
-legend_str = ["CO7","CO9p0"]
+legend_str = ["CO9p2","CO7"]
 legend_index = 8 #11          # Axis index to put legend (flattened index, start from 0).
                           # Good to place in an empty subplot
 legend_pos = 'upper right' # Position for legend, using matplitlib legend string
@@ -81,17 +80,17 @@ n_reg = len(region_ind)
 
 print(f"Check region names specified are consistent with mask file")
 for i in range(n_reg):
-  print(f"Panel label:({region_names[i]}) matches data label: ({ds_list[0].region_names.values[region_ind[i]]})")
+    print(f"Panel label:({region_names[i]}) matches data label: ({ds_list[0].region_names.values[region_ind[i]]})")
 
 # Loop over variable to plot
 for var_str in ["Temperature", "Salinity"]:
     # Settings that could be in a dictionary
     if var_str == "Temperature":
      max_crps = max_crps_temp
-     units = "(deg C)"
+     units = r"$(^{\circ}$C)"
     if var_str == "Salinity":
      max_crps = max_crps_sal
-     units = "(psu)"
+     units = "(-)"
     # variable to patch in MAE for radius = 0
     mae_var_name = "profile_mean_abs_diff_{0}".format(var_str.lower())  # profile_mean_abs_diff_temperature
 
@@ -102,7 +101,7 @@ for var_str in ["Temperature", "Salinity"]:
     var_name = "profile_mean_{0}_crps".format(var_str.lower())  # profile_mean_temperature_crps
 
     # Filename for the output
-    fn_out = "FIGS/regional_{0}.svg".format(var_name)
+    fn_out = "FIGS/regional_{0}_{1}_{2}.pdf".format(var_name, config.case, 'co7')
 
     # Create plot and flatten axis array
     f,a = plt.subplots(n_r, n_c, figsize = figsize, sharey = sharey)
