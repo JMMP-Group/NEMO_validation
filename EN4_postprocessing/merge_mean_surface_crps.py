@@ -22,23 +22,20 @@ def extract_season(ds, season=None):
         ds = ds.isel(id_dim=s_ind)
     return ds
 
-args = sys.argv
-model = args[1]  # MOD. Already loaded into config.dn_out directory path
 season = "All"
 
 # Merge over all available years: "*" are e.g._200501_2006. "p0" is undesirable but superceded by parent directory in config.dn_out
 base_dir = config.dn_out
-if(1):
+if(0):
     # Hack to read files common to specified (P0.0) directory
     base_dir = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/P0.0/profiles/"
-file_names = [f for f in os.listdir(base_dir) if f.startswith('surface_crps_data_p0_')]
+file_names = [f for f in os.listdir(base_dir) if f.startswith('surface_crps_data_')]
 
 ds_index = xr.open_mfdataset([config.dn_out + f for f in file_names],
                              combine='nested', concat_dim="id_dim", parallel=True)
 
 with ProgressBar():
   ds_index.to_netcdf(config.dn_out+"%03s_CRPS_MERGED.nc"%(season))
-
 print(f'File written to {config.dn_out+"%03s_CRPS_MERGED.nc"%(season)}')
 
 
@@ -53,7 +50,7 @@ print(fn_dat_nemo)
 fn_cfg_nemo = config.fn_cfg_nemo
 fn_cfg_prof = config.fn_cfg_prof
 fn_analysis_crps = "%s%03s_CRPS_MERGED.nc"%(config.dn_out, season)
-fn_out = "%s%03s_mask_means_crps_daily_%s.nc"%(config.dn_out, season, model)
+fn_out = "%s%03s_mask_means_crps_daily.nc"%(config.dn_out, season)
 
 ## Load the CRPS data as a profile object
 crps = coast.Profile(config=fn_cfg_prof)
