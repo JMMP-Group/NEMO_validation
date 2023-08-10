@@ -29,6 +29,7 @@ class config:
         self.grid_nc     = self.get_shell_var('GRID', True)
         self.dn_dat     = self.get_shell_var('DN_DAT', True)
         self.dn_out     = self.get_shell_var('DN_OUT', True)
+        self.case     = self.get_shell_var('MOD', True)
 
     def get_shell_var(self, var:str, debug=False):
         try:
