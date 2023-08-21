@@ -1,7 +1,6 @@
 README
 
-The plan is to compare the spatial patterns of T&S and create time series of
-how this evolves over time.
+For creating surface maps of various types.
 
-gridded_model_surface_data_201007 has daily data of the surface, averaged over
-the top 5m
+These script are reliant on the creation of gridded model surface output, which
+can be generated using EN4_process scripts.
