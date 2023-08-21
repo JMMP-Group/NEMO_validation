@@ -8,6 +8,7 @@ Reads data set in config.sh
 
 from socket import gethostname
 from os import environ
+import sys
 
 class config:
     """
@@ -30,6 +31,9 @@ class config:
         self.dn_dat     = self.get_shell_var('DN_DAT', True)
         self.dn_out     = self.get_shell_var('DN_OUT', True)
         self.case     = self.get_shell_var('MOD', True)
+
+        # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
+        sys.path.append(self.coast_repo)
 
     def get_shell_var(self, var:str, debug=False):
         try:
