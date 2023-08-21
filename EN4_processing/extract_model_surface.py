@@ -43,35 +43,30 @@ class extract_surface(object):
         """
         extract NEMO surface data 
         """
-        # create nemo object
-        nemo = coast.Gridded(fn_data=self.fn_dat, fn_domain=self.fn_dom,
-                             multiple=True, config=config.fn_cfg_nemo)
+        # get data
+        ds = coast.Gridded(fn_data=self.fn_dat, fn_domain=self.fn_dom,
+                           multiple=True, config=config.fn_cfg_nemo).dataset
 
-        # assign case number
-        nemo.dataset = nemo.dataset.assign_attrs(dict(case=config.case)) 
-        
         # rename depth 
-        nemo.dataset = nemo.dataset.rename({"depth_0": "depth"})
+        ds = ds.rename({"depth_0": "depth"})
 
         # select variables
-        nemo.dataset = nemo.dataset[["temperature", 
-                                     "salinity",
-                                     "bathymetry",
-                                     "bottom_level"]]
+        ds = ds[["temperature","salinity","bathymetry","bottom_level"]]
 
-        # add land mask
-        nemo.dataset = self.add_landmask(nemo.dataset)
+        # add land mask 
+        ds = self.add_landmask(ds)
 
         # mask below surface layer 
-        surf_mask = nemo.dataset.where(nemo.dataset.depth <= self.surf_lim)
+        surf_mask = ds.where(ds.depth <= self.surf_lim)
         
         # mean over surface
-        self.extracted = surf_mask.mean(dim="z_dim")
+        extracted = surf_mask.mean(dim="z_dim")
 
         # save
-        self.fend = "gridded_model_surface_data_%d%02d.nc"%(self.year,
-                                                            self.month)
-        self.extracted.to_netcdf(config.dn_out + self.fend)
+        extracted = extracted.assign_attrs(dict(case=config.case)) 
+        self.fend = "profiles/gridded_model_surface_data_%d%02d.nc"%(self.year,
+                                                                     self.month)
+        extracted.to_netcdf(config.dn_out + self.fend)
 
     def add_landmask(self, ds): 
         """
