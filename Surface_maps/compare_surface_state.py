@@ -12,7 +12,6 @@ class extract_surface(object):
         # paths
         self.fn_dom = config.dn_dom + config.grid_nc
         self.fn_dat = config.dn_out + "profiles/gridded*.nc"
-        #self.fn_dat = "%s*T.nc"%(config.dn_dat)
         self.fn_out = config.dn_out + 'surface_maps/'
 
     def surface_state_climatology(self):
