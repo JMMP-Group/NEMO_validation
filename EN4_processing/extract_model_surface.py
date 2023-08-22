@@ -5,9 +5,7 @@ import sys
 
 config = config() # initialise variables in python
 
-# IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
-sys.path.append(config.coast_repo)
-
+from NEMO_validation._utils import landmask
 import coast
 import xarray as xr
 import numpy as np
@@ -54,7 +52,7 @@ class extract_surface(object):
         ds = ds[["temperature","salinity","bathymetry","bottom_level"]]
 
         # add land mask 
-        ds = self.add_landmask(ds)
+        ds = landmask.add_landmask(ds)
 
         # mask below surface layer 
         surf_mask = ds.where(ds.depth <= self.surf_lim)
@@ -67,17 +65,6 @@ class extract_surface(object):
         self.fend = "profiles/gridded_model_surface_data_%d%02d.nc"%(self.year,
                                                                      self.month)
         extracted.to_netcdf(config.dn_out + self.fend)
-
-    def add_landmask(self, ds): 
-        """
-        Create a landmask array -- important for obs_operator. Calculated 
-        from bottom_level.
-        """
-
-        # add landmask
-        ds["landmask"] = ds.bottom_level == 0
-
-        return ds
 
 if __name__ == '__main__':
     #import dask
