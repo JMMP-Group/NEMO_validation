@@ -10,6 +10,7 @@ cfg = config() # initialise variables in python
 bdy = bounds("AMM15")
 
 from NEMO_validation._utils import landmask
+from dask.diagnostics import ProgressBar
 import coast
 import xarray as xr
 import numpy as np
@@ -32,7 +33,7 @@ class gridded_en4(object):
 
         # File paths 
         self.fn_dom = cfg.dn_dom + cfg.grid_nc
-        self.fn_dat = "%s%s%02d*T.nc"%(cfg.dn_dat, startyear, month) 
+        self.fn_dat = cfg.dn_dat + "*T.nc"
         self.fn_out = cfg.dn_out + 'surface_maps/'
         
         # Make out directory
@@ -51,40 +52,87 @@ class gridded_en4(object):
                                     dtype="datetime64[M]")
         
     def model_data(self):
-        # CREATE NEMO OBJECT and read in NEMO data.
-        nemo = coast.Gridded(self.fn_dat, self.fn_dom, multiple=True, 
-                             config=cfg.fn_cfg_nemo)
-        
-        # Extract latitude and longitude array
-        lon = nemo.dataset.longitude.values.squeeze()
-        lat = nemo.dataset.latitude.values.squeeze()
-        
-        # Extract time indices between start and end dates
-        t_ind = nemo.dataset.time.values>=self.start_date
-        nemo.dataset = nemo.dataset.isel(t_dim=t_ind)
-        t_ind = nemo.dataset.time.values<self.end_date
-        nemo.dataset = nemo.dataset.isel(t_dim=t_ind)
-        
-        nemo.dataset = landmask.add_landmask(nemo.dataset)
-        nemo.dataset.rename({"depth_0": "depth"})
-        
-        # Extract model variables.
-        nemo.dataset = nemo.dataset[["temperature",
-                                          "salinity",
-                                          "bathymetry",
-                                          "bottom_level",
-                                          "landmask"]]
-        return nemo.dataset
+        """ 
+        Bin model data to common grid.
+        """
 
-    def bin_data(self, ds):
+        model_monthly = []
+        for date in self.month_list:
+            print (date)
+            # get model data under alias ds
+            date_str = date.astype("str").replace("-","")
 
-        lons = np.linspace(bdy.lonbounds[0], bdy.lonbounds[1],21)
-        lats = np.linspace(bdy.latbounds[0], bdy.latbounds[1],21)
+            fn_surf = "profiles/gridded_model_surface_data_" + date_str + ".nc"
+            ds = xr.load_dataset(cfg.dn_out + fn_surf)
+
+            # Extract model variables.
+            ds = ds[["temperature", "salinity"]]
+
+            # average over month
+            ds = ds.mean("t_dim")
+
+            # get bin mean
+            ds = self.bin_data(ds, lon_coord="longitude", 
+                                   lat_coord="latitude")
+
+
+            # assign month coordinate
+            ds = ds.expand_dims("t_dim")
+            time_arr = xr.DataArray([date], dims="t_dim")
+            ds = ds.assign_coords({"time":time_arr})
+
+            model_monthly.append(ds)
+            #fout_append = "binned_model_monthly_mean_model_data_" + date_str \
+            #             + ".nc"
+            #with ProgressBar():
+            #    ds.to_netcdf(cfg.dn_dat + fout_append)
+        # join months and save
+        ds_all = xr.concat(model_monthly, dim="t_dim")
+        fout_append = "surface_maps/binned_model_monthly_mean_%s_%s.nc"%(
+                      self.month_list[0], self.month_list[-1])
+        ds_all.to_netcdf(cfg.dn_out + fout_append)
+
+    def merge_model_months(self):
+        """ merge model data into one file following binning opperation. """
+
+        def proc(ds):
+            print (ds)
+            return ds
+        fout_append = "binned_model_monthly_mean_model_data_*.nc"
+        ds = xr.open_mfdataset(cfg.dn_dat + fout_append, combine="nested", 
+                               concat_dim="t_dim", parallel=True, preprocess=proc)
+    def bin_data(self, ds, lon_coord="longitude", lat_coord="latitude", cell_num=20, coord_dims=False):
+        """ Bin lat/lons into regular grid """
+
+        lons = np.linspace(bdy.lonbounds[0], bdy.lonbounds[1], cell_num + 1)
+        lats = np.linspace(bdy.latbounds[0], bdy.latbounds[1], cell_num + 1)
         lon_labs = (lons[1:] + lons[:-1]) / 2
         lat_labs = (lats[1:] + lats[:-1]) / 2
-        ds = ds.groupby_bins('longitude', lons, labels=lon_labs).mean()
-        ds = ds.groupby_bins('latitude', lats, labels=lat_labs).mean()
-
+        #ds_binned = xhist.histogram(ds.temperature, bins=[lons])
+        #print (ds_binned)
+        #print (dskl)
+        #ds = ds.chunk({"x_dim":10, "y_dim":10})
+        #ds = ds.stack(h=["latitude","longitude"])
+        #ds = ds.set_index(h=["latitude"])
+        #ds = ds.unstack("h")
+        #print (ds)
+        #ds = ds.groupby_bins("x_dim", lons, labels=lon_labs)
+        #ds = ds.groupby_bins(lat_coord, lats, labels=lat_labs)
+        bins = []
+        for (lon, xg) in ds.groupby_bins(lon_coord, lons, labels=lon_labs):
+            lat_bins = []
+            for (lat, yg) in xg.groupby_bins(lat_coord, lats, labels=lat_labs):
+                yg = yg.mean("stacked_y_dim_x_dim")
+                yg = yg.assign_coords(longitude=("x_dim",[lon]),
+                                      latitude=("y_dim",[lat]))
+                yg = yg.swap_dims(x_dim="longitude",y_dim="latitude")
+                lat_bins.append(yg)
+            lat_bins = xr.concat(lat_bins, dim="latitude")
+            bins.append(lat_bins)
+        ds = xr.concat(bins, dim="longitude")
+        ds = ds.sortby("latitude")
+        ds = ds.sortby("longitude")
+        #ds = ds.chunk({"x_dim_bins":-1,"y_dim_bins":-1})
         return ds
 
     def grid_en4_profiles(self):
@@ -107,7 +155,8 @@ class gridded_en4(object):
             en4 = xr.load_dataset(self.en4_path + fn_append)
 
             # select variables
-            en4 = en4[["potential_temperature", "practical_salinity", "depth"]]
+            en4 = en4[["potential_temperature", "practical_salinity",
+                       "depth"]]
 
             en4 = en4.set_coords("depth")
             en4 = en4.where(en4.depth < 5, drop=True).mean("z_dim")
@@ -120,6 +169,7 @@ class gridded_en4(object):
             # bin over lat/lons
             en4 = self.bin_data(en4)
 
+            print (sdjklaf)
             # time average for each lat/lon bin
             en4 = en4.mean("time").expand_dims("t_dim")
 
@@ -145,9 +195,24 @@ class gridded_en4(object):
         # calculate climatology
         clim = coast.Climatology()
         clim_mean = clim.make_climatology(en4, "season", 
-                      fn_out=self.fn_out + "en4_gridded_surface_climatology.nc")
+                    fn_out=self.fn_out + "en4_gridded_surface_climatology.nc")
+
+    def get_binned_model_climatology(self):
+        """ Get seasonal climatololy from binned data """
+
+        # read gridded surface en4
+        fout_append = "surface_maps/binned_model_monthly_mean_%s_%s.nc"%(
+                      self.month_list[0], self.month_list[-1])
+        ds = xr.open_dataset(cfg.dn_out + fout_append)
+        
+        # calculate climatology
+        clim = coast.Climatology()
+        clim_mean = clim.make_climatology(ds, "season", 
+                   fn_out=self.fn_out + "binned_model_surface_climatology.nc")
             
 gr = gridded_en4()
-#m_ds = gr.model_data()
-#o_ds = gr.en4_profiles()
-gr.get_gridded_en4_climatology()
+#gr.model_data()
+#gr.grid_en4_profiles()
+#gr.get_gridded_en4_climatology()
+#gr.merge_model_months()
+gr.get_binned_model_climatology()
