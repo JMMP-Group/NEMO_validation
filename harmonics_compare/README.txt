@@ -20,4 +20,7 @@ Then queues monthly jobs using <machine>_pre_process_harm.sh
  to file.
 
 
+(coast) export RUN_NAME="TDISS-TEST"
+(coast) source config.sh
+(coast) python process_harm.py
 
