@@ -11,7 +11,7 @@ Below this section are a bunch of parameters you can set, with explanations in
 comments. Edit this as much as you like or even go into the plotting code below.
 '''
 
-from config import config
+from PythonEnvCfg.config import config
 config = config() # initialise variables in python
 
 import xarray as xr

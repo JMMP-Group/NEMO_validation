@@ -5,5 +5,5 @@ if __name__ == "__main__":
           name="NEMO_validation",
           version="0.1",
           packages=["EN4_postprocessing","EN4_postprocessing","EN4_processing",
-                    "_utils"]
+                    "_utils","PythonEnvCfg"]
          )
