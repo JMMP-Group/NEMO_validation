@@ -4,6 +4,30 @@
 # NEMO_validation
 Scripts for validation of Coastal Ocean NEMO output.
 
+## RDP temporary notes (2024/02/02)
+Scripts have been restructed to avoid multiple config files and enable calling
+across directories. Steps for install.
+
+1. Set-up conda environemt
+```
+conda env create -n  nemo_validation -f environment.yml
+``` 
+
+2. Activate environment
+```
+conda activate nemo_validation
+```
+
+3. Insall NEMO_validation (ensuring location is package root)
+```
+pip install -e .
+```
+
+Developers can now import code from neighbouring directories. To add directories
+to recognised list, add path to setup.py.
+
+## Description
+
 There are currently two components to these analyses given here:
 * Assessment against a global dataset (EN4) of temperature and salinity profiles.
 The workflow computes in "profile space" - extracting synthetic profiles from the simulation to match the observations 
