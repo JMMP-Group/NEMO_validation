@@ -20,13 +20,13 @@
 #
 # last field "debug" restricts the number profiles to make manageable for debugging
 
-from config import config
+from PythonEnv.config import config
 import sys
 
 config = config() # initialise variables in python
 
 # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
-sys.path.append(config.coast_repo)
+#sys.path.append(config.coast_repo)
 
 import coast
 import xarray as xr
@@ -182,7 +182,7 @@ end_date = np.datetime64(str(endyear)+"-01-01")
 ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50), np.arange(1000,4000,100)))
 
 # Name of the run -- used mainly for naming output files
-run_name='p0_%d%02d_%d'%(startyear,month,endyear)
+run_name='%d%02d'%(startyear,month)
 
 # File paths (All)
 fn_dom = "%s%s"%(config.dn_dom, grid)

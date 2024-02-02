@@ -15,7 +15,6 @@ export MASS_DIR="xu-ct872"
 # Use to activate conda environment in $MACHINE_pre_process_en4_monthly.sh
 #export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
 export CONDA_ENV="/home/users/ryapat30/.conda/envs/coast"
-PYTHONPATH=$PYTHONPATH:/home/users/ryapat30/NOC/
 
 # location of COAsT repo, if using a particular branch
 export COAST_REPO="/home/users/ryapat30/NOC/COAsT"
@@ -42,7 +41,7 @@ if [[ $MOD = "co7" ]]; then
  export DN_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/co7/daily/"  # co7 24h ave
 export GRID="CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
 else
- export DN_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/daily/"  # P2.0 24h ave
+ export DN_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/daily/"  # MOD 24h ave
  if [[ $MOD = "P2.0" ]]; then
    export GRID="GEG_SF12.nc"
  else
@@ -54,4 +53,3 @@ fi
 # directory for analysis output
 #export DN_OUT="/home/users/jelt/tmp/"$REGION"/" 
 export DN_OUT="/gws/nopw/j04/jmmp/CO9_AMM15_validation/"$MOD"/"
-#export DN_OUT="/gws/nopw/j04/jmmp/CO9_AMM15_validation/"$MOD"/profiles/"
