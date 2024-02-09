@@ -4,6 +4,10 @@ config = config() # initialise variables in python
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.gridspec as gridspec
+import matplotlib
+
+matplotlib.rcParams.update({'font.size': 8})
 
 class seasonal_profiles(object):
     '''
@@ -39,6 +43,9 @@ class seasonal_profiles(object):
                             co7_path+"JJA_mask_means_daily.nc"]
         self.fn_list_SON = [config.dn_out+"profiles/SON_mask_means_daily.nc",
                             co7_path+"SON_mask_means_daily.nc"]
+
+        self.legend_str = ["CO9p2","CO7"]
+        self.n_ds = len(self.fn_list_SON)
     
     def plot_all_djf_jja(self):
         """
@@ -64,6 +71,7 @@ class seasonal_profiles(object):
         self.save_plot       = True      # Boolean to save plot or not
         
         # Should match definition in EN4_processing: ref_depth
+        # TODO: THIS SHOULD BE ADDED DURING PROCESSSING...
         self.ref_depth = np.concatenate((np.arange(1,100,2), 
                                          np.arange(100,300,5), 
                                          np.arange(300, 1000, 50),
@@ -82,7 +90,6 @@ class seasonal_profiles(object):
         self.max_depth = 150      # Maximum plot depth
         
         # Legend settings
-        self.legend_str = ["CO9p2","CO7"]
         self.legend_fontsize = 8
         
         # Labels and Titles
@@ -100,7 +107,6 @@ class seasonal_profiles(object):
         self.ds_list_DJF = [xr.open_dataset(dd) for dd in self.fn_list_DJF]
         self.ds_list_JJA = [xr.open_dataset(dd) for dd in self.fn_list_JJA]
         ds_list = self.ds_list_DJF
-        self.n_ds = len(ds_list)
         self.n_reg = len(self.region_ind)
         
         print(f"Check region names specified are consistent with mask file")
@@ -219,22 +225,96 @@ class seasonal_profiles(object):
         if self.save_plot: 
             f.savefig(fn_out)
 
-    def plot_kattegat_norwegian_all_season(self):
+    def plot_kattegat_norwegian_all_season(self, scalar="temperature",
+                                           xmax=3.0, 
+                            xlabel=r"$\overline{|\Delta \Theta|}$ ($^{\circ}$C)"):
         """
         Plot seasonal profiles of Kattegat and the Norwegian Trench.
         """
-
+    
         # get data
+        ds_list_DJF = [xr.open_dataset(dd) for dd in self.fn_list_DJF]
+        ds_list_MAM = [xr.open_dataset(dd) for dd in self.fn_list_MAM]
+        ds_list_JJA = [xr.open_dataset(dd) for dd in self.fn_list_JJA]
+        ds_list_SON = [xr.open_dataset(dd) for dd in self.fn_list_SON]
+
+        ref_depth = np.concatenate((np.arange(1,100,2), 
+                                    np.arange(100,300,5), 
+                                    np.arange(300, 1000, 50),
+                                    np.arange(1000,4000,100)))
+        
 
         # initialise figure
+        fig = plt.figure(figsize=(6.5,5.5))
 
-        # plot
+        # initialise gridspec
+        gs0 = gridspec.GridSpec(ncols=4, nrows=1)
+        gs1 = gridspec.GridSpec(ncols=4, nrows=1)
+    
+        ## set frame bounds
+        gs0.update(top=0.9, bottom=0.6, left=0.1, wspace=0.1, hspace=0.12,
+                   right=0.85)
+        gs1.update(top=0.4, bottom=0.1, left=0.1, wspace=0.1,right=0.85)
 
-        # configure axes
+        # assign axes to lists
+        axs = []
+        for i in range(4):
+            axs.append(fig.add_subplot(gs0[i]))
+        for i in range(4):
+            axs.append(fig.add_subplot(gs1[i]))
 
-        # add legend
+        ## plot
+        def render(da, ax):
+            """
+            render scalar on specified axis
+            """
 
+            da_cut = da.isel(z_dim=slice(None,100))
+            p, = ax.plot(da_cut["profile_mean_abs_diff_" + scalar],
+                        ref_depth[:100])
+            return p
+
+        p_list = []
+        for i, case in enumerate(self.legend_str):
+            DJF = ds_list_DJF[i].swap_dims({"dim_mask":"region_names"})
+            MAM = ds_list_MAM[i].swap_dims({"dim_mask":"region_names"})
+            JJA = ds_list_JJA[i].swap_dims({"dim_mask":"region_names"})
+            SON = ds_list_SON[i].swap_dims({"dim_mask":"region_names"})
+            for j, region in enumerate(["kattegat","nor_trench"]):
+                render(DJF.sel(region_names=region), axs[0+4*(j-1)])
+                render(MAM.sel(region_names=region), axs[1+4*(j-1)])
+                render(JJA.sel(region_names=region), axs[2+4*(j-1)])
+                p0 = render(SON.sel(region_names=region), axs[3+4*(j-1)])
+                if j == 0:
+                    p_list.append(p0)
+
+        ## configure axes
+        titles=["DJF","MAM","JJA","SON"]
+        for i in range(4):
+            axs[i].set_title(titles[i], size=8)
+            axs[i+4].set_title(titles[i], size=8)
+        for ax in axs[1:4] + axs[5:]:
+            ax.set_yticklabels([])
+        for ax in [axs[0], axs[4]]:
+            ax.set_ylabel("Depth (m)") 
+        for ax in axs:
+            ax.set_ylim(0,150)
+            ax.invert_yaxis()
+            ax.set_xlim(0,xmax)
+            ax.set_xlabel(xlabel)
+        fig.legend(p_list, self.legend_str, fontsize=8,
+                   bbox_to_anchor=(1.0,0.5))
+
+        fig.text(0.475, 0.95, "Kattegat", 
+             va = 'bottom', ha='center', rotation='horizontal', 
+             fontsize=11)
+        fig.text(0.475, 0.45, "Norwegian Trench", 
+             va = 'bottom', ha='center', rotation='horizontal', 
+             fontsize=11)
+
+        # save
+        plt.savefig("FIGS/kattegat_and_nor_trench_seasonal_mean_abs_diff")
         
 if __name__ == "__main__":
     sp = seasonal_profiles()
-    sp.plot_all_djf_jja()
+    sp.plot_kattegat_norwegian_all_season()
