@@ -12,19 +12,21 @@ class mask_plotting(object):
 
     def __init__(self):
         #%% File settings
-        fn_cfg_nemo = config.fn_cfg_nemo
-        fn_dom_nemo = config.dn_dom + config.grid_nc
+        self.fn_cfg_nemo = config.fn_cfg_nemo
+        self.fn_dom_nemo = config.dn_dom + config.grid_nc
 
-    def region_plot(self, mask: xr.Dataset):
+    def quick_region_plot(self, mask: xr.Dataset):
         """
         Plot a map of masks in the MaskMaker object
         Add labels
+
+        no projection
         """
     
-        n_mask = mask.dims["dim_mask"]
+        n_mask = mask.dims["region_names"]
         offset = 10  # nonzero offset to make scaled-boolean-masks [0, >offset]
         for j in range(0, n_mask, 1):
-       	    tt = (j + offset) * mask["mask"].isel(dim_mask=j).squeeze()
+       	    tt = (j + offset) * mask["mask"].isel(region_names=j).squeeze()
        	    ff = tt.where(tt > 0).plot(x="longitude", y="latitude", 
                                        levels=range(offset,
                                        n_mask + offset + 1, 1), cmap='tab10',
@@ -35,7 +37,7 @@ class mask_plotting(object):
         for j in range(0, n_mask, 1):
             cbar.ax.text(1 + 0.5,
                          offset + (j + 0.5),
-                         mask["region_names"].isel(dim_mask=j).values,
+                         mask["region_names"].isel(region_names=j).values,
                          ha="left",
                          va="center",
                          color="k",
@@ -46,14 +48,18 @@ class mask_plotting(object):
     def open_mask(self):
         """ open existing mask created by regional mean by season """
 
-        path = config.dn_out + "mask_xr.nc"
-        self.regional_mask = xr.open_dataset(path, chunks=-1)
+        path = config.dn_out + "profiles/mask_xr.nc"
+        self.mask_xr = xr.open_dataset(path, chunks=-1)
+
+        # make regions selectable
+        self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
 
     def get_model_bathymetry(self):
         """ get nemo model bathymetry """
         
         # load nemo lat/lon grid to define regions (as function of bathymetry)
-        nemo = coast.Gridded(fn_domain=fn_dom_nemo, config=fn_cfg_nemo)
+        nemo = coast.Gridded(fn_domain=self.fn_dom_nemo,
+                             config=self.fn_cfg_nemo)
         
         # alias variables
         self.bath = nemo.dataset.bathymetry.values.squeeze()
@@ -94,8 +100,16 @@ class mask_plotting(object):
         
         self.mask_xr = mm.make_mask_dataset(lon, lat, masks_list, masks_names)
 
-    def plot_regional_mask(self):
-        """ plot regional mask """
+        # make regions selectable
+        self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
+
+    def plot_quick_regional_mask(self):
+        """
+        Plot unprojected regional mask.
+
+        This does not use cartopy projections for speed.
+        TODO: add projected version.
+        """
 
         # get mask
         self.open_mask()
@@ -104,18 +118,24 @@ class mask_plotting(object):
         self.get_model_bathymetry()
 
         # plot
-        region_plot(mask_xr.drop(["Norwegian Trench", "FSC"]))
-        plt.contourf(lon,lat,bath, levels=(0,10), colors="w")
-        plt.contour(lon,lat,bath, levels=(0,10), colors="k")
+        #subset = ["N North Sea", "Outer shelf","Eng channel","Kattegat",
+        #          "S North Sea", "Off shelf", "Irish Sea" ]
+        subset = ["northern_north_sea", "outer_shelf", "eng_channel",
+                  "kattegat", "southern_north_sea", "off_shelf", "irish_sea"]
+        self.region_plot(self.mask_xr.sel(region_names=subset))
+        plt.contourf(self.lon,self.lat,self.bath, levels=(0,10), colors="w")
+        plt.contour(self.lon,self.lat,self.bath, levels=(0,10), colors="k")
 
         # add Faroe Shetland Channel
-        plt.contour(mask_xr.longitude, mask_xr.latitude, 
-                    mask_xr.mask.isel(dim_mask=7),colors='r')
+        plt.contour(self.mask_xr.longitude, self.mask_xr.latitude, 
+                    self.mask_xr.mask.sel(region_names="fsc"),
+                    colors='r')
         plt.annotate("FSC", (-5.5, 60.75))
 
         # add Norwegian Trench
-        plt.contour(mask_xr.longitude, mask_xr.latitude,
-                    mask_xr.mask.isel(dim_mask=8),colors='r')
+        plt.contour(self.mask_xr.longitude, self.mask_xr.latitude,
+                    self.mask_xr.mask.sel(region_names="nor_trench"),
+                    colors='r')
         plt.annotate("Nor. Trench", (4, 60.1), ha="center", va="center",
                       rotation=-60)
 
