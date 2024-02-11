@@ -26,14 +26,9 @@ class seasonal_profiles(object):
     '''
 
     def __init__(self):
-        #%% File settings
-        self.run_name = "test"
         
-        # List of analysis output files. Profiles from each will be plotted
-        # on each axis of the plot
-        
-        # Assuming loading two configs: co7 and the P0.0. HARD WIRING.
-        # NOT IDEAL
+        # Get two configurations: co7 and config.py defined model.
+        # HARD WIRING co7. NOT IDEAL
         co7_path = '/gws/nopw/j04/jmmp/CO9_AMM15_validation/co7/profiles/'
         self.fn_list_DJF = [config.dn_out+"profiles/DJF_mask_means_daily.nc",
                             co7_path+"DJF_mask_means_daily.nc"]
@@ -51,6 +46,9 @@ class seasonal_profiles(object):
         """
         Plot djf and jja for all locations.
         """
+
+        # File settings
+        self.run_name = "test"
 
         #%% General Plot Settings
         ## Specify the specific regions, their labels and order of appearance
