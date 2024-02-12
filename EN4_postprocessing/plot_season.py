@@ -11,7 +11,7 @@ Below this section are a bunch of parameters you can set, with explanations in
 comments. Edit this as much as you like or even go into the plotting code below.
 '''
 
-from config import config
+from PythonEnvCfg.config import config
 config = config() # initialise variables in python
 
 import xarray as xr
@@ -26,9 +26,9 @@ run_name = "test"
 
 # Assuming loading two configs: co7 and the P0.0. HARD WIRING. NOT IDEAL
 co7_path = '/gws/nopw/j04/jmmp/CO9_AMM15_validation/co7/profiles/'
-fn_list_DJF = [config.dn_out+"DJF_mask_means_daily.nc",
+fn_list_DJF = [config.dn_out+"profiles/DJF_mask_means_daily.nc",
                co7_path+"DJF_mask_means_daily.nc"]#
-fn_list_JJA = [config.dn_out+"JJA_mask_means_daily.nc",
+fn_list_JJA = [config.dn_out+"profiles/JJA_mask_means_daily.nc",
                co7_path+"JJA_mask_means_daily.nc"]#
 
 #%% General Plot Settings

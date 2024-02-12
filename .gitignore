@@ -1,3 +1,4 @@
 */LOGS/*
 */FIGS/*
 *__pycache__*
+*.egg-info/

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from config import config
+from PythonEnvCfg.config import config
 import sys
 import numpy as np
 import os
