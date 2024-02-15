@@ -11,6 +11,7 @@ import cartopy.feature as cfeature
 import matplotlib
 
 matplotlib.rcParams.update({'font.size': 8})
+plt.rcParams['figure.facecolor'] = 'black'
 
 class mask_plotting(object):
     """
@@ -182,6 +183,9 @@ class mask_plotting(object):
         # set axes labels
         ax.set_xlabel("Longitude")
         ax.set_ylabel("Latitude")
+
+        # set transparent background
+        fig.patch.set_alpha(0.0)
 
         # save
         plt.savefig("FIGS/maskmaker_proj_plot", dpi=600)

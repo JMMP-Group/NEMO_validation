@@ -226,7 +226,7 @@ class seasonal_profiles(object):
 
     def plot_kattegat_norwegian_all_season(self, scalar="temperature",
                                            xmax=3.0, 
-                            xlabel=r"$\overline{|\Delta \Theta|}$ ($^{\circ}$C)"):
+                         xlabel=r"$\overline{|\Delta \Theta|}$ ($^{\circ}$C)"):
         """
         Plot seasonal profiles of Kattegat and the Norwegian Trench.
         """
@@ -304,6 +304,7 @@ class seasonal_profiles(object):
         fig.legend(p_list, self.legend_str, fontsize=8,
                    bbox_to_anchor=(1.0,0.5))
 
+        # add location annotation
         fig.text(0.475, 0.95, "Kattegat", 
              va = 'bottom', ha='center', rotation='horizontal', 
              fontsize=11)
@@ -312,8 +313,14 @@ class seasonal_profiles(object):
              fontsize=11)
 
         # save
-        plt.savefig("FIGS/kattegat_and_nor_trench_seasonal_mean_abs_diff")
+        save_path = "FIGS/kattegat_and_nor_trench_seasonal_mean_abs_diff_" \
+                    + scalar + ".pdf"
+        plt.savefig(save_path)
         
 if __name__ == "__main__":
     sp = seasonal_profiles()
     sp.plot_kattegat_norwegian_all_season()
+    sp.plot_kattegat_norwegian_all_season(scalar="temperature")
+    sp.plot_kattegat_norwegian_all_season(scalar="salinity",
+           xlabel=r"$\overline{|\Delta S|}$ ($10^{-3}$)",
+           xmax=4.0)
