@@ -29,15 +29,16 @@ class seasonal_profiles(object):
         
         # Get two configurations: co7 and config.py defined model.
         # HARD WIRING co7. NOT IDEAL
+        fn = "_mask_means_daily.nc"
         co7_path = '/gws/nopw/j04/jmmp/CO9_AMM15_validation/co7/profiles/'
-        self.fn_list_DJF = [config.dn_out+"profiles/DJF_mask_means_daily.nc",
-                            co7_path+"DJF_mask_means_daily.nc"]
-        self.fn_list_MAM = [config.dn_out+"profiles/MAM_mask_means_daily.nc",
-                            co7_path+"MAM_mask_means_daily.nc"]
-        self.fn_list_JJA = [config.dn_out+"profiles/JJA_mask_means_daily.nc",
-                            co7_path+"JJA_mask_means_daily.nc"]
-        self.fn_list_SON = [config.dn_out+"profiles/SON_mask_means_daily.nc",
-                            co7_path+"SON_mask_means_daily.nc"]
+        self.fn_list_DJF = [config.dn_out+"profiles/DJF" + fn,
+                            co7_path+ "DJF" + fn]
+        self.fn_list_MAM = [config.dn_out+"profiles/MAM" + fn,
+                            co7_path+ "MAM" + fn]
+        self.fn_list_JJA = [config.dn_out+"profiles/JJA" + fn,
+                            co7_path+ "JJA" + fn]
+        self.fn_list_SON = [config.dn_out+ "profiles/SON" + fn,
+                            co7_path+ "SON" + fn]
 
         self.legend_str = ["CO9p2","CO7"]
         self.n_ds = len(self.fn_list_SON)
@@ -225,7 +226,7 @@ class seasonal_profiles(object):
 
     def plot_kattegat_norwegian_all_season(self, scalar="temperature",
                                            xmax=3.0, 
-                            xlabel=r"$\overline{|\Delta \Theta|}$ ($^{\circ}$C)"):
+                         xlabel=r"$\overline{|\Delta \Theta|}$ ($^{\circ}$C)"):
         """
         Plot seasonal profiles of Kattegat and the Norwegian Trench.
         """
@@ -303,6 +304,7 @@ class seasonal_profiles(object):
         fig.legend(p_list, self.legend_str, fontsize=8,
                    bbox_to_anchor=(1.0,0.5))
 
+        # add location annotation
         fig.text(0.475, 0.95, "Kattegat", 
              va = 'bottom', ha='center', rotation='horizontal', 
              fontsize=11)
@@ -311,8 +313,14 @@ class seasonal_profiles(object):
              fontsize=11)
 
         # save
-        plt.savefig("FIGS/kattegat_and_nor_trench_seasonal_mean_abs_diff")
+        save_path = "FIGS/kattegat_and_nor_trench_seasonal_mean_abs_diff_" \
+                    + scalar + ".pdf"
+        plt.savefig(save_path)
         
 if __name__ == "__main__":
     sp = seasonal_profiles()
     sp.plot_kattegat_norwegian_all_season()
+    sp.plot_kattegat_norwegian_all_season(scalar="temperature")
+    sp.plot_kattegat_norwegian_all_season(scalar="salinity",
+           xlabel=r"$\overline{|\Delta S|}$ ($10^{-3}$)",
+           xmax=4.0)
