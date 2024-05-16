@@ -1,3 +1,12 @@
+"""
+This script has been developed using local data on my macbook.
+The idea would be to port it to JASMIN, or somewhere once all the debugging is done.
+
+Useage:
+python process_harm.py
+"""
+
+
 import os
 os.environ['DN_OUT'] ="/Users/jelt/Downloads/SENEMO/"
 os.environ['COAST_REPO'] = "/home/users/jelt/GitHub/COAsT"
@@ -30,6 +39,28 @@ import numpy as np
 from taylor_harmonic_tide_plot import TaylorTide
 
 constit_list = ['M2','S2','N2','K1','O1','Q1','P1','K2'] #,'M4','MS4']
+
+def align_datasets(tg_obs, tg_mod):
+    """
+
+    Match the nans between two datasets
+    """
+    for constit in constit_list:
+        ind1 = np.isnan(tg_obs.dataset[constit+"x"].values)
+        ind2 = np.isnan(tg_obs.dataset[constit+"y"].values)
+        ind3 = np.isnan(tg_mod.dataset[constit+"x"].values)
+        ind4 = np.isnan(tg_mod.dataset[constit+"y"].values)
+        I = ~ind1 * ~ind2 * ~ind3 * ~ind4
+
+        tg_obs.dataset[constit+"x"][~I] = np.nan
+        tg_obs.dataset[constit+"y"][~I] = np.nan
+        tg_mod.dataset[constit+"x"][~I] = np.nan
+        tg_mod.dataset[constit+"y"][~I] = np.nan
+
+        #tg_obs.dataset = tg_obs.dataset.where(I)
+        #tg_mod.dataset = tg_mod.dataset.where(I)
+    return tg_obs, tg_mod
+
 
 
 def amp_pha_from_re_im(creal, cimag):
@@ -241,18 +272,19 @@ def plot_scatter_line(X1, Y1, X2, Y2, ind_deep, constit_str=None, subtitle_str=[
 def plot_all_complex_harmonic_stick_errors():
     # Loop over model runs and harmonic species.
     # Plot vector errors between complex model and obs harmonics: (z1,z2)_mod - (z1,z2)_obs
-    for EXP in ["GS1P1", "GS1P2", "FES2014"]:
+    for EXP in ["EXPIWD00", "EXPIWD01", "FES2014", "EXPIWD02"]:
         for constit in constit_list:
-            if EXP == "GS1P1": tg_mod = gs1p1
-            if EXP == "GS1P2": tg_mod = gs1p2
+            if EXP == "EXPIWD00": tg_mod = EXPIWD00
+            if EXP == "EXPIWD01": tg_mod = EXPIWD01
             if EXP == "FES2014": tg_mod = fes
+            if EXP == "EXPIWD02": tg_mod = EXPIWD02
 
             # separate observations by depth
             try:
                 ind_deep = tg_mod.dataset.bathymetry.values > 200
             except:
-                ind_deep = gs1p1.dataset.bathymetry.values > 200
-                print(f"Issue with bathy in {EXP}. Use bathy from GS1p1")
+                ind_deep = EXPIWD00.dataset.bathymetry.values > 200
+                print(f"Issue with bathy in {EXP}. Use bathy from EXPIWD00")
 
             try:
                 X1, Y1 = obs.dataset[constit + "x"], tg_mod.dataset[constit + "x"]
@@ -271,18 +303,19 @@ def plot_all_complex_harmonic_stick_errors():
 def plot_all_complex_harmonic_errors():
     # Loop over model runs and harmonic species.
     # Plot z1 & z2 with best fit stats against obs
-    for EXP in ["GS1P1", "GS1P2", "FES2014"]:
+    for EXP in ["EXPIWD00", "EXPIWD01", "FES2014", "EXPIWD02"]:
         for constit in constit_list:
-            if EXP == "GS1P1": tg_mod = gs1p1
-            if EXP == "GS1P2": tg_mod = gs1p2
+            if EXP == "EXPIWD00": tg_mod = EXPIWD00
+            if EXP == "EXPIWD01": tg_mod = EXPIWD01
             if EXP == "FES2014": tg_mod = fes
+            if EXP == "EXPIWD02": tg_mod = EXPIWD02
 
             # separate observations by depth
             try:
                 ind_deep = tg_mod.dataset.bathymetry.values > 200
             except:
-                ind_deep = gs1p1.dataset.bathymetry.values > 200
-                print(f"Issue with bathy in {EXP}. Use bathy from GS1p1")
+                ind_deep = EXPIWD00.dataset.bathymetry.values > 200
+                print(f"Issue with bathy in {EXP}. Use bathy from EXPIWD00")
 
             try:
                 X1, Y1 = obs.dataset[constit + "x"], tg_mod.dataset[constit + "x"]
@@ -301,19 +334,20 @@ def plot_all_complex_harmonic_errors():
 def plot_all_amp_pha_errors():
     # Loop over model runs and harmonic species.
     # Plot amp & pha with best fit stats against obs
-    for EXP in ["GS1P1", "GS1P2", "FES2014"]:
+    for EXP in ["EXPIWD00", "EXPIWD01", "FES2014", "EXPIWD02"]:
         for constit in constit_list:
-            if EXP == "GS1P1": tg_mod = gs1p1
-            if EXP == "GS1P2": tg_mod = gs1p2
+            if EXP == "EXPIWD00": tg_mod = EXPIWD00
+            if EXP == "EXPIWD01": tg_mod = EXPIWD01
             if EXP == "FES2014": tg_mod = fes
+            if EXP == "EXPIWD02": tg_mod = EXPIWD02
             print(f"Plot {constit} amplitude and phase errors (deg): {EXP}")
 
             # separate observations by depth
             try:
                 ind_deep = tg_mod.dataset.bathymetry.values > 200
             except:
-                ind_deep = gs1p1.dataset.bathymetry.values > 200
-                print(f"Issue with bathy in {EXP}. Use bathy from GS1p1")
+                ind_deep = EXPIWD00.dataset.bathymetry.values > 200
+                print(f"Issue with bathy in {EXP}. Use bathy from EXPIWD00")
 
             try:
                 tg_mod.dataset['A'], tg_mod.dataset['G'] = amp_pha_from_re_im(tg_mod.dataset[constit + "x"],
@@ -350,9 +384,9 @@ def plot_all_taylor_tides():
                 pass
             if subset == 'deep':
                 # separate observations by depth
-                II = gs1p1.dataset.bathymetry.values > 200
+                II = EXPIWD00.dataset.bathymetry.values > 200
             elif subset == 'shal':
-                II = gs1p1.dataset.bathymetry.values <= 200
+                II = EXPIWD00.dataset.bathymetry.values <= 200
             else:
                 print(f"Not expecting that {subset}")
 
@@ -369,11 +403,11 @@ def plot_all_taylor_tides():
                 plt.savefig(config.dn_out + "PROCESSED/FIGS/dist_obsA_" + subset + ".png")
 
             # Obs
-            if count == 0:
+            if count == 0: # first pass. Obs: R=costheta=1, err=0
                 R = np.array([1])  # R for obs
                 rms_amp = np.array([rms_abs_amp(z1obs, z2obs)])
                 rms_err = np.array([0])  # err for obs
-            else:
+            else: # second pass - other depth range. Obs: R=costheta=1, err=0
                 R = np.hstack((R, 1))
                 rms_amp = np.hstack((rms_amp, rms_abs_amp(z1obs, z2obs)))
                 rms_err = np.hstack((rms_err, 0))
@@ -391,9 +425,9 @@ def plot_all_taylor_tides():
             rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
             rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
 
-            # GS1P1
+            # EXPIWD00
             del z1mod, z2mod
-            z1mod, z2mod = gs1p1.dataset[constit + 'x'][II], gs1p1.dataset[constit + 'y'][II]
+            z1mod, z2mod = EXPIWD00.dataset[constit + 'x'][II], EXPIWD00.dataset[constit + 'y'][II]
             # z1obs_new, z1mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_mx2.dataset.M2x)
             # z2obs_new, z2mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_mx2.dataset.M2y)
 
@@ -401,10 +435,23 @@ def plot_all_taylor_tides():
             rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
             rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
 
-            # GS1P2
+            # EXPIWD01
             del z1mod, z2mod
             try:
-                z1mod, z2mod = gs1p2.dataset[constit + 'x'][II], gs1p2.dataset[constit + 'y'][II]
+                z1mod, z2mod = EXPIWD01.dataset[constit + 'x'][II], EXPIWD01.dataset[constit + 'y'][II]
+            except:
+                z1mod = np.nan
+                z2mod = np.nan
+            # z1obs_new, z1mod_new = tganalysis.match_missing_values(obs.dataset.M2x, tg_mv2.dataset.M2x)
+            # z2obs_new, z2mod_new = tganalysis.match_missing_values(obs.dataset.M2y, tg_mv2.dataset.M2y)
+            R = np.hstack((R, pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)))
+            rms_amp = np.hstack((rms_amp, rms_abs_amp(z1mod, z2mod)))
+            rms_err = np.hstack((rms_err, rms_abs_error(z1obs, z2obs, z1mod, z2mod)))
+
+            # EXPIWD02
+            del z1mod, z2mod
+            try:
+                z1mod, z2mod = EXPIWD02.dataset[constit + 'x'][II], EXPIWD02.dataset[constit + 'y'][II]
             except:
                 z1mod = np.nan
                 z2mod = np.nan
@@ -416,8 +463,9 @@ def plot_all_taylor_tides():
 
             count = count + 1
 
-        label = ['obs:s', 'fes:s', 'gs1p1:s', 'gs1p2:s',
-                 'obs:d', 'fes:d', 'gs1p1:d', 'gs1p2:d']
+        label = ['obs:s', 'fes:s', 'EXPIWD00:s', 'EXPIWD01:s', 'EXPIWD02:s',
+                 'obs:d', 'fes:d', 'EXPIWD00:d', 'EXPIWD01:d', 'EXPIWD02:d']
+        npts = len(label)
 
         print(f"R= {[format(R[i], '.2f') for i in range(len(R))]}")
         print(f"rms_amp= {[format(rms_amp[i], '.2f') for i in range(len(R))]}")
@@ -430,13 +478,13 @@ def plot_all_taylor_tides():
         costheta = R
 
         B = rms_amp[0]
-        for i in range(0, 4):
+        for i in range(0, int(npts/2)):
             print(
-                f"{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i] ** 2 + B ** 2 - 2 * A[i] * B * costheta[i])}. C={C[i]}")
-        B = rms_amp[5]
-        for i in range(4, 8):
+                f"{constit}:{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i] ** 2 + B ** 2 - 2 * A[i] * B * costheta[i])}. C={C[i]}")
+        B = rms_amp[int(npts/2)]
+        for i in range(int(npts/2), int(npts)):
             print(
-                f"{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i] ** 2 + B ** 2 - 2 * A[i] * B * costheta[i])}. C={C[i]}")
+                f"{constit}:{label[i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[i] ** 2 + B ** 2 - 2 * A[i] * B * costheta[i])}. C={C[i]}")
 
         # Create TaylorTide plot template
         tt = TaylorTide(
@@ -447,14 +495,16 @@ def plot_all_taylor_tides():
             cos_theta_lines=[0.3, 0.6, 0.9],
         )
         # Add data to axes
-        tt.ax.scatter(rms_amp[1:4] * R[1:4], rms_amp[1:4] * np.sqrt(1 - R[1:4] ** 2), s=10, c=['r', 'k', 'g'])
+        tt.ax.scatter(rms_amp[1:int(npts/2)] * R[1:int(npts/2)],
+                      rms_amp[1:int(npts/2)] * np.sqrt(1 - R[1:int(npts/2)] ** 2),
+                      s=10, c=['r', 'k', 'g', 'y'])
         # manual legend
-        colors = ['red', 'black', 'green']
+        colors = ['red', 'black', 'green', 'yellow']
         lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='dotted') for c in colors]
-        labels = ["FES2014", "GS1p1", "GS1p2"]
+        labels = ["FES2014", "EXPIWD00", "EXPIWD01", "EXPIWD02"]
         plt.legend(lines, labels)
 
-        plt.title(constit + ':shallow')
+        plt.title(constit + ':shallow' + " N=" + str(int(np.isfinite(z1obs).sum())))
         plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_" + constit + "_shallow.png")
 
         # Create TaylorTide plot template
@@ -466,26 +516,31 @@ def plot_all_taylor_tides():
             cos_theta_lines=[0.3, 0.6, 0.9],
         )
         # Add data to axes
-        tt.ax.scatter(rms_amp[5::] * R[5::], rms_amp[5::] * np.sqrt(1 - R[5::] ** 2), s=10, c=['r', 'k', 'g'])
+        tt.ax.scatter(rms_amp[int(npts/2)+1::] * R[int(npts/2)+1::],
+                      rms_amp[int(npts/2)+1::] * np.sqrt(1 - R[int(npts/2)+1::] ** 2),
+                      s=10, c=['r', 'k', 'g', 'y'])
         # manual legend
-        colors = ['red', 'black', 'green']
+        colors = ['red', 'black', 'green', 'yellow']
         lines = [Line2D([0], [0], color=c, linewidth=3, linestyle='dotted') for c in colors]
-        labels = ["FES2014", "GS1p1", "GS1p2"]
+        labels = ["FES2014", "EXPIWD00", "EXPIWD01", "EXPIWD02"]
         plt.legend(lines, labels)
 
-        plt.title(constit + ':deep')
+        plt.title(constit + ':deep' + " N=" + str(int(np.isfinite(z1obs).sum())))
         plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_" + constit + "_deep.png")
 
 def plot_overlay_taylor_tides():
     # Loop over harmonic species.
     # Plot Taylor Tide diag of model and obs for each harmonic. Overlay on two (deep/shallow) plots as trees
+
+    nsim=5 # number of simulations + obs.  labels = ["EXPIWD00", "EXPIWD01", "FES2014", "EXPIWD02", "obs"]
+
     for subset in ['shal', 'deep']:
       for constit_family_list in [["M2", "S2", "N2", "K2"], ["O1", "Q1", "P1"]]:
         if "M2" in constit_family_list: family_str = "semi-diurnal"
         if "O1" in constit_family_list: family_str = "diurnal"
-        R = np.zeros((4, len(constit_family_list)))
-        rms_amp = np.zeros((4, len(constit_family_list)))
-        rms_err = np.zeros((4, len(constit_family_list)))
+        R = np.zeros((nsim, len(constit_family_list)))
+        rms_amp = np.zeros((nsim, len(constit_family_list)))
+        rms_err = np.zeros((nsim, len(constit_family_list)))
         label = {}
         for count, constit in enumerate(constit_family_list):
             try:
@@ -494,9 +549,9 @@ def plot_overlay_taylor_tides():
                 pass
             if subset == 'deep':
                 # separate observations by depth
-                II = gs1p1.dataset.bathymetry.values > 200
+                II = EXPIWD00.dataset.bathymetry.values > 200
             elif subset == 'shal':
-                II = gs1p1.dataset.bathymetry.values <= 200
+                II = EXPIWD00.dataset.bathymetry.values <= 200
             else:
                 print(f"Not expecting that {subset}")
 
@@ -520,24 +575,24 @@ def plot_overlay_taylor_tides():
             label[0,count] = 'obs:'+constit
 
 
-            # GS1P1
+            # EXPIWD00
             try:
                 del z1mod, z2mod
             except:
                 pass
-            z1mod, z2mod = gs1p1.dataset[constit + 'x'][II], gs1p1.dataset[constit + 'y'][II]
+            z1mod, z2mod = EXPIWD00.dataset[constit + 'x'][II], EXPIWD00.dataset[constit + 'y'][II]
 
             R[1,count] = pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)
             rms_amp[1,count] = rms_abs_amp(z1mod, z2mod)
             rms_err[1,count] = rms_abs_error(z1obs, z2obs, z1mod, z2mod)
-            label[1,count] = 'gs1p1:'+constit
+            label[1,count] = 'EXPIWD00:'+constit
 
 
 
-            # GS1P2
+            # EXPIWD01
             del z1mod, z2mod
             #try:
-            z1mod, z2mod = gs1p2.dataset[constit + 'x'][II], gs1p2.dataset[constit + 'y'][II]
+            z1mod, z2mod = EXPIWD01.dataset[constit + 'x'][II], EXPIWD01.dataset[constit + 'y'][II]
             #except:
             #    z1mod = np.nan
             #    z2mod = np.nan
@@ -545,7 +600,7 @@ def plot_overlay_taylor_tides():
             R[2,count] = pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)
             rms_amp[2,count] = rms_abs_amp(z1mod, z2mod)
             rms_err[2,count] = rms_abs_error(z1obs, z2obs, z1mod, z2mod)
-            label[2,count] = 'gs1p2:'+constit
+            label[2,count] = 'EXPIWD01:'+constit
 
 
             # FES
@@ -557,6 +612,20 @@ def plot_overlay_taylor_tides():
             rms_err[3,count] = rms_abs_error(z1obs, z2obs, z1mod, z2mod)
             label[3,count] = 'fes:'+constit
 
+
+            # EXPIWD02
+            del z1mod, z2mod
+            #try:
+            z1mod, z2mod = EXPIWD02.dataset[constit + 'x'][II], EXPIWD02.dataset[constit + 'y'][II]
+            #except:
+            #    z1mod = np.nan
+            #    z2mod = np.nan
+
+            R[4,count] = pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)
+            rms_amp[4,count] = rms_abs_amp(z1mod, z2mod)
+            rms_err[4,count] = rms_abs_error(z1obs, z2obs, z1mod, z2mod)
+            label[4,count] = 'EXPIWD02:'+constit
+
         print(subset)
         #print(f"R= {[format(R[i], '.2f') for i in range(len(R))]}")
         #print(f"rms_amp= {[format(rms_amp[i], '.2f') for i in range(len(R))]}")
@@ -564,15 +633,16 @@ def plot_overlay_taylor_tides():
         print(label)
 
         ## Check cosine rule consistency
-        for i in range(len(constit_family_list)):
-            B = rms_amp[0,i]
-            A = rms_amp[1:4,i]
-            C = rms_err[1:4,i]
-            costheta = R[1:4,i]
+        for count, constit in enumerate(constit_family_list):
+        #for i in range(len(constit_family_list)):
+            B = rms_amp[0,count]
+            A = rms_amp[1:nsim,count]
+            C = rms_err[1:nsim,count]
+            costheta = R[1:nsim,count]
 
-            for j in range(3): # model runs: fes, gs1p1, gs1p2
+            for j in range(0,nsim-1): # model runs: fes, EXPIWD00, EXPIWD01, EXPIWD02
                 print(
-                    f"{label[1+j,i]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[j] ** 2 + B ** 2 - 2 * A[j] * B * costheta[j])}. C={C[j]}")
+                    f"{label[1+j,count]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[j] ** 2 + B ** 2 - 2 * A[j] * B * costheta[j])}. C={C[j]}")
             del B, A, C, costheta
 
 
@@ -591,23 +661,25 @@ def plot_overlay_taylor_tides():
         ## Loop over constituents to create plot
         for i in range(len(constit_family_list)):
             # Add data to axes
-            tt.ax.scatter(rms_amp[0:4,i] * R[0:4,i],
-                          rms_amp[0:4,i] * np.sqrt(1 - R[0:4,i] ** 2),
-                          s=20, c=['b', 'k', 'g', 'r'])
+            tt.ax.scatter(rms_amp[0:nsim,i] * R[0:nsim,i],
+                          rms_amp[0:nsim,i] * np.sqrt(1 - R[0:nsim,i] ** 2),
+                          s=20, c=['b', 'k', 'g', 'r', 'y'])
             # Add vectors between points and obs
-            tt.ax.plot([np.repeat(rms_amp[0,i],3), rms_amp[1:4,i] * R[1:4,i]],
-                       [np.zeros(3), rms_amp[1:4,i] * np.sqrt(1 - R[1:4,i] ** 2)])
-            tt.ax.lines[-3].set_color('k')
-            tt.ax.lines[-2].set_color('g')
-            tt.ax.lines[-1].set_color('r')
+            tt.ax.plot([np.repeat(rms_amp[0,i],nsim-1), rms_amp[1:nsim,i] * R[1:nsim,i]],
+                       [np.zeros(nsim-1), rms_amp[1:nsim,i] * np.sqrt(1 - R[1:nsim,i] ** 2)])
+            if nsim != 5: print('Colours and lines not as expected here')
+            tt.ax.lines[-4].set_color('k')
+            tt.ax.lines[-3].set_color('g')
+            tt.ax.lines[-2].set_color('r')
+            tt.ax.lines[-1].set_color('y')
 
             tt.ax.text( rms_amp[0,i], -0.025, constit_family_list[i], rotation=0, color='b')
 
 
         # manual legend
-        colors = ['black', 'green', 'red', 'blue']
+        colors = ['black', 'green', 'red', 'yellow', 'blue']
         lines = [Line2D([], [], color=c, markersize=5, marker='o', linestyle='None') for c in colors]
-        labels = ["GS1p1", "GS1p2", "FES2014", "obs"]
+        labels = ["EXPIWD00", "EXPIWD01", "FES2014", "EXPIWD02", "obs"]
         plt.legend(lines, labels, loc='upper left')
 
         plt.title(subset + ":" + family_str)
@@ -615,12 +687,20 @@ def plot_overlay_taylor_tides():
 
 def plot_cloud():
     # Taylor Tide with cloud of all data points
+    """
+    This is not quite right. Or maybe I need to document it better.
+    The coloured dots should be mean model error and mean obs _error_. The black
+     dots should be model err.
+     Not sure why there is a magenta and a red dot.
+     The count variable doesn't seem to be doing the right thing by not changing
+     """
     #for constit in constit_list:
     constit = "M2"
-    EXP = "GS1P1" #, "GS1P2", "FES2014"]:
-    if EXP == "GS1P1": tg_mod = gs1p1
-    if EXP == "GS1P2": tg_mod = gs1p2
+    EXP =  "EXPIWD02" #"EXPIWD00" #, "EXPIWD01", "FES2014",
+    if EXP == "EXPIWD00": tg_mod = EXPIWD00
+    if EXP == "EXPIWD01": tg_mod = EXPIWD01
     if EXP == "FES2014": tg_mod = fes
+    if EXP == "EXPIWD02": tg_mod = EXPIWD02
 
 
     if(1):
@@ -632,9 +712,9 @@ def plot_cloud():
             pass
         if subset == 'deep':
             # separate observations by depth
-            II = gs1p1.dataset.bathymetry.values > 200
+            II = EXPIWD00.dataset.bathymetry.values > 200
         elif subset == 'shal':
-            II = gs1p1.dataset.bathymetry.values <= 200
+            II = EXPIWD00.dataset.bathymetry.values <= 200
         else:
             print(f"Not expecting that {subset}")
 
@@ -667,13 +747,13 @@ def plot_cloud():
 
 
 
-        label = ['obs:s', 'fes:s', 'gs1p1:s', 'gs1p2:s',
-                 'obs:d', 'fes:d', 'gs1p1:d', 'gs1p2:d']
+        #label = ['obs:s', 'fes:s', 'EXPIWD00:s', 'EXPIWD01:s',
+        #         'obs:d', 'fes:d', 'EXPIWD00:d', 'EXPIWD01:d']
 
         print(f"R= {[format(R[i], '.2f') for i in range(len(R))]}")
         print(f"rms_amp= {[format(rms_amp[i], '.2f') for i in range(len(R))]}")
         print(f"rms_err= {[format(rms_err[i], '.2f') for i in range(len(R))]}")
-        print(label)
+        #print(label)
 
         ## Check cosine rule consistency
         A = rms_amp
@@ -717,7 +797,7 @@ def plot_east_coast_usa():
 
     plt.close('all')
     #plt.figure()
-    fig, axs = plt.subplots(2, 2, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
+    fig, axs = plt.subplots(3, 2, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
     axs[0,0].coastlines()
     axs[0,0].scatter(obs.dataset.longitude, obs.dataset.latitude, c=obs.dataset['A'], s=20,
                      vmin=0, vmax=0.45, cmap='Spectral')
@@ -730,16 +810,21 @@ def plot_east_coast_usa():
 
 
     axs[1,0].coastlines()
-    axs[1,0].scatter(gs1p1.dataset.longitude, gs1p1.dataset.latitude, c=gs1p1.dataset['A'], s=20,
+    axs[1,0].scatter(EXPIWD00.dataset.longitude, EXPIWD00.dataset.latitude, c=EXPIWD00.dataset['A'], s=20,
                      vmin=0, vmax=0.45, cmap='Spectral')
-    axs[1,0].set_title('GS1P1')
+    axs[1,0].set_title('EXPIWD00')
 
 
     axs[1,1].coastlines()
-    im = axs[1,1].scatter(gs1p2.dataset.longitude, gs1p2.dataset.latitude, c=gs1p2.dataset['A'], s=20,
+    im = axs[1,1].scatter(EXPIWD01.dataset.longitude, EXPIWD01.dataset.latitude, c=EXPIWD01.dataset['A'], s=20,
                      vmin=0, vmax=0.45, cmap='Spectral')
-    axs[1,1].set_title('GS1P2')
+    axs[1,1].set_title('EXPIWD01')
 
+
+    axs[2,0].coastlines()
+    im = axs[2,0].scatter(EXPIWD02.dataset.longitude, EXPIWD02.dataset.latitude, c=EXPIWD02.dataset['A'], s=20,
+                     vmin=0, vmax=0.45, cmap='Spectral')
+    axs[2,0].set_title('EXPIWD02')
 
     plt.setp(axs, xlim=xlims, ylim=ylims)
 
@@ -750,6 +835,8 @@ def plot_east_coast_usa():
     plt.suptitle("M2 amp")
     # plt.show()
     plt.savefig(config.dn_out + "PROCESSED/FIGS/scatter_amp_on_map.png")
+
+
 
 # Load data as tidegauge objects
 ## Harmonise definitions: negate M2y (and phase) in NEMO - done in preprocessing.
@@ -763,20 +850,28 @@ fes = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/FES2014_e
 fes.dataset['A'], fes.dataset['G'] = amp_pha_from_re_im(fes.dataset.M2x, fes.dataset.M2y)
 fes.dataset['G'] = (fes.dataset.G+180)%360-180  # set phase: -180,180
 
-gs1p1 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/GS1p1_tide_extracted.nc"))
-gs1p1.dataset['A'], gs1p1.dataset['G'] = amp_pha_from_re_im(gs1p1.dataset.M2x, gs1p1.dataset.M2y)
+EXPIWD02 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/EXPIWD02_extracted.nc"))
+#EXPIWD02.dataset = EXPIWD02.dataset.drop_vars(["G", "A"]) # Unlabelled amp/pha parts should not be in the file
+EXPIWD02.dataset['A'], EXPIWD02.dataset['G'] = amp_pha_from_re_im(EXPIWD02.dataset.M2x, EXPIWD02.dataset.M2y)
 
-gs1p1.dataset['G'] = (gs1p1.dataset.G+180)%360-180  # set phase: -180,180
-gs1p1.dataset['M2y'] = +gs1p1.dataset.M2y
-gs1p1.dataset = gs1p1.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
+EXPIWD02.dataset['G'] = (EXPIWD02.dataset.G+180)%360-180  # set phase: -180,180
+EXPIWD02.dataset['M2y'] = +EXPIWD02.dataset.M2y
+EXPIWD02.dataset = EXPIWD02.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
 
-gs1p2 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/GS1p2_full_extracted.nc"))
-#gs1p2.dataset = gs1p2.dataset.drop_vars(["G", "A"]) # Unlabelled amp/pha parts should not be in the file
-gs1p2.dataset['A'], gs1p2.dataset['G'] = amp_pha_from_re_im(gs1p2.dataset.M2x, gs1p2.dataset.M2y)
+EXPIWD00 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/EXPIWD00_extracted.nc"))
+EXPIWD00.dataset['A'], EXPIWD00.dataset['G'] = amp_pha_from_re_im(EXPIWD00.dataset.M2x, EXPIWD00.dataset.M2y)
 
-gs1p2.dataset['G'] = -(gs1p2.dataset.G+180)%360-180  # set phase: -180,180
-gs1p2.dataset['M2y'] = +gs1p2.dataset.M2y
-gs1p2.dataset = gs1p2.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
+EXPIWD00.dataset['G'] = (EXPIWD00.dataset.G+180)%360-180  # set phase: -180,180
+EXPIWD00.dataset['M2y'] = +EXPIWD00.dataset.M2y
+EXPIWD00.dataset = EXPIWD00.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
+
+EXPIWD01 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/EXPIWD01_extracted.nc"))
+EXPIWD01.dataset['A'], EXPIWD01.dataset['G'] = amp_pha_from_re_im(EXPIWD01.dataset.M2x, EXPIWD01.dataset.M2y)
+
+EXPIWD01.dataset['G'] = -(EXPIWD01.dataset.G+180)%360-180  # set phase: -180,180
+EXPIWD01.dataset['M2y'] = +EXPIWD01.dataset.M2y
+EXPIWD01.dataset = EXPIWD01.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
+
 
 
 
@@ -793,7 +888,7 @@ if(0):
     # definitions for M2x and M2y are opposite to NEMO, but work:
     fig, [ax0, ax1] = plt.subplots(ncols=2)
     fes.dataset.M2x.plot(ax=ax0)
-    gs1p1.dataset.M2x.plot(ax=ax1)
+    EXPIWD00.dataset.M2x.plot(ax=ax1)
     plt.show()
 
 ## Basic map plot of phases
@@ -801,36 +896,46 @@ if(0):
 
 plt.close('all')
 plt.figure()
-plt.subplot(2,2,1)
-plt.scatter(obs.dataset.longitude, obs.dataset.latitude, c=obs.dataset['G'], s=10 )
+plt.subplot(3,2,1)
+plt.scatter(obs.dataset.longitude, obs.dataset.latitude, c=obs.dataset['G'], s=10, cmap="Spectral")
 plt.colorbar()
 plt.title('obs')
 plt.xlim(xlims)
 plt.ylim(ylims)
 
-plt.subplot(2,2,2)
-plt.scatter(fes.dataset.longitude, fes.dataset.latitude, c=fes.dataset['G'], s=10 )
+plt.subplot(3,2,2)
+plt.scatter(fes.dataset.longitude, fes.dataset.latitude, c=fes.dataset['G'], s=10, cmap="Spectral")
 plt.colorbar()
 plt.title('FES')
 plt.xlim(xlims)
 plt.ylim(ylims)
 
-plt.subplot(2,2,3)
-plt.scatter(gs1p1.dataset.longitude, gs1p1.dataset.latitude, c=gs1p1.dataset['G'], s=10 )
+plt.subplot(3,2,3)
+plt.scatter(EXPIWD00.dataset.longitude, EXPIWD00.dataset.latitude, c=EXPIWD00.dataset['G'], s=10, cmap="Spectral")
 plt.colorbar()
-plt.title('GS1P1')
+plt.title('EXPIWD00')
 plt.xlim(xlims)
 plt.ylim(ylims)
 
-plt.subplot(2,2,4)
-plt.scatter(gs1p2.dataset.longitude, gs1p2.dataset.latitude, c=gs1p2.dataset['G'], s=10 )
+plt.subplot(3,2,4)
+plt.scatter(EXPIWD01.dataset.longitude, EXPIWD01.dataset.latitude, c=EXPIWD01.dataset['G'], s=10, cmap="Spectral")
 plt.colorbar()
-plt.title('GS1P2')
+plt.title('EXPIWD01')
 plt.xlim(xlims)
 plt.ylim(ylims)
+
+plt.subplot(3, 2, 5)
+plt.scatter(EXPIWD02.dataset.longitude, EXPIWD02.dataset.latitude, c=EXPIWD02.dataset['G'], s=10, cmap="Spectral")
+plt.colorbar()
+plt.title('EXPIWD02')
+plt.xlim(xlims)
+plt.ylim(ylims)
+
+
 #plt.show()
 plt.savefig(config.dn_out+"PROCESSED/FIGS/scatter_phase_on_map.png")
 
+print(fes.dataset)
 
 #%% Align datasets
 # TidegaugeAnalysis routine would work well if only _two_ dataarray had to be aligned:
@@ -847,25 +952,27 @@ ind1 = np.isnan(obs.dataset.M2x.values)
 ind2 = np.isnan(obs.dataset.M2y.values)
 ind3 = np.isnan(fes.dataset.M2x.values)
 ind4 = np.isnan(fes.dataset.M2y.values)
-ind5 = np.isnan(gs1p1.dataset.M2x.values)
-ind6 = np.isnan(gs1p1.dataset.M2y.values)
-ind7 = np.isnan(gs1p2.dataset.M2x.values)
-ind8 = np.isnan(gs1p2.dataset.M2y.values)
-
-I = ~ind1 * ~ind2 * ~ind3 * ~ind4 * ~ind5 * ~ind6 * ~ind7 * ~ind8
+ind5 = np.isnan(EXPIWD00.dataset.M2x.values)
+ind6 = np.isnan(EXPIWD00.dataset.M2y.values)
+ind7 = np.isnan(EXPIWD01.dataset.M2x.values)
+ind8 = np.isnan(EXPIWD01.dataset.M2y.values)
+ind9 = np.isnan(EXPIWD02.dataset.M2x.values)
+ind10 = np.isnan(EXPIWD02.dataset.M2y.values)
+I = ~ind1 * ~ind2 * ~ind3 * ~ind4 * ~ind5 * ~ind6 * ~ind7 * ~ind8 * ~ind8 * ~ind10
 
 #obs.dataset.M2x[~I] = np.nan
 #obs.dataset.M2y[~I] = np.nan
 #fes.dataset.M2x[~I] = np.nan
 #fes.dataset.M2y[~I] = np.nan
-#gs1p1.dataset.M2x[~I] = np.nan
-#gs1p1.dataset.M2y[~I] = np.nan
-#gs1p2.dataset.M2x[~I] = np.nan
-#gs1p2.dataset.M2y[~I] = np.nan
+#EXPIWD00.dataset.M2x[~I] = np.nan
+#EXPIWD00.dataset.M2y[~I] = np.nan
+#EXPIWD01.dataset.M2x[~I] = np.nan
+#EXPIWD01.dataset.M2y[~I] = np.nan
 obs.dataset = obs.dataset.where(I)
 fes.dataset = fes.dataset.where(I)
-gs1p1.dataset = gs1p1.dataset.where(I)
-gs1p2.dataset = gs1p2.dataset.where(I)
+EXPIWD00.dataset = EXPIWD00.dataset.where(I)
+EXPIWD01.dataset = EXPIWD01.dataset.where(I)
+EXPIWD02.dataset = EXPIWD02.dataset.where(I)
 
 print(ind1.flatten().sum())
 print(ind2.flatten().sum())
@@ -875,13 +982,15 @@ print(ind5.flatten().sum())
 print(ind6.flatten().sum())
 print(ind7.flatten().sum())
 print(ind8.flatten().sum())
+print(ind9.flatten().sum())
+print(ind10.flatten().sum())
 print((~I).flatten().sum())
 
 
 #%%  Plot distributions of depth at observation locations
 plt.close('all')
 plt.figure()
-plt.plot( np.sort(np.log10(gs1p1.dataset.bathymetry.values)) )
+plt.plot( np.sort(np.log10(EXPIWD00.dataset.bathymetry.values)) )
 #plt.plot([0,500],[np.log10(2000), np.log10(2000)], 'm', label="2000m")
 plt.plot([0,500],[np.log10(200), np.log10(200)], 'r', label="200m")
 #plt.plot([0,500],[np.log10(50), np.log10(50)], 'g', label="50m")
@@ -892,8 +1001,14 @@ plt.title("distribution of depths at observation sites")
 plt.legend()
 plt.savefig(config.dn_out+"PROCESSED/FIGS/dist_bathy.png")
 
+obs, EXPIWD00 = align_datasets(obs, EXPIWD00)
+obs, EXPIWD01 = align_datasets(obs, EXPIWD01)
+obs, fes = align_datasets(obs, fes)
+obs, EXPIWD02 = align_datasets(obs, EXPIWD02)
+
+
 #%% Plot eaat coast of USA
-plot_east_coast_usa()
+#plot_east_coast_usa()
 
 #%% ## Plot complex harmonic errors
 #plot_all_complex_harmonic_errors()
