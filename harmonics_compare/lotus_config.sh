@@ -12,10 +12,12 @@ export COAST_REPO="/home/users/jelt/GitHub/COAsT"
 
 
 if [ $RUN_NAME = "GS1p1_tide" ]; then
- export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/FINAL_PHYSICS_RUNS/GS1p1_tide/output/SENEMO_1y_20190101_20191231_grid_T_2D.nc"
+ export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p1_tide/output/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
+ export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p1_tide/config/domain_cfg.nc"
 
 elif [ $RUN_NAME = "GS1p2_full" ]; then
- export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/FINAL_PHYSICS_RUNS/GS1p2_full/SENEMO_1y_20190101_20191231_grid_T_2D.nc"
+ export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p2_full/output/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
+ export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p2_full/config/domain_cfg.nc"
 
 elif [ $RUN_NAME = "FES2014" ]; then
   export DN_FES="/gws/nopw/j04/class_vol2/senemo/shared/FES2014/"
@@ -29,7 +31,6 @@ fi
 
 export FN_HARM_OBS="/home/users/jelt/data/obs/for_DA_dense/obs_M2.nc"
 
-export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/jdha/FINAL_TESTING/EXP_MESv2_NOTAPER_WAV_DJC_NTM_TDISSx2/config/domain_cfg.nc"
 export FN_NEMO_CFG="/home/users/jelt/GitHub/COAsT/config/example_nemo_grid_t.json"
 
 export DN_OUT="/gws/nopw/j04/class_vol2/senemo/jelt/"
