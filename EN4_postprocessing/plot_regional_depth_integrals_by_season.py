@@ -25,21 +25,18 @@ class seasonal_depth_integral(object):
     
     def depth_mean(self):
 
-        # Should match definition in EN4_processing: ref_depth
-        # TODO: THIS SHOULD BE ADDED DURING PROCESSSING...
-        ref_depth_t = np.concatenate((np.arange(1,100,2), 
-                                    np.arange(100,300,5), 
-                                    np.arange(300, 1000, 50),
-                                    np.arange(1000,4000,100)))
- 
-        # interpolated e3t (crude estimate - w-pts = mid-pts between cells)
-        e3t =  (ref_depth_t[1:] - ref_depth_t[:-1]) / 2
+        # get depth at cell edges
+        depth_w =  (self.da.depth[1:] + self.da.depth[:-1]) / 2
+        
+        # get cell thickness (e3t)
+        e3t =  depth_w[1:] - depth_w[:-1]
         
         # extend to bottom cell
-        e3t = xr.DataArray(np.concatenate((e3t, [e3t[-1]])), dims=("z_dim"))
+        e3t = xr.DataArray(np.concatenate(([e3t[0]], e3t, [e3t[-1]])),
+                                           dims=("z_dim"))
             
-        # depth integral
-        self.da = (self.da * e3t).sum("z_dim") / e3t.sum("z_dim")
+        # depth mean
+        self.da = self.da.weighted(e3t).mean("z_dim")
         
     def plot_regional_depth_integrals(self, scalar="temperature"):
         """
@@ -60,10 +57,10 @@ class seasonal_depth_integral(object):
 
         if scalar == "temperature": 
             x_label = "Temperature Bias ($^{\circ}$C)"
-            y_max = 0.065
+            y_max = 0.85
         if scalar == "salinity": 
             x_label = "Salinity Bias ($10^{-3}$)"
-            y_max = 0.026
+            y_max = 0.66
     
         # initialise plot
         fig, axs = plt.subplots(1, figsize=(5.5,3.5))
@@ -99,7 +96,9 @@ class seasonal_depth_integral(object):
          
         clist = [plt.cm.tab10.colors[i] for i in [0,1,3,2,5,6,9]]
         cmap = mcolors.ListedColormap(clist)
-        for j, (season, bias) in enumerate(da.groupby("season")):
+        seasons = ["DJF","MAM","JJA","SON"]
+        for j, season in enumerate(seasons):
+            bias = da.sel(season=season)
             for i, region in enumerate(regions):
                 offset = (width * j * 1.1)
                 bias_r = bias.sel(region_names=region)
