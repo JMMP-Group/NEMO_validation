@@ -32,17 +32,19 @@ import pandas as pd
 args = sys.argv
 
 #model = args[1] # not needed 
+path = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/"
+model_path = path + "co7/"
 season = str(args[1])
+config.grid_nc = "CO7_EXACT_CFG_FILE.nc"
 
 # File paths (All)
 fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
-fn_dat_nemo = "%s%s%02d*T.nc"%(config.dn_dat, "2004", 1)  # NB config.dn_dat contains $MOD/exper. yyyy:str is just to get grid data from a valid file
-print(fn_dat_nemo)
+fn_dat_nemo = "%s%s%02d*T.nc"%(model_path, "2004", 1)  # NB config.dn_dat contains $MOD/exper. yyyy:str is just to get grid data from a valid file
 fn_cfg_nemo = config.fn_cfg_nemo
 fn_cfg_prof = config.fn_cfg_prof
-fn_analysis_diff = "%sprofiles/%03s_PRO_DIFF.nc"%(config.dn_out, season)
-fn_analysis_index = "%sprofiles/%03s_PRO_INDEX.nc"%(config.dn_out, season)
-fn_out = "%sprofiles/%03s_mask_means_daily.nc"%(config.dn_out, season)
+fn_analysis_diff = "%sprofiles/%03s_PRO_DIFF.nc"%(model_path, season)
+fn_analysis_index = "%sprofiles/%03s_PRO_INDEX.nc"%(model_path, season)
+fn_out = "%sprofiles/%03s_mask_means_daily.nc"%(model_path, season)
 
 # get differences
 differences = coast.Profile(config=fn_cfg_prof) 

@@ -15,13 +15,16 @@ class seasonal_depth_integral(object):
     Plotting collapsed measures of temperature and salinity biases per region.
     '''
 
-    def __init__(self, case_path):
+    def __init__(self, case_path, model):
         
-        fn = "profiles/season_merged_mask_means_daily.nc"
+        self.model = model
+        fn = model + "/profiles/season_merged_mask_means_daily.nc"
+        print (case_path+fn)
         self.ds = xr.open_dataset(case_path + fn)
 
         # make region names indexable
         self.ds = self.ds.swap_dims({"dim_mask":"region_names"})
+        print (self.ds)
     
     def depth_mean(self):
 
@@ -57,10 +60,10 @@ class seasonal_depth_integral(object):
 
         if scalar == "temperature": 
             x_label = "Temperature Bias ($^{\circ}$C)"
-            y_max = 0.85
+            y_max = 1.15
         if scalar == "salinity": 
             x_label = "Salinity Bias ($10^{-3}$)"
-            y_max = 0.66
+            y_max = 0.72
     
         # initialise plot
         fig, axs = plt.subplots(1, figsize=(5.5,3.5))
@@ -76,7 +79,7 @@ class seasonal_depth_integral(object):
         fig.patch.set_alpha(0.0)
 
         # save
-        save_name = "FIGS/depth_integrated_regional_errors_by_season_cut_{}.pdf".format(scalar)
+        save_name = "FIGS/{}depth_integrated_regional_errors_by_season_cut_{}.pdf".format(self.model,scalar)
         plt.savefig(save_name)
 
     def render_bars(self, ax, da):
@@ -116,7 +119,7 @@ class seasonal_depth_integral(object):
         ax.set_xticks(x + (width*1.6), region_names)
 
 if __name__ == "__main__":
-    co7_path = '/gws/nopw/j04/jmmp/CO9_AMM15_validation/co7/'
-    sp = seasonal_depth_integral(co7_path)
+    ds_path = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/"
+    sp = seasonal_depth_integral(ds_path, "P2.0")
     sp.plot_regional_depth_integrals(scalar="temperature")
     sp.plot_regional_depth_integrals(scalar="salinity")

@@ -224,8 +224,12 @@ class seasonal_profiles(object):
         if self.save_plot: 
             f.savefig(fn_out)
 
-    def plot_kattegat_norwegian_all_season(self, scalar="temperature",
-                                           xmax=3.0, 
+    def plot_two_region_all_season(
+                         self,
+                         r1_dict,
+                         r2_dict,
+                         scalar="temperature",
+                         xmax=3.0, 
                          xlabel=r"$\overline{|\Delta \Theta|}$ ($^{\circ}$C)"):
         """
         Plot seasonal profiles of Kattegat and the Norwegian Trench.
@@ -279,7 +283,10 @@ class seasonal_profiles(object):
             MAM = ds_list_MAM[i].swap_dims({"dim_mask":"region_names"})
             JJA = ds_list_JJA[i].swap_dims({"dim_mask":"region_names"})
             SON = ds_list_SON[i].swap_dims({"dim_mask":"region_names"})
-            for j, region in enumerate(["kattegat","nor_trench"]):
+            region_names = [r1_dict["region_id"],
+                            r2_dict["region_id"]]
+            print (DJF.region_names)
+            for j, region in enumerate(region_names):
                 render(DJF.sel(region_names=region), axs[0+4*(j-1)])
                 render(MAM.sel(region_names=region), axs[1+4*(j-1)])
                 render(JJA.sel(region_names=region), axs[2+4*(j-1)])
@@ -297,7 +304,7 @@ class seasonal_profiles(object):
         for ax in [axs[0], axs[4]]:
             ax.set_ylabel("Depth (m)") 
         for ax in axs:
-            ax.set_ylim(0,150)
+            ax.set_ylim(0,200)
             ax.invert_yaxis()
             ax.set_xlim(0,xmax)
             ax.set_xlabel(xlabel)
@@ -305,22 +312,35 @@ class seasonal_profiles(object):
                    bbox_to_anchor=(1.0,0.5))
 
         # add location annotation
-        fig.text(0.475, 0.95, "Kattegat", 
+        fig.text(0.475, 0.95, r1_dict["region_str"], 
              va = 'bottom', ha='center', rotation='horizontal', 
              fontsize=11)
-        fig.text(0.475, 0.45, "Norwegian Trench", 
+        fig.text(0.475, 0.45, r2_dict["region_str"],
              va = 'bottom', ha='center', rotation='horizontal', 
              fontsize=11)
 
         # save
-        save_path = "FIGS/kattegat_and_nor_trench_seasonal_mean_abs_diff_" \
+        save_path = "FIGS/" \
+                    +"{}_{}_seasonal_mean_abs_diff_".format(
+                    r1_dict["region_id"], r2_dict["region_id"]) \
                     + scalar + ".pdf"
         plt.savefig(save_path)
         
 if __name__ == "__main__":
+
+    # set regions
+    s_north_sea = {"region_id": "southern_north_sea",
+                   "region_str": "S. North Sea"}
+    irish_sea = {"region_id": "irish_sea",
+                 "region_str": "Irish Sea"}
+
+    # plot
     sp = seasonal_profiles()
-    sp.plot_kattegat_norwegian_all_season()
-    sp.plot_kattegat_norwegian_all_season(scalar="temperature")
-    sp.plot_kattegat_norwegian_all_season(scalar="salinity",
-           xlabel=r"$\overline{|\Delta S|}$ ($10^{-3}$)",
-           xmax=4.0)
+    sp.plot_two_region_all_season(s_north_sea,
+                                  irish_sea,
+                                  scalar="temperature")
+    sp.plot_two_region_all_season(s_north_sea,
+                                  irish_sea,
+                                  scalar="salinity",
+                                  xlabel=r"$\overline{|\Delta S|}$ ($10^{-3}$)",
+                                  xmax=4.0)
