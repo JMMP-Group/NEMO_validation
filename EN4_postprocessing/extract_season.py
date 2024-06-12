@@ -24,17 +24,17 @@ def extract_season(ds, season=None):
     return ds
 
 args = sys.argv
-model = args[1]  # MOD. Already loaded into config.dn_out directory path
-season = str(args[2])  # season: 'DJF', 'MAM', 'JJA', SON'
+#model = args[1]  # MOD. Already loaded into config.dn_out directory path
+season = str(args[1])  # season: 'DJF', 'MAM', 'JJA', SON'
 
 # Merge over all available years: "????" are 4-digit year labels
-ds_index = xr.open_mfdataset(config.dn_out +
-                             'interpolated_profiles_p0_*.nc',
+ds_index = xr.open_mfdataset(config.dn_out + 
+                             'profiles/interpolated_profiles_*.nc',
                              combine='nested', concat_dim="id_dim", parallel=True)
 ds_index = extract_season(ds_index, season)
 
 ds_diff = xr.open_mfdataset(config.dn_out +
-                            'profile_errors_p0_*.nc',
+                            'profiles/profile_errors_p0_*.nc',
                             combine='nested', concat_dim="id_dim", parallel=True)
 ds_diff = extract_season(ds_diff, season)
 
