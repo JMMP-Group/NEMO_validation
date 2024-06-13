@@ -161,27 +161,46 @@ class seasonal_depth_integral(object):
         obs_path = config.dn_out + "profiles/interpolated_obs_*.nc"
         da = xr.open_mfdataset(obs_path, combine='nested', concat_dim="id_dim",
                                parallel=True)[scalar]
-
         seasons = ["DJF","MAM","JJA","SON"]
-        for season in seasons:
+        season_data = []
+        #for season in seasons:
+        for season, ds in da.groupby("time.season"):
+            print (season)
+            print (ds)
             mask_indices = self.get_mask_regions(da)
-            da_season = self.extract_season(da, season)
-            mask_data = da.isel(id_dim=mask_indices.astype(int))
+            mask_data = ds.isel(id_dim=mask_indices.isel(dim_mask=2).astype(int).values)
+            plt.scatter(mask_data.longitude, mask_data.latitude, s=0.5)
+            plt.show()
+            #cs = ['r','g','b','k','cyan','yellow','brown']
+            #for i in range(7):
+            #    m = mask_data.isel(dim_mask=i)
+            #    plt.scatter(m.longitude, m.latitude, s=0.5, c=cs[i])
+            #plt.show()
             print (mask_data)
-            print (skdjfh)
-            print (mask_data)
-            std = mask_data.std(dim=["id_dim","z_dim"], skipna=True).compute()
-            print (std)
+        print (mask_data)
+        print (sdk)
+        region_data = []
+        print (mask_data.time.values)
+        #    for region, r_da in mask_data.groupby("dim_mask"):
+        #        da_region = self.extract_season(r_da, season)
+        #        for time, data in da_region.groupby("time.month"):
+        #            print (time)
+        #            #print (data)
+        #        da_region = da_region.expand_dims("region_names")
+        #        region_data.append(da_region)
+        #    all_regions_one_season = xr.concat(region_data, dim="region_names")
+        #    std = mask_data.std(dim=["id_dim","z_dim"], skipna=True).compute()
+        #    #print (std)
+        #    std = std.expand_dims(dict(seasons=season))
+        #    #print (std)
+        #    season_data.append(std)
+        #std_all_seasons_and_regions = xr.concat(season_data, dim="seasons")
+        ##print (std_all_seasons_and_regions)
     
     
     def extract_season(self, ds, season=None):
         # Extract season if needed
         if season is not None:
-            print ('')
-            print ('')
-            print (ds)
-            print ('')
-            print ('')
             season_array = general_utils.determine_season(ds.time)
             s_ind = season_array == season
             ds = ds.isel(id_dim=s_ind)
@@ -201,6 +220,7 @@ class seasonal_depth_integral(object):
         # get profile dataset
         obs_profiles = coast.Profile(config=fn_cfg_prof) 
         obs_profiles.dataset = da
+        print (obs_profiles.dataset)
         
         mask_xr = xr.open_dataset(config.dn_out + "profiles/mask_xr.nc")
         
@@ -209,10 +229,8 @@ class seasonal_depth_integral(object):
         mask_indices = analysis.determine_mask_indices(obs_profiles,
                                                        mask_xr)
        
-
         # Add bathymetry data to profiles before mask averaging
         #da['bathymetry'] = model_profiles_interp.dataset.bathymetry
-        print (da)
 
         return mask_indices.mask
 
