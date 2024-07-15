@@ -158,52 +158,42 @@ class seasonal_depth_integral(object):
         render on bar plot
         """
 
+        def _preprocess(ds_month):
+            """ drop broadcasting of depth variable """
+            # TODO: this should be done in GEN_MOD_Dave_example_profile_vali...
+            ds_month["depth"] = ds_month.depth.isel(id_dim=0)
+            return ds_month
+
+        # get observational profiles interpolated to uniform depths
         obs_path = config.dn_out + "profiles/interpolated_obs_*.nc"
-        da = xr.open_mfdataset(obs_path, combine='nested', concat_dim="id_dim",
-                               parallel=True)[scalar]
-        #da = da.isel(id_dim=slice(None,1000))
-        #seasons = ["DJF","MAM","JJA","SON"]
+        obs_profiles_all = xr.open_mfdataset(obs_path, combine='nested',
+                                             concat_dim="id_dim",
+                                             parallel=True,
+                                             preprocess=_preprocess)[scalar]
+
+        # get standard deviation by season
         season_data = []
-        for season, ds in da.groupby("time.season"):
-            print ('')
-            print ('')
-            print ('')
-            print ('')
-            print (ds)
+        for season, ds in obs_profiles_all.groupby("time.season"):
+            # split by region
             mask_indices = self.get_mask_regions(ds)
             mask_data = ds.isel(id_dim=mask_indices)
-            print ('')
-            print ('')
-            print ('')
-            print ('')
-            print ('')
-            print ('')
-            print ('')
-            print ('')
-            print ('')
-            mask_data[depth] = mask_data.depth.isel(dim_mask=0, id_dim=0)
-            print (mask_data)
-            print (skdjf)
+
+            # standard devation for each depth
             mask_data_std = mask_data.std(["id_dim"], skipna=True)
+
+            # depth-mean of standard devation
             mask_data_std_mean = self.depth_mean(mask_data_std)
-            mask_data_std_mean = mask_data_std_mean.expand_dims(dict(seasons=[season]))
+
+            # set season dim and variable name
+            mask_data_std_mean = mask_data_std_mean.expand_dims(
+                                 dict(seasons=[season]))
             mask_data_std_mean.name = scalar + "_std"
+
+            # append season list
             season_data.append(mask_data_std_mean)
+
+        # join all season standard deviations
         std_all_seasons_and_regions = xr.concat(season_data, dim="seasons")
-        #    for region, r_da in mask_data.groupby("dim_mask"):
-        #        da_region = self.extract_season(r_da, season)
-        #        for time, data in da_region.groupby("time.month"):
-        #            print (time)
-        #            #print (data)
-        #        da_region = da_region.expand_dims("region_names")
-        #        region_data.append(da_region)
-        #    all_regions_one_season = xr.concat(region_data, dim="region_names")
-        #    std = mask_data.std(dim=["id_dim","z_dim"], skipna=True).compute()
-        #    #print (std)
-        #    std = std.expand_dims(dict(seasons=season))
-        #    #print (std)
-        #    season_data.append(std)
-        #std_all_seasons_and_regions = xr.concat(season_data, dim="seasons")
         print (std_all_seasons_and_regions.values)
     
     
