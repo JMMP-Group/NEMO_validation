@@ -9,6 +9,7 @@ import matplotlib
 import matplotlib.colors as mcolors
 import coast
 from coast import general_utils
+from dask.diagnostics import ProgressBar
 
 matplotlib.rcParams.update({'font.size': 8})
 
@@ -84,6 +85,9 @@ class seasonal_depth_integral(object):
         # scatter
         self.render_bars(axs, self.da_list)
 
+        # add obs profles std
+        self.add_obs_std_to_bars(axs)
+
         axs.set_ylabel(x_label)
         axs.set_ylim(0,y_max) 
     
@@ -117,7 +121,6 @@ class seasonal_depth_integral(object):
         cmap = mcolors.ListedColormap(clist)
         seasons = ["DJF","MAM","JJA","SON"]
         # RDP - Too many loops, not readable...
-        self.add_obs_std_to_bars(10)
         for k, da in enumerate(da_list):
             # select regions
             da = da.sel(region_names=regions)
@@ -141,7 +144,7 @@ class seasonal_depth_integral(object):
                         #right, top = rect.xy[0] + w, rect.xy[1] + h
                         #ax.text(top, x, labels=[season], padding=3,
                         #             rotation=90)
-        
+
         region_names = ["N. North\nSea",
                         "Outer\nShelf",
                         "Eng.\nChannel",
@@ -152,10 +155,12 @@ class seasonal_depth_integral(object):
         ax.set_xticks(x + (3*width*1.2*len(self.models) + width*k)/2,
                       region_names)
 
-    def add_obs_std_to_bars(self, x_pos, scalar="temperature"):
+    def get_obs_std(self):
         """
-        find the standard deviation of the interpolated obs profile and
-        render on bar plot
+        find the standard deviation of the interpolated obs profile and save
+        TODO: this is at odds with regional_mean_by_season.py and these
+        should be merged.
+        The process has begun via addition of obs to extract_season.py 
         """
 
         def _preprocess(ds_month):
@@ -169,7 +174,7 @@ class seasonal_depth_integral(object):
         obs_profiles_all = xr.open_mfdataset(obs_path, combine='nested',
                                              concat_dim="id_dim",
                                              parallel=True,
-                                             preprocess=_preprocess)[scalar]
+                                             preprocess=_preprocess)
 
         # get standard deviation by season
         season_data = []
@@ -184,58 +189,57 @@ class seasonal_depth_integral(object):
             # depth-mean of standard devation
             mask_data_std_mean = self.depth_mean(mask_data_std)
 
-            # set season dim and variable name
+            # set season dim
             mask_data_std_mean = mask_data_std_mean.expand_dims(
                                  dict(seasons=[season]))
-            mask_data_std_mean.name = scalar + "_std"
 
             # append season list
             season_data.append(mask_data_std_mean)
 
         # join all season standard deviations
-        std_all_seasons_and_regions = xr.concat(season_data, dim="seasons")
-        print (std_all_seasons_and_regions.values)
-    
-    
-    def extract_season(self, ds, season=None):
-        # Extract season if needed
-        if season is not None:
-            season_array = general_utils.determine_season(ds.time)
-            s_ind = season_array == season
-            ds = ds.isel(id_dim=s_ind)
-        return ds
+        std_seasons_regions = xr.concat(season_data, dim="seasons")
+
+        # set variable names
+        for var in std_seasons_regions.keys():
+            std_seasons_regions = std_seasons_regions.rename({var:var+"_std"})
+
+        # save
+        with ProgressBar():
+            std_seasons_regions.to_netcdf(config.dn_out
+                     + "masked_reductions/obs_season_merged_mask_std_mean.nc")
     
     def get_mask_regions(self, da):
+        """
+        Retrieve masked regions
+
+        Based on the assumption that mask_xr.nc has already been generated
+        """
+
+        # check for mask_xr.nc
+        # TODO
 
         # define cfg files
         fn_cfg_nemo = config.fn_cfg_nemo
         fn_cfg_prof = config.fn_cfg_prof
         fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
 
-        ## get model profiles to retrieve mask indicies
-        #model_profiles_interp = coast.Profile(config=fn_cfg_prof)
-        #model_profiles_interp.dataset = xr.open_dataset(fn_analysis_index,
-        #                                              chunks={'id_dim':10000})
         # get profile dataset
         obs_profiles = coast.Profile(config=fn_cfg_prof) 
         obs_profiles.dataset = da
-        #print (obs_profiles.dataset)
         
+        # get masks
         mask_xr = xr.open_dataset(config.dn_out + "profiles/mask_xr.nc")
-        print (mask_xr)
         
-        ## Perform analysis
+        # get indices associated with each mask region
         analysis = coast.ProfileAnalysis()
         mask_indices = analysis.determine_mask_indices(obs_profiles,
                                                        mask_xr)
        
-        # Add bathymetry data to profiles before mask averaging
-        #da['bathymetry'] = model_profiles_interp.dataset.bathymetry
-
         return mask_indices.mask.astype(int)
 
 if __name__ == "__main__":
     ds_path = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/"
     sp = seasonal_depth_integral(ds_path, ["P2.0", "co7"])
     #sp.plot_regional_depth_integrals(scalar="temperature")
-    sp.plot_regional_depth_integrals(scalar="salinity")
+    sp.get_obs_std()
+    #sp.plot_regional_depth_integrals(scalar="salinity")
