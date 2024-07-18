@@ -54,17 +54,12 @@ class seasonal_depth_integral(object):
         Plot depth integrated differences between EN4 and NEMO.
         """
 
-        # Region indices (in analysis) to plot
-        self.region_ind = [ 1, 7, 3, 2, 9, 5, 4, 6, 8]
-        self.region_names = ['N. North\nSea','S. North\nSea',
-                             'Eng.\nChannel','Outer\nShelf',
-                             'Irish\nSea', 'Kattegat',
-                             'Nor.\nTrench', 'FSC', 'Off-shelf']
-        
+        # alias var to globally accessible parameter
+        self.var_str = scalar
 
         if scalar == "temperature": 
             x_label = "Temperature Bias ($^{\circ}$C)"
-            y_max = 1.15
+            y_max = 1.2
         if scalar == "salinity": 
             x_label = "Salinity Bias ($10^{-3}$)"
             y_max = 0.72
@@ -82,11 +77,8 @@ class seasonal_depth_integral(object):
             # list for all models
             self.da_list.append(da)
 
-        # scatter
+        # set bars
         self.render_bars(axs, self.da_list)
-
-        # add obs profles std
-        self.add_obs_std_to_bars(axs)
 
         axs.set_ylabel(x_label)
         axs.set_ylim(0,y_max) 
@@ -120,6 +112,13 @@ class seasonal_depth_integral(object):
         clist = [plt.cm.tab10.colors[i] for i in [0,1,3,2,5,6,9]]
         cmap = mcolors.ListedColormap(clist)
         seasons = ["DJF","MAM","JJA","SON"]
+
+        # get max bars for each season and region 0 between da entries
+        da_0 = da_list[0].expand_dims(da_id=[0])
+        da_1 = da_list[1].expand_dims(da_id=[1])
+        da = xr.merge([da_0, da_1])
+        max_da = da.max("da_id").sel(region_names=regions[0])
+
         # RDP - Too many loops, not readable...
         for k, da in enumerate(da_list):
             # select regions
@@ -135,11 +134,20 @@ class seasonal_depth_integral(object):
                         alpha = 0.4
                     else:
                         alpha = 1
+                        self.add_obs_std(ax, season, region,
+                                         x[i] + offset, width * 2)
                     rect = ax.bar(x[i] + offset, bias_r, width, color=clist[i],
-                                  alpha=alpha)
+                                  alpha=alpha, align="edge")
+                    print (rect)
                     if i == 0 and k == 0:
-                        ax.bar_label(rect, labels=[season], padding=3,
-                                     rotation=90)
+                        #ax.bar_label(rect, labels=[season], padding=3,
+                        #             rotation=90)
+                        print (season)
+                        print (max_da.sel(season=season).to_array().values[0])
+                        print (x[i] + offset)
+                        ax.text(x[i] + offset, max_da.sel(season=season).to_array().values[0],
+                                   season,
+                                rotation=90, transform=ax.transData)
                         #x_pos = x[i] + offset + width
                         #right, top = rect.xy[0] + w, rect.xy[1] + h
                         #ax.text(top, x, labels=[season], padding=3,
@@ -154,6 +162,29 @@ class seasonal_depth_integral(object):
                         "Irish\nSea"]
         ax.set_xticks(x + (3*width*1.2*len(self.models) + width*k)/2,
                       region_names)
+
+    def add_obs_std(self, ax, season, region, x0, width):
+        """
+        add standard deviation of temperature/salinity to bar plot
+        """
+
+        # get data
+        path = config.dn_out \
+             + "masked_reductions/obs_season_merged_mask_std_mean.nc"
+        obs_std = xr.open_dataset(path)[self.var_str + "_std"]
+
+        # two standard deviations
+        obs_std = obs_std * 2
+
+        # set region_names as coordinate dimension
+        obs_std = obs_std.set_index(dim_mask= "region_names")
+
+        # select for region and season
+        obs_std_region_season = obs_std.sel(seasons=season, dim_mask=region)
+
+        # plot horizontal line
+        ax.hlines(obs_std_region_season, x0, x0 + width,
+                   transform=ax.transData, colors="k")
 
     def get_obs_std(self):
         """
@@ -240,6 +271,6 @@ class seasonal_depth_integral(object):
 if __name__ == "__main__":
     ds_path = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/"
     sp = seasonal_depth_integral(ds_path, ["P2.0", "co7"])
-    #sp.plot_regional_depth_integrals(scalar="temperature")
-    sp.get_obs_std()
+    sp.plot_regional_depth_integrals(scalar="temperature")
+    #sp.get_obs_std()
     #sp.plot_regional_depth_integrals(scalar="salinity")
