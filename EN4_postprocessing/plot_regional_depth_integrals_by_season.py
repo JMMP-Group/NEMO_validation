@@ -95,6 +95,23 @@ class seasonal_depth_integral(object):
                   + scalar + ".pdf"
         plt.savefig(save_name)
 
+    def get_bar_max_by_season(self):
+        """ get index of maximum value between each model provided """
+
+        # expand dims to have model id in order to merge
+        da_0 = da_list[0].expand_dims(da_id=[0])
+        da_1 = da_list[1].expand_dims(da_id=[1])
+
+        # merge into dataset
+        da = xr.merge([da_0, da_1])
+
+        # find maximum arguments
+        max_da = da.argmax("da_id").sel(
+                 region_names=regions[0]).to_dataarray().values[0]
+    
+        return max_da
+
+
     def render_bars(self, ax, da_list):
         """ render season scatter coloured by region """
 
@@ -113,11 +130,8 @@ class seasonal_depth_integral(object):
         cmap = mcolors.ListedColormap(clist)
         seasons = ["DJF","MAM","JJA","SON"]
 
-        # get max bars for each season and region 0 between da entries
-        da_0 = da_list[0].expand_dims(da_id=[0])
-        da_1 = da_list[1].expand_dims(da_id=[1])
-        da = xr.merge([da_0, da_1])
-        max_da = da.max("da_id").sel(region_names=regions[0])
+        # get index of max bars between models
+        bar_max = self.get_bar_max_by_season(da_list)
 
         # RDP - Too many loops, not readable...
         for k, da in enumerate(da_list):
@@ -127,32 +141,41 @@ class seasonal_depth_integral(object):
                 # select season
                 bias = da.sel(season=season)
                 for i, region in enumerate(regions):
-                    #offset = width * ((k + 1) + j * 1.1)
                     offset = width * j * 1.2 * len(self.models) + (k * width)
                     bias_r = bias.sel(region_names=region)
                     if k > 0: 
                         alpha = 0.4
                     else:
                         alpha = 1
+
+                        # add observational standard deviation
                         self.add_obs_std(ax, season, region,
                                          x[i] + offset, width * 2)
-                    rect = ax.bar(x[i] + offset, bias_r, width, color=clist[i],
-                                  alpha=alpha, align="edge")
-                    print (rect)
-                    if i == 0 and k == 0:
-                        #ax.bar_label(rect, labels=[season], padding=3,
-                        #             rotation=90)
-                        print (season)
-                        print (max_da.sel(season=season).to_array().values[0])
-                        print (x[i] + offset)
-                        ax.text(x[i] + offset, max_da.sel(season=season).to_array().values[0],
-                                   season,
-                                rotation=90, transform=ax.transData)
-                        #x_pos = x[i] + offset + width
-                        #right, top = rect.xy[0] + w, rect.xy[1] + h
-                        #ax.text(top, x, labels=[season], padding=3,
-                        #             rotation=90)
 
+                    # render bars
+                    rect = ax.bar(x[i] + offset, bias_r, width,
+                                  color=clist[i],
+                                  alpha=alpha,
+                                  align="edge")
+
+                    # add season labels
+                    if i == 0 and k == bar_max[j]:
+                        if k == 0:
+                            # upper right
+                            vertex = rect.patches[0].get_corners()[2]
+                        else:
+                            # upper left
+                            vertex = rect.patches[0].get_corners()[3]
+                        x_pos = vertex[0]
+                        y_pos = vertex[1]
+
+                        # set offset for season label
+                        margin = ax.get_ylim()[1] * 0.03
+                        
+                        ax.text(x_pos, y_pos + margin, season, ha="center",
+                                rotation=90, transform=ax.transData)
+
+        # set x tick labels
         region_names = ["N. North\nSea",
                         "Outer\nShelf",
                         "Eng.\nChannel",
