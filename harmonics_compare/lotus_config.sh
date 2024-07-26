@@ -19,6 +19,18 @@ elif [ $RUN_NAME = "GS1p2_full" ]; then
  export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p2_full/output/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
  export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p2_full/config/domain_cfg.nc"
 
+elif [ $RUN_NAME = "GS1p6_full" ]; then
+ export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/jholt/EXP_GS1p6_full_IWD_soenhance_SSR_ice/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
+ export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p2_full/config/domain_cfg.nc"
+
+elif [ $RUN_NAME = "GS1p6_full_so" ]; then
+ export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/jholt/EXP_GS1p6_full_IWD_soenhance_SSR_ice_so/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
+ export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p2_full/config/domain_cfg.nc"
+
+elif [ $RUN_NAME = "GS1p7" ]; then
+ export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/jholt/EXP_GS1p6_full_IWD_soenhance_qdr2/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
+ export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p2_full/config/domain_cfg.nc"
+
 elif [ $RUN_NAME = "FES2014" ]; then
   export DN_FES="/gws/nopw/j04/class_vol2/senemo/shared/FES2014/"
   #export FN_FES_AMP="/gws/nopw/j04/class_vol2/senemo/shared/FES2014_M2_amp_on_SENEMO_grid.nc"

@@ -4,7 +4,9 @@ source config.sh  # sets $MACHINE. Is called again before other variables are us
 
 rm LOGS/OUT* LOGS/*.err LOGS/*.out
 
-configArray=("GS1p1_tide" "GS1p2_full" "FES2014")
+#configArray=("GS1p1_tide" "GS1p2_full" "FES2014")
+#configArray=("GS1p6_full" "GS1p6_full_so")
+configArray=("GS1p7")
 for config in ${configArray[*]}
 do
   echo "sbatch "${MACHINE,,}"_pre_process_harm.sh $config"
