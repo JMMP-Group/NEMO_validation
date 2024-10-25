@@ -14,6 +14,7 @@ export RUN_NAME="P1.5b"
 export RUN_NAME="P1.5"
 export RUN_NAME="P1.5c"
 export RUN_NAME="co7"
+export RUN_NAME="P2.0"
 
 ## 2014 P0.0
 #export MASS="xu-cb676"
