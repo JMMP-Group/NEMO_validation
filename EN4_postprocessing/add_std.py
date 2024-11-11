@@ -5,7 +5,7 @@
 # E.g.:
 # python add_std.py DJF
 
-from config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python

@@ -1,3 +1,6 @@
+from PythonEnvCfg.config import config
+config = config() # initialise variables in python
+
 #!/usr/bin/env python3
 #
 # This script will use all of the available analysis tools in COAsT for
@@ -13,10 +16,10 @@
 # process will do a different time period (so start and end dates is
 # all that needs to change between processes).
 
-from config import config
+#from config import config
 import sys
 
-config = config() # initialise variables in python
+#config = config() # initialise variables in python
 # IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
 sys.path.append(config.coast_repo)
 
@@ -28,24 +31,31 @@ import pandas as pd
 
 args = sys.argv
 
-model = args[1]
-season = str(args[2])
+#model = args[1] # not needed 
+path = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/"
+model_path = path + "co7/"
+season = str(args[1])
+config.grid_nc = "CO7_EXACT_CFG_FILE.nc"
 
 # File paths (All)
 fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
-fn_dat_nemo = "%s%s%02d*T.nc"%(config.dn_dat, "2004", 1)  # NB config.dn_dat contains $MOD/exper. yyyy:str is just to get grid data from a valid file
-print(fn_dat_nemo)
+fn_dat_nemo = "%s%s%02d*T.nc"%(model_path, "2004", 1)  # NB config.dn_dat contains $MOD/exper. yyyy:str is just to get grid data from a valid file
 fn_cfg_nemo = config.fn_cfg_nemo
 fn_cfg_prof = config.fn_cfg_prof
-fn_analysis_diff = "%s%03s_PRO_DIFF.nc"%(config.dn_out, season)
-fn_analysis_index = "%s%03s_PRO_INDEX.nc"%(config.dn_out, season)
-fn_out = "%s%03s_mask_means_daily.nc"%(config.dn_out, season)
+fn_analysis_diff = "%sprofiles/%03s_PRO_DIFF.nc"%(model_path, season)
+fn_analysis_index = "%sprofiles/%03s_PRO_INDEX.nc"%(model_path, season)
+fn_out = "%sprofiles/%03s_mask_means_daily.nc"%(model_path, season)
 
+# get differences
 differences = coast.Profile(config=fn_cfg_prof) 
 differences.dataset = xr.open_dataset(fn_analysis_diff, chunks={'id_dim':10000})
+
+# collapse depth to 1d
+differences.dataset["depth"] = differences.dataset.depth.mean("id_dim")
+
+# get model profiles to retrieve mask indicies
 model_profiles_interp = coast.Profile(config=fn_cfg_prof)
 model_profiles_interp.dataset = xr.open_dataset(fn_analysis_index, chunks={'id_dim':10000})
-
 
 print('Doing regional analysis..')
 
@@ -56,8 +66,9 @@ bath = nemo.dataset.bathymetry.values.squeeze()
 lon = nemo.dataset.longitude.values.squeeze()
 lat = nemo.dataset.latitude.values.squeeze()
 
-
 # Define Regional Masks
+# TODO: a function exists for this in plot_regional_mask.py
+# make common function external to this code
 
 mm = coast.MaskMaker()
 masks_list = []
@@ -114,5 +125,4 @@ mask_stats_model = mask_stats_model.drop_vars("profile_mean_bathymetry").rename(
 # SAVE mask dataset to file
 mask_stats_model.to_netcdf(fn_out.replace("daily.nc","daily_model.nc"))
 print('done')
-
 
