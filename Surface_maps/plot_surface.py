@@ -1,5 +1,4 @@
-from config import config
-
+from PythonEnvCfg.config import config
 cfg = config() # initialise variables in python
 
 import coast

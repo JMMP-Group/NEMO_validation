@@ -2,9 +2,7 @@
 ### replication of  EN4_processing/GEN_MOD_Dave_example_profile_validation.py
 ### purpose > make gridded version of en4 data?
 
-from config import config
-from config import bounds
-import sys
+from PythonEnvCfg.config import config, bounds
 
 cfg = config() # initialise variables in python
 bdy = bounds("AMM15")
@@ -18,6 +16,7 @@ import pandas as pd
 import os
 from coast import crps_util as cu
 import numpy as np
+import sys
 
 import time
 
