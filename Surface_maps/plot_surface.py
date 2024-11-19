@@ -9,7 +9,9 @@ import xarray as xr
 import numpy as np
 import cmocean
 
-class plot_surface(object):
+class plot_gridded_surface(object):
+    """ ploting routine for gridded surface temperature and salinity maps """
+
     def __init__(self):
 
         # paths
@@ -178,5 +180,65 @@ class plot_surface(object):
         self.validate_surface_climatology("temperature")
         self.validate_surface_climatology("salinity")
 
-ps = plot_surface()
-ps.validate_model_surface_climatology()
+class plot_pointwise_surface(object):
+    """
+    ploting routine for pointwise surface temperature and salinity maps
+    """
+
+    def __init__(self):
+
+        # paths
+        self.fn_dom = cfg.dn_dom + cfg.grid_nc
+        self.fn_dat = cfg.dn_out + "surface_maps/"
+        en4_nc = "/surface_maps/en4_gridded_surface_climatology.nc"
+        m_nc = "/surface_maps/binned_model_surface_climatology.nc"
+        self.en4_grid = cfg.dn_out + en4_nc
+        self.model_binned = cfg.dn_out + m_nc
+
+    def plot_validate_model_surface_by_season(self, var="temperature"):
+        """ plot modelled surface temperature and salinity against EN4 """
+
+        proj=ccrs.PlateCarree()
+        plt_proj=ccrs.PlateCarree()
+        proj_dict = {"projection": plt_proj}
+
+        # initiate plots
+        fig, axs = plt.subplots(2,2, figsize=(6.5,6.5), subplot_kw=proj_dict)
+        plt.subplots_adjust()
+
+        # get data
+        ds_path = self.fn_dat + "near_surface_EN4_bias_by_season.nc"
+        da = xr.open_dataset(ds_path)["diff_" + var]
+
+        vmin = -1
+        vmax = 1
+
+        def render(ax, da):
+            p = ax.scatter(da.longitude, da.latitude, c=da, s=0.2,
+                           transform=plt_proj, cmap=cmocean.cm.balance,
+                           vmin=vmin, vmax=vmax)
+            return p
+
+        for i, (season, da) in enumerate(da.groupby("season")):
+            ax = axs.flatten()[i]
+            p = render(ax,da)
+            ax.text(0.5,1.01,season,transform=ax.transAxes)
+
+        for ax in axs.flatten():
+            ax.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
+
+        pos0 = axs[1,0].get_position()
+        pos1 = axs[1,1].get_position()
+        cbar_ax = fig.add_axes([pos0.x0, 0.12, 
+                                pos1.x1 - pos1.x0, 0.02])
+        cbar = fig.colorbar(p, cax=cbar_ax, orientation='horizontal')
+        cbar.ax.text(0.5, -2.8, r"Temperature ($^{\circ}$C)", fontsize=8,
+                     rotation=0, transform=cbar.ax.transAxes,
+                     va='top', ha='center')
+
+        plt.show()
+
+ps = plot_gridded_surface()
+ps =  plot_pointwise_surface()
+ps.plot_validate_model_surface_by_season("temperature")
+ps.plot_validate_model_surface_by_season("salinity")
