@@ -31,9 +31,10 @@ class surface_climatology(object):
         ds_list = []
         for season in ['DJF','MAM','JJA','SON']:
             # get data
-            ds = xr.open_dataset(cfg.dn_out + season + "_PRO_DIFF.nc",
-                                 chunks='auto')
+            path = cfg.dn_out + 'profiles/' + season + "_PRO_DIFF.nc"
+            ds = xr.open_dataset(path, chunks='auto')
 
+            print (ds) 
             ds_list.append(ds.assign_coords(
                            season=('id_dim',[season]*len(ds.id_dim))))
 

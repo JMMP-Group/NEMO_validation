@@ -12,15 +12,10 @@ config = config() # initialise variables in python
 
 import xarray as xr
 from dask.diagnostics import ProgressBar
-from coast import general_utils
 
-def extract_season(ds, season=None):
+def extract_season(ds, season):
     """ reduce data to given season """
-    # Extract season if needed
-    if season is not None:
-        season_array = general_utils.determine_season(ds.time)
-        s_ind = season_array == season
-        ds = ds.isel(id_dim=s_ind)
+    ds = ds.where(ds.time.dt.season == season)
     return ds
 
 def _preprocess(ds_month):
@@ -30,13 +25,12 @@ def _preprocess(ds_month):
     return ds_month
 
 args = sys.argv
-#model = args[1]  # MOD. Already loaded into config.dn_out directory path
 season = str(args[1])  # season: 'DJF', 'MAM', 'JJA', SON'
 
 # Merge over all available years: "????" are 4-digit year labels
 # interpolated profiles
 ds_index = xr.open_mfdataset(config.dn_out + 
-                             'profiles/interpolated_profiles_*.nc',
+                             "profiles/interpolated_profiles_*.nc",
                              combine='nested', concat_dim="id_dim",
                              parallel=True, preprocess=_preprocess)
 ds_index = extract_season(ds_index, season)
@@ -57,9 +51,9 @@ ds_obs = extract_season(ds_diff, season)
 
 # save
 with ProgressBar():
-  ds_index.to_netcdf(config.dn_out+"%03s_PRO_INDEX.nc"%(season))
-  ds_diff.to_netcdf(config.dn_out+"%03s_PRO_DIFF.nc"%(season))
-  ds_obs.to_netcdf(config.dn_out+"%03s_PRO_OBS.nc"%(season))
+  ds_index.to_netcdf(config.dn_out+"profiles/"+"%03s_PRO_INDEX.nc"%(season))
+  ds_diff.to_netcdf(config.dn_out+"profiles/"+"%03s_PRO_DIFF.nc"%(season))
+  ds_obs.to_netcdf(config.dn_out+"profiles/"+"%03s_PRO_OBS.nc"%(season))
 
-print(f'File written to {config.dn_out+"%03s_PRO_INDEX.nc"%(season)}')
-print(f'File written to {config.dn_out+"%03s_PRO_DIFF.nc"%(season)}')
+print(f'File written to {config.dn_out+"profiles/"+"%03s_PRO_INDEX.nc"%(season)}')
+print(f'File written to {config.dn_out+"profiles/"+"%03s_PRO_DIFF.nc"%(season)}')
