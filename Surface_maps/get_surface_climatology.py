@@ -34,7 +34,6 @@ class surface_climatology(object):
             path = cfg.dn_out + 'profiles/' + season + "_PRO_DIFF.nc"
             ds = xr.open_dataset(path, chunks='auto')
 
-            print (ds) 
             ds_list.append(ds.assign_coords(
                            season=('id_dim',[season]*len(ds.id_dim))))
 

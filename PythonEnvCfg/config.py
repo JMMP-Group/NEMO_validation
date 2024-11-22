@@ -7,7 +7,7 @@ Reads data set in config.sh
 """
 
 from socket import gethostname
-from os import environ
+from os import environ, system
 
 class config:
     """
@@ -16,6 +16,7 @@ class config:
     thing=c.THING
     """
     def __init__(self):
+
         # read SHELL variables. Set in config.sh
         #self.machine = environ.get('MACHINE')
         self.region      = self.get_shell_var('REGION', True)
@@ -30,6 +31,11 @@ class config:
         self.dn_dat     = self.get_shell_var('DN_DAT', True)
         self.dn_out     = self.get_shell_var('DN_OUT', True)
         self.case     = self.get_shell_var('MOD', True)
+        self.comp_case = {"case": self.get_shell_var("COMP_MOD", True),
+                         "raw_data":  self.get_shell_var("COMP_DAT", True),
+                         "proc_data":  self.get_shell_var("COMP_OUT", True),
+                         "grid":  self.get_shell_var("COMP_GRID", True)}
+
 
     def get_shell_var(self, var:str, debug=False):
         try:
@@ -37,8 +43,6 @@ class config:
             return environ.get(var.upper())
         except:
             print(f"Problem with getting shell variable: {var}")
-
-
 
 class bounds:
     """ bounds class to define cartesian box for preprocesses EN4 data"""

@@ -9,6 +9,7 @@ export ENDYEAR=2014 #1980    # 2014
 
 ## Process monthly data. Required in iter_sub_METEST.sh
 export MOD="P2.0"  # Model reference name
+export COMP_MOD="co7"
 
 export MASS_DIR="xu-ct872"
 
@@ -37,13 +38,28 @@ export DN_DOM="/gws/nopw/j04/jmmp/jmmp_collab/AMM15/DOMAIN_CFG/"
 
 # directory for NEMO data files
 #export DN_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/p0/daily/"  # Dave 25h data
-if [[ $MOD = "co7" ]]; then
+if [[ $COMP_MOD = "co7" ]]; then
  export DN_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/co7/daily/"  # co7 24h ave
 export GRID="CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
 else
  export DN_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/daily/"  # MOD 24h ave
- if [[ $MOD = "P2.0" ]]; then
+ if [[ $COMP_MOD = "P2.0" ]]; then
    export GRID="GEG_SF12.nc"
+ else
+   echo "WARNING: grid not set find matching grid and add to lotus_config.sh"
+   # options?: "domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
+   # options?: "GEG_SF12.nc" CO7_EXACT_CFG_FILE.nc
+ fi
+fi
+
+# temporary fix for adding comparison model
+if [[ $MOD = "co7" ]]; then
+ export COMP_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/co7/daily/"  # co7 24h ave
+export COMP_GRID="CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
+else
+ export COMP_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/daily/"  # MOD 24h ave
+ if [[ $MOD = "P2.0" ]]; then
+   export COMP_GRID="GEG_SF12.nc"
  else
    echo "WARNING: grid not set find matching grid and add to lotus_config.sh"
    # options?: "domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
@@ -53,3 +69,4 @@ fi
 # directory for analysis output
 #export DN_OUT="/home/users/jelt/tmp/"$REGION"/" 
 export DN_OUT="/gws/nopw/j04/jmmp/CO9_AMM15_validation/"$MOD"/"
+export COMP_OUT="/gws/nopw/j04/jmmp/CO9_AMM15_validation/"$COMP_MOD"/"

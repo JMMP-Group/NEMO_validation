@@ -15,7 +15,7 @@ from dask.diagnostics import ProgressBar
 
 def extract_season(ds, season):
     """ reduce data to given season """
-    ds = ds.where(ds.time.dt.season == season)
+    ds = ds.where(ds.time.dt.season.compute() == season, drop=True)
     return ds
 
 def _preprocess(ds_month):
@@ -33,7 +33,10 @@ ds_index = xr.open_mfdataset(config.dn_out +
                              "profiles/interpolated_profiles_*.nc",
                              combine='nested', concat_dim="id_dim",
                              parallel=True, preprocess=_preprocess)
+print (ds_index)
 ds_index = extract_season(ds_index, season)
+print (ds_index)
+print (kfjs)
 
 # profile bias
 ds_diff = xr.open_mfdataset(config.dn_out +
