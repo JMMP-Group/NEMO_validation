@@ -9,6 +9,8 @@ import xarray as xr
 import numpy as np
 import cmocean
 
+from EN4_postprocessing.plot_regional_mask import masking
+
 class plot_gridded_surface(object):
     """ ploting routine for gridded surface temperature and salinity maps """
 
@@ -272,7 +274,6 @@ class plot_pointwise_surface(object):
 
         da = da.set_index(id_dim=["time","latitude","longitude"])
         comp_da = comp_da.set_index(id_dim=["time","latitude","longitude"])
-        print(da)
  
         diff = da - comp_da
 
@@ -316,7 +317,81 @@ class plot_pointwise_surface(object):
                      va='top', ha='center')
         plt.show()
 
-ps = plot_gridded_surface()
+    def partition_by_region(self):
+        """ 
+        partition profile data by region
+        TODO: move to processing script
+        """
+
+        ma = masking()
+        ma.create_regional_mask()
+
+        seasons = ["DJF","MAM","JJA","SON"]
+        for season in seasons:
+            print (f"Partitioning {season} by region")
+            ma.partition_profiles_by_region(season=season)
+
+    def plot_surface_bias_scatter(self, var):
+        """plot scatter of surface bias of two models"""
+
+        # initiate plots
+        fig, axs = plt.subplots(9,4, figsize=(6.5,3.5))
+        plt.subplots_adjust()
+
+        # get data
+        ds_path = self.fn_path + "near_surface_EN4_bias_by_season_by_region.nc"
+        da = xr.open_dataset(ds_path)["diff_" + var]
+
+        ds_path = self.fn_comp_path +\
+                "near_surface_EN4_bias_by_season_by_region.nc"
+        da_comp = xr.open_dataset(ds_path)["diff_" + var]
+
+        for j, region in enumerate(da.region_names.values):
+            print (region)
+            da_r = da.sel(region_names=region)
+            da_comp_r = da_comp.sel(region_names=region)
+
+            multiindex = ["season","time","latitude","longitude"]
+            da_r = da_r.set_index(id_dim=multiindex).dropna("id_dim")
+            da_comp_r = da_comp_r.set_index(id_dim=multiindex).dropna("id_dim")
+
+            vmin = 0 
+            vmax = 2
+
+            da_r, da_comp_r = xr.align(da_r, da_comp_r)
+
+
+            seasons = ["DJF","MAM","JJA","SON"]
+            colours = ["r","g","b","c"]
+
+            for i, season in enumerate(seasons):
+                ax = axs[j,i]
+
+                da_season_r = np.abs(da_r.sel(season=season))
+                da_comp_season_r = np.abs(da_comp_r.sel(season=season))
+
+                s = ax.scatter(da_season_r, da_comp_season_r,
+                            c=colours[i], s=0.2, alpha=0.5,
+                            label=season)
+                #ax.hist2d(da_season, da_comp_season, bins=100, vmin=0,vmax=1000)
+
+                ax.plot([vmin,vmax], [vmin,vmax], 'k-', alpha=0.75, zorder=10)
+                ax.set_xlim(vmin,vmax)
+                ax.set_ylim(vmin,vmax)
+                ax.set_aspect("equal")
+
+                ax.set_title(f"{season} {region}")
+                ax.set_xlabel(cfg.case + " " + var + " Bias")
+
+        for ax in axs[:,0]:
+            ax.set_ylabel(cfg.comp_case["case"] + " " + var + " Bias")
+
+
+        plt.show()
+
+
 ps =  plot_pointwise_surface()
-ps.plot_validate_model_surface_by_season("temperature", comp_model=True)
-ps.plot_validate_model_surface_by_season("salinity", comp_model=True)
+#ps.partition_by_region()
+ps.plot_surface_bias_scatter("temperature")
+#ps.plot_validate_model_surface_by_season("temperature", comp_model=True)
+#ps.plot_validate_model_surface_by_season("salinity", comp_model=True)

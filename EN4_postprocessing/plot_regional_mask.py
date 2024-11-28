@@ -1,5 +1,4 @@
 from PythonEnvCfg.config import config
-config = config() # initialise variables in python
 
 import xarray as xr
 import matplotlib.pyplot as plt
@@ -9,24 +8,27 @@ import cartopy.crs as ccrs
 import matplotlib.colors as mcolors
 import cartopy.feature as cfeature
 import matplotlib
+from dask.diagnostics import ProgressBar
 
 matplotlib.rcParams.update({'font.size': 8})
 plt.rcParams['figure.facecolor'] = 'black'
 
-class mask_plotting(object):
+class masking(object):
     """
     Mask plotting routines
     """
 
     def __init__(self):
+
+        self.cfg = config() # initialise variables in python
+
         #%% File settings
-        self.fn_cfg_nemo = config.fn_cfg_nemo
-        self.fn_dom_nemo = config.dn_dom + config.grid_nc
+        self.fn_cfg_nemo = self.cfg.fn_cfg_nemo
+        self.fn_dom_nemo = self.cfg.dn_dom + self.cfg.grid_nc
 
         # open nemo lat/lon grid to define regions (as function of bathymetry)
         self.nemo = coast.Gridded(fn_domain=self.fn_dom_nemo,
                                   config=self.fn_cfg_nemo)
-        print (self.nemo.dataset)
 
     def quick_region_plot(self, mask: xr.Dataset):
         """
@@ -61,7 +63,7 @@ class mask_plotting(object):
     def open_mask(self):
         """ open existing mask created by regional mean by season """
 
-        path = config.dn_out + "profiles/mask_xr.nc"
+        path = self.cfg.dn_out + "profiles/mask_xr.nc"
         self.mask_xr = xr.open_dataset(path)
 
         # make regions selectable
@@ -70,11 +72,12 @@ class mask_plotting(object):
     def get_model_bathymetry(self):
         """ get nemo model bathymetry """
         
-        
         # alias variables
         self.bath = self.nemo.dataset.bathymetry.values.squeeze()
         self.lon = self.nemo.dataset.longitude.values.squeeze()
         self.lat = self.nemo.dataset.latitude.values.squeeze()
+        
+        return self.lon, self.lat, self.bath
 
     def render_regional_mask(self, ax, proj):
         """
@@ -190,7 +193,7 @@ class mask_plotting(object):
         # save
         plt.savefig("FIGS/maskmaker_proj_plot", dpi=600)
     
-    def create_regional_mask(self, overlap=False):
+    def create_regional_mask(self):
         """
         Create regional mask
 
@@ -200,7 +203,7 @@ class mask_plotting(object):
         """
         
         # get model data
-        self.get_model_bathymetry(self)
+        lon, lat, bath = self.get_model_bathymetry()
        
         # Define Regional Masks
         mm = coast.MaskMaker()
@@ -226,6 +229,46 @@ class mask_plotting(object):
 
         # make regions selectable
         self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
+
+    def partition_profiles_by_region(self, season=None):
+        """ partition processed profiles by region """
+
+        if season:
+            fn_index = self.cfg.dn_out + f"profiles/{season}_PRO_DIFF.nc"
+            # get model profiles on EN4 grid
+            model_profile = coast.Profile(config=self.cfg.fn_cfg_prof)
+            model_profile.dataset = xr.open_dataset(fn_index, chunks=-1)
+        else:
+            # TODO add non seasonal handleing
+            print ("non-seasonal arguments yet to be implemented")
+
+        # create mask
+        self.create_regional_mask()
+
+        # get mask indicies
+        analysis = coast.ProfileAnalysis()
+        self.mask_indices = analysis.determine_mask_indices(model_profile,
+                                                            self.mask_xr)
+
+        # extract regions
+        model_profile_regions = []
+        for region, region_mask in self.mask_indices.groupby("region_names"):
+
+            mask_ind = region_mask.mask.astype(bool).squeeze()
+            model_profile_region = model_profile.dataset.isel(
+                                                           id_dim=mask_ind)
+            model_profile_region = model_profile_region.expand_dims(
+                                      "region_names")
+            model_profile_regions.append(model_profile_region)
+
+        # combine extracted regions
+        model_profile_merged = xr.concat(model_profile_regions,
+                                         dim='id_dim')
+
+        # save
+        with ProgressBar():
+            path = self.cfg.dn_out + f"profiles/{season}_profiles_by_region.py"
+            model_profile_merged.to_netcdf(path)
 
     def plot_quick_regional_mask(self):
         """
@@ -271,6 +314,6 @@ class mask_plotting(object):
         plt.savefig("FIGS/maskmaker_quick_plot.png")
 
 if __name__ == "__main__":
-    mp = mask_plotting()
+    mp = masking()
     #mp.plot_quick_regional_mask()
     mp.plot_regional_mask()

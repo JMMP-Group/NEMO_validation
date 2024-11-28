@@ -5,21 +5,18 @@
 from PythonEnvCfg.config import config, bounds
 
 cfg = config() # initialise variables in python
-bdy = bounds("AMM15")
 
-from _utils import landmask
 from dask.diagnostics import ProgressBar
 import xarray as xr
 import pandas as pd
 import os
-import numpy as np
 
 class surface_climatology(object):
 
     def __init__(self):
 
         # File paths 
-        self.fn_out = cfg.dn_out + 'surface_maps/'
+        self.fn_out = cfg.dn_out + "surface_maps/"
         
         # Make out directory
         print(os.popen(f"mkdir -p {cfg.dn_out}").read())
@@ -29,10 +26,11 @@ class surface_climatology(object):
 
 
         ds_list = []
-        for season in ['DJF','MAM','JJA','SON']:
+        for season in ["DJF","MAM","JJA","SON"]:
             # get data
-            path = cfg.dn_out + 'profiles/' + season + "_PRO_DIFF.nc"
-            ds = xr.open_dataset(path, chunks='auto')
+            path = cfg.dn_out + f"profiles/{season}_profiles_by_region.py"
+            #path = cfg.dn_out + f"profiles/{season}_PRO_DIFF.nc"
+            ds = xr.open_dataset(path, chunks="auto")
 
             ds_list.append(ds.assign_coords(
                            season=('id_dim',[season]*len(ds.id_dim))))
@@ -61,4 +59,4 @@ class surface_climatology(object):
 sc = surface_climatology()
 sc.get_season_bias()
 sc.restrict_to_surface()
-sc.save_ds(sc.season_ds, "near_surface_EN4_bias_by_season.nc")
+sc.save_ds(sc.season_ds, "near_surface_EN4_bias_by_season_by_region.nc")
