@@ -11,6 +11,9 @@ import cmocean
 
 from EN4_postprocessing.plot_regional_mask import masking
 
+plt.style.use('default')
+
+
 class plot_gridded_surface(object):
     """ ploting routine for gridded surface temperature and salinity maps """
 
@@ -334,26 +337,50 @@ class plot_pointwise_surface(object):
     def plot_surface_bias_scatter(self, var):
         """plot scatter of surface bias of two models"""
 
-        # initiate plots
-        fig, axs = plt.subplots(9,4, figsize=(6.5,3.5))
-        plt.subplots_adjust()
+        fn="near_surface_EN4_bias_by_season_by_region.nc"
 
         # get data
-        ds_path = self.fn_path + "near_surface_EN4_bias_by_season_by_region.nc"
+        ds_path = self.fn_path + fn
         da = xr.open_dataset(ds_path)["diff_" + var]
 
-        ds_path = self.fn_comp_path +\
-                "near_surface_EN4_bias_by_season_by_region.nc"
+        ds_path = self.fn_comp_path + fn
         da_comp = xr.open_dataset(ds_path)["diff_" + var]
 
+        self.plot_bias_scatter(da, da_comp, depth_var=False)
+
+        plt.show()
+
+    def plot_full_depth_bias_scatter(self, var):
+        """plot scatter of surface bias of two models"""
+
+        # TODO rename to "full depth" not "near full depth"
+        fn="near_full_depth_EN4_bias_by_season_by_region.nc"
+
+        # get data
+        ds_path = self.fn_path + fn
+        da = xr.open_dataset(ds_path)["diff_" + var]
+
+        ds_path = self.fn_comp_path + fn
+        da_comp = xr.open_dataset(ds_path)["diff_" + var]
+
+        self.plot_bias_scatter(da, da_comp, var, depth_var=True)
+
+        plt.savefig(f"full_depth_{var}_bias.png", dpi=600)
+
+
+    def plot_bias_scatter(self, da, da_comp, var, depth_var=True):
+
+        # initiate plots
+        fig, axs = plt.subplots(9,4, figsize=(6.5,10.5))
+        plt.subplots_adjust()
         for j, region in enumerate(da.region_names.values):
             print (region)
             da_r = da.sel(region_names=region)
             da_comp_r = da_comp.sel(region_names=region)
 
             multiindex = ["season","time","latitude","longitude"]
-            da_r = da_r.set_index(id_dim=multiindex).dropna("id_dim")
-            da_comp_r = da_comp_r.set_index(id_dim=multiindex).dropna("id_dim")
+            da_r = da_r.set_index(id_dim=multiindex).drop_duplicates("id_dim")
+            da_comp_r = da_comp_r.set_index(id_dim=multiindex).drop_duplicates("id_dim")
 
             vmin = 0 
             vmax = 2
@@ -370,10 +397,27 @@ class plot_pointwise_surface(object):
                 da_season_r = np.abs(da_r.sel(season=season))
                 da_comp_season_r = np.abs(da_comp_r.sel(season=season))
 
-                s = ax.scatter(da_season_r, da_comp_season_r,
-                            c=colours[i], s=0.2, alpha=0.5,
-                            label=season)
-                #ax.hist2d(da_season, da_comp_season, bins=100, vmin=0,vmax=1000)
+                if depth_var:
+                    da_season_r = da_season_r.swap_dims({"z_dim":"depth"})
+                    da_comp_season_r = da_comp_season_r.swap_dims({"z_dim":"depth"})
+                    da_season_depth_r = []
+                    da_comp_season_depth_r = []
+                    for i, depth in enumerate(da_season_r.depth):
+                        da_season_depth_r.append(da_season_r.sel(depth=depth))
+                        da_comp_season_depth_r.append(da_comp_season_r.sel(depth=depth))
+                        #colour = plt.cm.plasma(depth/da_season_r.depth.max())
+                        #print (depth/da_season_r.depth.max())
+                    da_1d = xr.concat(da_season_depth_r, dim="id_dim")
+                    da_comp_1d = xr.concat(da_comp_season_depth_r, dim="id_dim")
+                    #s = ax.scatter(da_1d,
+                    #               da_comp_1d,
+                    #        c=da_1d.depth, s=0.02, alpha=0.5,
+                    #        label=season)
+                    s = ax.hist2d(da_1d, da_comp_1d, bins=100, range=[[0,5],[0,5]])
+                else:
+                    s = ax.scatter(da_season_r, da_comp_season_r,
+                                c=colours[i], s=0.2, alpha=0.5,
+                                label=season)
 
                 ax.plot([vmin,vmax], [vmin,vmax], 'k-', alpha=0.75, zorder=10)
                 ax.set_xlim(vmin,vmax)
@@ -387,11 +431,10 @@ class plot_pointwise_surface(object):
             ax.set_ylabel(cfg.comp_case["case"] + " " + var + " Bias")
 
 
-        plt.show()
 
 
 ps =  plot_pointwise_surface()
 #ps.partition_by_region()
-ps.plot_surface_bias_scatter("temperature")
+ps.plot_full_depth_bias_scatter("temperature")
 #ps.plot_validate_model_surface_by_season("temperature", comp_model=True)
 #ps.plot_validate_model_surface_by_season("salinity", comp_model=True)

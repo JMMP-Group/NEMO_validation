@@ -11,7 +11,7 @@ import xarray as xr
 import pandas as pd
 import os
 
-class surface_climatology(object):
+class regional_climatology(object):
 
     def __init__(self):
 
@@ -56,7 +56,15 @@ class surface_climatology(object):
         with ProgressBar():
             ds.to_netcdf(self.fn_out + path)
 
-sc = surface_climatology()
-sc.get_season_bias()
-sc.restrict_to_surface()
-sc.save_ds(sc.season_ds, "near_surface_EN4_bias_by_season_by_region.nc")
+def save_surface_EN4_bias_by_region_and_season():
+    sc = regional_climatology()
+    sc.get_season_bias()
+    sc.restrict_to_surface()
+    sc.save_ds(sc.season_ds, "near_surface_EN4_bias_by_season_by_region.nc")
+
+def save_full_depth_EN4_bias_by_region_and_season():
+    sc = regional_climatology()
+    sc.get_season_bias()
+    sc.save_ds(sc.season_ds, "near_full_depth_EN4_bias_by_season_by_region.nc")
+
+save_full_depth_EN4_bias_by_region_and_season()
