@@ -112,6 +112,18 @@ class masking(object):
         model_profile_merged = xr.concat(model_profile_regions,
                                          dim='id_dim')
 
+    def partition_by_region(self):
+        """ 
+        partition profile data by region
+        """
+
+        self..create_regional_mask()
+
+        seasons = ["DJF","MAM","JJA","SON"]
+        for season in seasons:
+            print (f"Partitioning {season} by region")
+            self.partition_profiles_by_region(season=season)
+
         # save
         with ProgressBar():
             path = self.cfg.dn_out + f"profiles/{season}_profiles_by_region.py"

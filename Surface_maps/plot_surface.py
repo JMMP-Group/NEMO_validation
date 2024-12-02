@@ -9,8 +9,6 @@ import xarray as xr
 import numpy as np
 import cmocean
 
-from EN4_postprocessing.plot_regional_mask import masking
-
 plt.style.use('default')
 
 
@@ -212,8 +210,9 @@ class plot_pointwise_surface(object):
         comp_model: comparison model, if required
         """
 
+        self.plt_proj=ccrs.AlbersEqualArea()
+        #self.plt_proj=ccrs.PlateCarree()
         proj=ccrs.PlateCarree()
-        self.plt_proj=ccrs.PlateCarree()
         self.proj_dict = {"projection": self.plt_proj}
 
         if comp_model:
@@ -237,7 +236,8 @@ class plot_pointwise_surface(object):
 
         def render(ax, da):
             p = ax.scatter(da.longitude, da.latitude, c=da, s=0.2,
-                           transform=self.plt_proj, cmap=cmocean.cm.balance,
+                           transform=ccrs.PlateCarree(),
+                           cmap=cmocean.cm.balance,
                            vmin=vmin, vmax=vmax)
             return p
 
@@ -320,20 +320,6 @@ class plot_pointwise_surface(object):
                      va='top', ha='center')
         plt.show()
 
-    def partition_by_region(self):
-        """ 
-        partition profile data by region
-        TODO: move to processing script
-        """
-
-        ma = masking()
-        ma.create_regional_mask()
-
-        seasons = ["DJF","MAM","JJA","SON"]
-        for season in seasons:
-            print (f"Partitioning {season} by region")
-            ma.partition_profiles_by_region(season=season)
-
     def plot_surface_bias_scatter(self, var):
         """plot scatter of surface bias of two models"""
 
@@ -374,14 +360,13 @@ class plot_pointwise_surface(object):
         fig, axs = plt.subplots(9,4, figsize=(6.5,10.5))
         plt.subplots_adjust()
         for j, region in enumerate(da.region_names.values):
-            print (region)
+            print ("b", region)
             da_r = da.sel(region_names=region)
             da_comp_r = da_comp.sel(region_names=region)
 
             multiindex = ["season","time","latitude","longitude"]
             da_r = da_r.set_index(id_dim=multiindex).drop_duplicates("id_dim")
             da_comp_r = da_comp_r.set_index(id_dim=multiindex).drop_duplicates("id_dim")
-
             vmin = 0 
             vmax = 2
 
@@ -430,11 +415,71 @@ class plot_pointwise_surface(object):
         for ax in axs[:,0]:
             ax.set_ylabel(cfg.comp_case["case"] + " " + var + " Bias")
 
+    def plot_bias_angle(self, var, depth_var=True):
+
+        # TODO rename to "full depth" not "near full depth"
+        fn="near_full_depth_EN4_bias_by_season_by_region.nc"
+
+        # get data
+        ds_path = self.fn_path + fn
+        da = xr.open_dataset(ds_path)["diff_" + var]
+
+        ds_path = self.fn_comp_path + fn
+        da_comp = xr.open_dataset(ds_path)["diff_" + var]
+
+        # initiate plots
+        fig, axs = plt.subplots(9,4, figsize=(6.5,10.5))
+        plt.subplots_adjust()
+        for j, region in enumerate(da.region_names.values):
+            print ("region: ",  region)
+            da_r = da.sel(region_names=region)
+            da_comp_r = da_comp.sel(region_names=region)
+
+            multiindex = ["season","time","latitude","longitude"]
+            da_r = da_r.set_index(id_dim=multiindex).drop_duplicates("id_dim")
+            da_comp_r = da_comp_r.set_index(id_dim=multiindex).drop_duplicates("id_dim")
+            da_r, da_comp_r = xr.align(da_r, da_comp_r)
+
+            # get angle
+            angle = np.arctan(da_r/da_comp_r)
+
+            seasons = ["DJF","MAM","JJA","SON"]
+            colours = ["r","g","b","c"]
+
+            for i, season in enumerate(seasons):
+                ax = axs[j,i]
+
+                angle_season = angle.sel(season=season)
+
+                if depth_var:
+                    print (depth_var)
+                    angle_season = angle_season.swap_dims({"z_dim":"depth"})
+
+                    angle_season_depth = []
+                    for i, depth in enumerate(angle.depth):
+                        angle_season_depth.append(
+                                                angle_season.sel(depth=depth))
+                    angle_1d = xr.concat(angle_season_depth, dim="id_dim")
+
+
+                    s = ax.hist(angle_1d, bins=100,
+                                range=[-np.pi/2,np.pi/2])
+                    ax.axvline(np.pi/4, c="orange")
+                    ax.axvline(-np.pi/4, c="orange")
+
+
+                ax.set_title(f"{season} {region}")
+                ax.set_xlabel("Freq.")
+
+        for ax in axs[:,0]:
+            ax.set_ylabel(cfg.comp_case["case"] + " " + var + " Bias")
+
+        plt.savefig(f"full_depth_{var}_bias_angle.png", dpi=600)
 
 
 
 ps =  plot_pointwise_surface()
-#ps.partition_by_region()
-ps.plot_full_depth_bias_scatter("temperature")
+#ps.plot_full_depth_bias_scatter("temperature")
+ps.plot_bias_angle("temperature")
 #ps.plot_validate_model_surface_by_season("temperature", comp_model=True)
 #ps.plot_validate_model_surface_by_season("salinity", comp_model=True)
