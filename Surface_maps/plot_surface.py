@@ -8,8 +8,10 @@ import cartopy.feature as cfeature
 import xarray as xr
 import numpy as np
 import cmocean
+import matplotlib
 
-plt.style.use('default')
+matplotlib.rcParams.update({'font.size': 8})
+#plt.style.use('default')
 
 
 class plot_gridded_surface(object):
@@ -210,8 +212,8 @@ class plot_pointwise_surface(object):
         comp_model: comparison model, if required
         """
 
-        self.plt_proj=ccrs.AlbersEqualArea()
-        #self.plt_proj=ccrs.PlateCarree()
+        #self.plt_proj=ccrs.AlbersEqualArea()
+        self.plt_proj=ccrs.PlateCarree()
         proj=ccrs.PlateCarree()
         self.proj_dict = {"projection": self.plt_proj}
 
@@ -258,7 +260,7 @@ class plot_pointwise_surface(object):
                      rotation=0, transform=cbar.ax.transAxes,
                      va='top', ha='center')
 
-        plt.show()
+        plt.savefig("one_model_surface_en4_pointwise.png", dpi=600)
 
     def render_validate_model_surface_by_season_two_model(self, var):
         """ plot suface comparison accross two model configurations """
@@ -315,10 +317,11 @@ class plot_pointwise_surface(object):
         cbar_ax = fig.add_axes([pos0.x0, 0.12, 
                                 pos1.x1 - pos1.x0, 0.02])
         cbar = fig.colorbar(p, cax=cbar_ax, orientation='horizontal')
-        cbar.ax.text(0.5, -2.8, r"Temperature ($^{\circ}$C)", fontsize=8,
+        cbar.ax.text(0.5, -2.8, f"{var} bias", fontsize=8,
                      rotation=0, transform=cbar.ax.transAxes,
                      va='top', ha='center')
-        plt.show()
+
+        plt.savefig(f"two_model_surface_{var}_en4_pointwise.png", dpi=600)
 
     def plot_surface_bias_scatter(self, var):
         """plot scatter of surface bias of two models"""
@@ -428,8 +431,8 @@ class plot_pointwise_surface(object):
         da_comp = xr.open_dataset(ds_path)["diff_" + var]
 
         # initiate plots
-        fig, axs = plt.subplots(9,4, figsize=(6.5,10.5))
-        plt.subplots_adjust()
+        fig, axs = plt.subplots(9,4, figsize=(6.5,8.5))
+        plt.subplots_adjust(hspace=0.4,bottom=0.05,top=0.95)
         for j, region in enumerate(da.region_names.values):
             print ("region: ",  region)
             da_r = da.sel(region_names=region)
@@ -469,10 +472,26 @@ class plot_pointwise_surface(object):
 
 
                 ax.set_title(f"{season} {region}")
-                ax.set_xlabel("Freq.")
 
         for ax in axs[:,0]:
-            ax.set_ylabel(cfg.comp_case["case"] + " " + var + " Bias")
+            ax.set_ylabel("Freq.")
+
+        for ax in axs[:,1:].flatten():
+            ax.set_yticklabels([])
+
+        for ax in axs.flatten():
+            ax.set_xticks([-np.pi/2,-np.pi/4,0,np.pi/4,np.pi/2])
+
+        for ax in axs[:-1,:].flatten():
+            ax.set_xticklabels([])
+
+        for ax in axs[-1,:]:
+            ax.set_xticklabels(["$-\pi/2$",
+                                "$-\pi/4$",
+                                "0",
+                                "$\pi/4$",
+                                "$\pi/2$"])
+            ax.set_xlabel(f"{var} bias")
 
         plt.savefig(f"full_depth_{var}_bias_angle.png", dpi=600)
 
@@ -480,6 +499,6 @@ class plot_pointwise_surface(object):
 
 ps =  plot_pointwise_surface()
 #ps.plot_full_depth_bias_scatter("temperature")
-ps.plot_bias_angle("temperature")
+#ps.plot_bias_angle("temperature")
 #ps.plot_validate_model_surface_by_season("temperature", comp_model=True)
 #ps.plot_validate_model_surface_by_season("salinity", comp_model=True)
