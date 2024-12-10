@@ -37,7 +37,15 @@ elif [ $RUN_NAME = "FES2014" ]; then
   #export FN_FES_PHA="/gws/nopw/j04/class_vol2/senemo/shared/FES2014_M2_pha_on_SENEMO_grid.nc"
 #else #
 
+elif [ $RUN_NAME = "GS1p1_tide_final" ]; then
+  export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p1_tide_final/output/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
+  export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/RUNS2024r01/GS1p1_tide_final/config/domain_cfg.nc"
+
+elif [ $RUN_NAME = "GS1p7_triads" ]; then
+  export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/jdha/GS1p7_TRIADS/output/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
+  export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/jdha/GS1p7_TRIADS/config/domain_cfg.nc"
 fi
+
 
 
 
