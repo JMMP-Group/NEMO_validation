@@ -15,7 +15,7 @@ def merge_mask_mean_seasons(path):
     for season in ["DJF", "MAM", "JJA", "SON"]:
         # open dataset 
         ds_season = xr.open_dataset(
-                             config.dn_out + "profiles/" + season + fn_append)
+                             path+ "profiles/" + season + fn_append)
 
         # expand season dimension
         seasons.append(ds_season.expand_dims({"season": [season]}))
