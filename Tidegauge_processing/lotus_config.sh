@@ -13,8 +13,8 @@ export RUN_NAME="P0.0"
 export RUN_NAME="P1.5b"
 export RUN_NAME="P1.5"
 export RUN_NAME="P1.5c"
-export RUN_NAME="co7"
-export RUN_NAME="P2.0"
+#export RUN_NAME="co7"
+#export RUN_NAME="P2.0"
 
 ## 2014 P0.0
 #export MASS="xu-cb676"
@@ -22,13 +22,13 @@ export RUN_NAME="P2.0"
 
 # 10 years P0.0
 if [ $RUN_NAME = "P0.0" ]; then
- export FN_NEMO_DATA="/gws/nopw/j04/jmmp_collab/AMM15/OUTPUTS/"$RUN_NAME"/NC3_SSH/YYYYMM*_shelftmb_grid_T.nc"
+ export FN_NEMO_DATA="/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/"$RUN_NAME"/NC3_SSH/YYYYMM*_shelftmb_grid_T.nc"
 
 elif [ $RUN_NAME = "co7" ]; then
  export FN_NEMO_DATA="/gws/nopw/j04/jmmp/MASS/rosie_mi-ao113_2004/field.nc.file/YYYYMM*_shelftmb_grid_T.nc"
 
 else # elif [ $RUN_NAME = "P1.5" ]; then
- export FN_NEMO_DATA="/gws/nopw/j04/jmmp_collab/AMM15/OUTPUTS/"$RUN_NAME"/SSH/YYYYMM*_shelftmb_grid_T.nc.ppc3"
+ export FN_NEMO_DATA="/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/"$RUN_NAME"/SSH/YYYYMM*_shelftmb_grid_T.nc.ppc3"
 fi
 
 
