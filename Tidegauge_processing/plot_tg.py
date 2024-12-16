@@ -63,9 +63,10 @@ if(0):
 # Set output file, unless edited fn_ssh_hourly_stats==fn_extr_out
 if(1):  # THIS PRODUCES CORR BUT GETS STUCK WITH HARMONICS PLOTS - NO DATA.
   # mkdir config.dn_out
-  plot_single_cfg( config.fn_analyse_out, config.dn_out, config.run_name, file_type='.png')
+  #plot_single_cfg( config.fn_analyse_out, config.dn_out, config.run_name, file_type='.png')
 
   # plot the differences against a reference run: "diff = run_name - ref_run_name"
   ref_run_name = "P0.0"
   fn_analyse_out_ref = config.fn_analyse_out.replace(config.run_name, ref_run_name)
+  fn_analyse_out_ref = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/P0.0/tg_analysis/ssh_hourly_analyse_P0.0.nc"
   plot_stats_ssh_hourly_compare_cfgs( config.fn_analyse_out, fn_analyse_out_ref, config.dn_out, config.run_name, ref_run_name, file_type='.png')
