@@ -16,7 +16,7 @@ from coast import crps_util as cu
 import numpy as np
 
 import time
-from validate_ssh_tg_hourly import extract_ssh, analyse_ssh, plot_single_cfg, plot_stats_ssh_hourly_compare_cfgs
+from validate_ssh_tg_hourly import extract_ssh, analyse_ssh, plot_single_cfg, plot_stats_ssh_hourly_compare_cfgs, plot_taylor_tide
 import numpy as np
 
 #constit = ['M2','S2','N2','K1','O1','P1','M4']
@@ -63,8 +63,12 @@ if(0):
 # Set output file, unless edited fn_ssh_hourly_stats==fn_extr_out
 if(1):  # THIS PRODUCES CORR BUT GETS STUCK WITH HARMONICS PLOTS - NO DATA.
   # mkdir config.dn_out
-  plot_single_cfg( config.fn_analyse_out, config.dn_out, config.run_name, file_type='.png')
+  #plot_single_cfg( config.fn_analyse_out, config.dn_out, config.run_name, file_type='.png')
 
+  # plot modified Taylor Tide diagram
+  ref_run_name = "P0.0"
+  plot_taylor_tide( [config.fn_analyse_out.replace(config.run_name, ref_run_name), config.fn_analyse_out], config.dn_out, [ref_run_name, config.run_name], file_type='.png')
+  
   # plot the differences against a reference run: "diff = run_name - ref_run_name"
   ref_run_name = "P0.0"
   fn_analyse_out_ref = config.fn_analyse_out.replace(config.run_name, ref_run_name)

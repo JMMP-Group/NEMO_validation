@@ -8,6 +8,7 @@ import coast
 from coast import general_utils as gu
 from coast import plot_util as pu
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import xarray as xr
 import numpy as np
 from datetime import datetime, timedelta
@@ -711,7 +712,355 @@ def extract_ssh(fn_nemo_data, fn_nemo_domain, fn_nemo_cfg, fn_obs, fn_out,
                         mask = (['port','time'], shared_mask)))
 
         write_ds_to_file(ext, fn_out)
+
+class TaylorTide():
+    def __init__(self,
+                r_obs = None,
+                rms_amp_max = 0.61,
+                rms_amp_contours = [0.2, 0.4, 0.6],
+                rms_err_contours=[0.2, 0.4, 0.6],
+                cos_theta_lines = [0.3, 0.6, 0.9],
+                theta_lines = [0, 15, 30, 45, 60],
+                theta_lines_flag = True, # theta or cos(theta) construction lines
+                err_contour_flag = True,
+                ):
+
+        self.fig, self.ax = self.plot_frame(r_obs, rms_amp_max, rms_amp_contours,
+                                            rms_err_contours, cos_theta_lines, theta_lines,
+                                            theta_lines_flag, err_contour_flag)
+
+    # This custom formatter removes trailing zeros, e.g. "1.0" becomes "1", and
+    def rms_fmt(self,x):
+        s = f"{x:.2f}"
+        if s.endswith("00"):  # ends with two zeros
+            s = f"{x:.0f}"
+        elif s.endswith("0"): # end with ONLY one zero
+            s = f"{x:.1f}"
+        return rf"{s}"
+
+    def plot_frame(self, r_obs, rms_amp_max, rms_amp_contours, rms_err_contours,
+                   cos_theta_lines, theta_lines,
+                   theta_lines_flag, err_contour_flag):
+
+        #fig = plt.figure(figsize=(2, 2)) # to make a thumbnail schematic
+        fig = plt.figure()
+
+        theta = np.arange(0, np.pi + np.pi/100, np.pi/100)
+
+        # define meshgrid for contour plots
+        x = np.arange(0,rms_amp_max, rms_amp_max/100)
+        y = np.arange(0,rms_amp_max, rms_amp_max/100)
+        X,Y = np.meshgrid(x,y)
+
+        # setting the axis limits in [left, bottom, width, height]
+        rect = [0.1, 0.1, 0.8, 0.8]
+
+        # the cartesian axis:
+        ax = fig.add_axes(rect, frameon=False)
+        #ax =fig.add_subplot(111)
+
+        # RMS amplitude arc contours
+        if rms_amp_contours != []:
+            Camp = ax.contour( X,Y,np.sqrt(X**2 + Y**2), levels=rms_amp_contours, colors='grey', linestyles='dotted')
+            ax.clabel(Camp, Camp.levels, inline=True, fmt=self.rms_fmt, fontsize=10)
+
+        # Obs point, arc through obs, RMS error arcs
+        if r_obs is not None:
+            ax.scatter(r_obs, 0, s=30, color='blue', clip_on=False)  # obs point
+
+            if err_contour_flag is True:
+                ax.plot(r_obs * np.cos(theta), r_obs * np.sin(theta), '-', color='blue')  # arc through obs
+
+                # RMS error arc from obs as origin
+                mask = X**2 + Y**2 > rms_amp_max**2
+                C = np.ma.masked_where(mask, np.sqrt((X-r_obs)**2 + Y**2))
+                Cerr = ax.contour(X, Y, C, levels=rms_err_contours, colors='grey',
+                                  linestyles='dashed')
+                ax.clabel(Cerr, Cerr.levels, inline=True, fmt=self.rms_fmt, fontsize=10)
+
+                # Add text contour label. THIS WILL BE A PROBLEM IF MORE THAN 3 LEVELS ARE DEFINED
+                fmt = {}
+                strs = ['', '', 'RMS error']
+                for l, s in zip(rms_err_contours, strs):
+                    fmt[l] = s
+                ax.clabel(Cerr, Cerr.levels, inline=True, fmt=fmt, fontsize=10)
+
+
+        # Bounding lines - black
+        ax.plot( rms_amp_max*np.cos(theta), rms_amp_max*np.sin(theta), '-', color='black')
+        # Bounding x=0 and y=0 lines - black
+        ax.plot( [0,rms_amp_max], [0,0], '-', color='black')
+        ax.plot( [0,0], [0,rms_amp_max], '-', color='black')
+
+
+        # Cos theta / correlation lines
+        r = np.arange(0, rms_amp_max, rms_amp_max/50)
+        if theta_lines_flag == False:
+            for cos_theta in cos_theta_lines:
+                ax.plot( r*cos_theta, r*np.sqrt(1 - cos_theta**2), ':', color='grey')
+                ax.text( rms_amp_max*cos_theta, rms_amp_max*np.sqrt(1 - cos_theta**2), str(cos_theta), color='k' )
+            ax.text( rms_amp_max*1/np.sqrt(2), rms_amp_max*1/np.sqrt(2), "Correlation", rotation=-45, color='k')
+        else:
+            for ang in theta_lines:
+                ang_rad = ang*np.pi/180.
+                ax.plot( r*np.cos(ang_rad), r*np.sin(ang_rad), ':', color='grey')
+                ax.text( rms_amp_max*np.cos(ang_rad), rms_amp_max*np.sin(ang_rad), str(ang)+"$^o$", color='k' )
+            ax.text( rms_amp_max*1/np.sqrt(2), rms_amp_max*1/np.sqrt(2), "phase error", rotation=-45, color='k')
+
+
+        # axis limits and axis labels
+        ax.set_xlim([0,rms_amp_max])
+        ax.set_ylim([0,rms_amp_max])
+        ax.set_xlabel('RMS amplitude (m)')
+        ax.set_ylabel('RMS amplitude (m)')
+
+        ax.set_aspect(1)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+
+        if(0):
+            # the polar axis:
+            ax_polar = fig.add_axes([0.1, 0.0, 0.8, 0.8], polar=True, frameon=False)
+            #ax_polar = fig.add_axes(ax.get_position(original=True), polar=True, frameon=False)
+            ## [left, bottom, width, height]
+            #ax_polar.set_position([0.1, 0.0, 0.8, 0.8])
+
+            # the polar plot
+            ax_polar.plot(r, r, color='r', linewidth=3)
+            ax_polar.set_rmax(2.0)
+            ax_polar.grid(True)
+            ax_polar.set_thetamin(0)
+            ax_polar.set_thetamax(54)
+            ax_polar.set_xlabel('RMS amplitude (m)')
+            ax_polar.set_ylabel('RMS amplitude (m)')
+
+
+        return fig, ax
+
+class plot_taylor_tide():
+
+    def __init__(self, fn_ssh_hourly_stats, dn_out, run_name, file_type='.png'):
+# define colors
+        self.c_co7 = 'lightblue' #[46/256., 153/256., 195/256.]
+        self.c_co9 = 'green'
+        #c_FES = 'y'
+        self.c_obs = 'blue'
+        self.plot_fn(       fn_ssh_hourly_stats, dn_out, run_name, file_type='.png')
+
+    def pearson_correl_coef(self, z1obs, z2obs, z1mod, z2mod):
+       """
+       sum( <zobs_i, zmod_i> )/ ( rms(zobs) rms(zmod) )
+        for vectors zobs_i = (z1obs_i, z2obs_i))
+        and zero mean zobs and zmod
+       """
+       inner_product = np.nanmean( z1obs*z1mod + z2obs*z2mod )
+       return inner_product / (self.rms_abs_amp(z1obs,z2obs) * self.rms_abs_amp(z1mod,z2mod))
+
+    def rms_abs_amp(self, z1, z2):
+      """
+      root mean square vector amplitude
+      z1=a.cos(theta), z2=a.sin(theta)
+      """
+      return np.sqrt(np.nanmean( z1**2 + z2**2 ))
+
+    def rms_abs_error(self, z1obs, z2obs, z1mod, z2mod):
+      """
+      root mean square absolute error = sqrt( sum |zmod - zobs|^2 )
+      """
+      return self.rms_abs_amp( z1obs - z1mod, z2obs - z2mod )
+
+    def plot_fn(self, fn_ssh_hourly_stats, dn_out, run_name, file_type='.png'):
         
+        if type(fn_ssh_hourly_stats) is not list:
+            fn_ssh_hourly_stats = [fn_ssh_hourly_stats]
+            run_name = [run_name]
+
+        if len(run_name) != len(fn_ssh_hourly_stats):
+            print('Error: run_name length must be equal to fn_ssh_hourly_stats length.')
+            return
+
+        n_cfgs = len(fn_ssh_hourly_stats)
+
+        stats = [xr.open_dataset(fn ,engine="netcdf4") for fn in fn_ssh_hourly_stats]
+
+        #stats = xr.open_dataset(fn_ssh_hourly_stats, engine="netcdf4")
+
+        ## load data
+        #a_obs = stats[0].a_obs  # [nobs, constit]
+        #g_obs = stats[0].g_obs  # [nobs, constit]
+        #a_mod = stats[0].a_mod  # [nobs, constit]
+        #g_mod = stats[0].g_mod  # [nobs, constit]
+       
+        # Loop over harmonic species.
+        # Plot Taylor Tide diag of model and obs for each harmonic. Overlay on two (deep/shallow) plots as trees
+
+        nsim=3 # number of simulations + obs.  labels = ["co9", "co7", "obs"]
+
+        #for constit_family_list in [["M2", "S2", "N2", "K2"]]:
+        for constit_family_list in [["M2", "S2", "N2", "K2"], ["O1", "Q1", "P1"]]:
+          if "M2" in constit_family_list: family_str = "semi-diurnal"
+          if "O1" in constit_family_list: family_str = "diurnal"
+          R = np.zeros((nsim, len(constit_family_list)))
+          rms_amp = np.zeros((nsim, len(constit_family_list)))
+          rms_err = np.zeros((nsim, len(constit_family_list)))
+          label = {}
+          for count, constit in enumerate(constit_family_list):
+            try:
+                del II, z1obs, z2obs, z1mod, z2mod
+            except:
+                pass
+
+            cc = np.argwhere( (stats[0].constituent == constit).values)[0][0] # find index of constit
+            z1obs = stats[0].a_obs[:,cc]*np.cos(np.deg2rad(stats[0].g_obs[:,cc]))
+            z2obs = stats[0].a_obs[:,cc]*np.sin(np.deg2rad(stats[0].g_obs[:,cc])) 
+
+            R[0,count] = 1
+            rms_amp[0,count] = self.rms_abs_amp(z1obs, z2obs)
+            rms_err[0,count] = 0
+            label[0,count] = 'obs:'+constit
+
+
+            # CO7_AMM15
+            try:
+                del z1mod, z2mod
+            except:
+                pass
+            cc = np.argwhere( (stats[0].constituent == constit).values)[0][0] # find index of constit
+            z1mod = stats[0].a_mod[:,cc]*np.cos(np.deg2rad(stats[0].g_mod[:,cc]))
+            z2mod = stats[0].a_mod[:,cc]*np.sin(np.deg2rad(stats[0].g_mod[:,cc]))
+
+            R[1,count] = self.pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)
+            rms_amp[1,count] = self.rms_abs_amp(z1mod, z2mod)
+            rms_err[1,count] = self.rms_abs_error(z1obs, z2obs, z1mod, z2mod)
+            label[1,count] = 'CO7_AMM15:'+constit
+
+            if n_cfgs == 2:
+              # CO9_AMM15
+              try:
+                del z1mod, z2mod
+              except:
+                pass
+              cc = np.argwhere( (stats[1].constituent == constit).values)[0][0] # find index of constit
+              z1mod = stats[1].a_mod[:,cc]*np.cos(np.deg2rad(stats[1].g_mod[:,cc]))
+              z2mod = stats[1].a_mod[:,cc]*np.sin(np.deg2rad(stats[1].g_mod[:,cc]))
+
+              R[2,count] = self.pearson_correl_coef(z1obs, z2obs, z1mod, z2mod)
+              rms_amp[2,count] = self.rms_abs_amp(z1mod, z2mod)
+              rms_err[2,count] = self.rms_abs_error(z1obs, z2obs, z1mod, z2mod)
+              label[2,count] = 'CO9_AMM15:'+constit
+
+
+          print(label)
+
+          ## Check cosine rule consistency. Output data.
+          for count, constit in enumerate(constit_family_list):
+          #for i in range(len(constit_family_list)):
+                B = rms_amp[0,count]
+                A = rms_amp[1:nsim,count]
+                C = rms_err[1:nsim,count]
+                costheta = R[1:nsim,count]
+
+                #print(constit)
+                #print(B)
+                #print(A)
+                #print(C)
+                #print(costheta)
+                print("Check cosine rule consistency")
+                for j in range(0,nsim-1): # model runs: fes, gs1p1, gs1p2, tdiss
+                    print(
+                        f"{label[1+j,count]}: sqrt(A^2+B^2-2ABcos(theta))={np.sqrt(A[j] ** 2 + B ** 2 - 2 * A[j] * B * costheta[j])}. C={C[j]}")
+
+                print("Output table of data")
+                for j in range(0, nsim - 1):  # model runs: fes, gs1p1, gs1p2, tdiss
+                    print(
+                        f"{label[1 + j, count]:11s}: (A, B, C, theta)={A[j]:.3f}, {B:.3f}, {C[j]:.3f}, {np.arccos(costheta[j]) * 180 / np.pi:.1f}")
+                del B, A, C, costheta
+
+
+
+          # Create TaylorTide plot template
+          if family_str == "semi-diurnal":
+                fig_amp_max = 2.5
+                fig_err_contours = [0.2, 0.4, 0.6]
+
+          elif family_str == "diurnal":
+                fig_amp_max = 0.11
+                fig_err_contours = [0.01, 0.02, 0.03]
+
+
+
+          tt = TaylorTide(
+                r_obs=rms_amp[0,0],
+                rms_amp_max=fig_amp_max,
+                rms_amp_contours=[],
+                #rms_amp_contours=[0.2, 0.4, 0.6],
+                rms_err_contours=fig_err_contours,
+                cos_theta_lines=[0.3, 0.6, 0.9],
+                err_contour_flag=True,
+            )
+
+          ## Loop over constituents to add data
+          for i in range(len(constit_family_list)):
+                # Add data to axes
+                tt.ax.scatter(rms_amp[1:nsim,i] * R[1:nsim,i],
+                          rms_amp[1:nsim,i] * np.sqrt(1 - R[1:nsim,i] ** 2),
+                          s=60, c=[ self.c_co7, self.c_co9 ], zorder=10, clip_on=False)
+                            #s = 20, c = ['b', 'g', 'r', 'y'], zorder = 10, clip_on = False)
+                # Add vectors between points and obs
+                tt.ax.plot([np.repeat(rms_amp[0,i],nsim-1), rms_amp[1:nsim,i] * R[1:nsim,i]],
+                       [np.zeros(nsim-1), rms_amp[1:nsim,i] * np.sqrt(1 - R[1:nsim,i] ** 2)])
+                if nsim != 3: print('Colours and lines not as expected here')
+                #tt.ax.lines[-4].set_color('k')
+                #tt.ax.lines[-3].set_color(c_ZPS_TIDE) #'g')
+                tt.ax.lines[-2].set_color(self.c_co7) #'r')
+                tt.ax.lines[-1].set_color(self.c_co9) #'y')
+
+                # Place constituent labels
+                #tt.ax.text( rms_amp[0,i], -0.036*fig_amp_max, constit_family_list[i], rotation=0, color='b')
+                xpos = rms_amp[0,i]
+                ypos = 0.036*fig_amp_max
+                if constit_family_list[i]=="M2": xpos = xpos - 0.20
+                if constit_family_list[i]=="S2": xpos = xpos + 0.00
+                if constit_family_list[i]=="K2": xpos = xpos - 0.03; ypos = ypos + 0.02
+                if constit_family_list[i]=="N2": xpos = xpos - 0.02; ypos = ypos + 0.04
+                if constit_family_list[i]=="Q1": xpos = xpos - 0.012
+                if constit_family_list[i]=="O1": xpos = xpos + 0.002
+                if constit_family_list[i]=="P1": xpos = xpos + 0.002
+                tt.ax.text( xpos, ypos, constit_family_list[i], fontsize=12,  rotation=0, color='b')
+
+                # Draw obs dot (smaller)
+                tt.ax.scatter(rms_amp[0,i], 0, s=40, color=self.c_obs, zorder=20, clip_on=False)  # obs point
+
+          # Add indicative timing labels
+          if family_str == "diurnal":
+                tt.ax.text( fig_amp_max*np.cos(np.pi/6), fig_amp_max*np.sin(np.pi/6), "      (2hr)", color='k')
+                tt.ax.text( fig_amp_max*np.cos(np.pi/24), fig_amp_max*np.sin(np.pi/24), " (30min)", color='k')
+          elif family_str == "semi-diurnal":
+                tt.ax.text( fig_amp_max*np.cos(np.pi/6), fig_amp_max*np.sin(np.pi/6),  "      (1hr)", color='k')
+                tt.ax.text( fig_amp_max*np.cos(np.pi/24), fig_amp_max*np.sin(np.pi/24)," (15min)", color='k')
+
+          # manual legend (once)
+          if(1): # family_str == "semi-diurnal":
+                #colors = [ 'green', 'red', 'yellow', 'blue']
+                colors = [ self.c_co7, self.c_co9, self.c_obs]
+                sizes = [ 6, 6, 4]
+                lines = [Line2D([], [], color=colors[ci], markersize=sizes[ci], marker='o', linestyle='None') for ci in range(len(colors))]
+                labels = [ "CO7_AMM15", "CO9_AMM15", "observations"]
+                plt.legend(lines, labels, loc='upper left', framealpha=1)
+
+          #plt.title(subset + ":" + family_str)
+          plt.title(family_str ) 
+
+          fn = "Taylor_ssh_hourly_harmonic_tree_"+family_str+file_type
+          plt.savefig(os.path.join(dn_out, fn))
+          plt.close('all')
+
+
+
+
+
 class plot_single_cfg():
     
     def __init__(self, fn_ssh_hourly_stats, dn_out, run_name, file_type='.png'):
