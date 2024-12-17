@@ -43,11 +43,14 @@ class bias_angle(object):
                 ax = axs[i,j]
 
                 s = ax.plot(subset.bias_angle,
-                            subset.temperature_frequency_quant.squeeze()[0])
+                            subset.temperature_frequency_quant.squeeze()[0],
+                            c="slateblue", lw=0.8)
                 s = ax.plot(subset.bias_angle,
-                            subset.temperature_frequency_quant.squeeze()[1])
+                            subset.temperature_frequency_quant.squeeze()[1],
+                            c="slateblue", ls="--", lw=0.8)
                 s = ax.plot(subset.bias_angle,
-                            subset.temperature_frequency_quant.squeeze()[2])
+                            subset.temperature_frequency_quant.squeeze()[2],
+                            c="slateblue", lw=0.8)
                 s = ax.plot(subset.bias_angle,
                            subset.temperature_frequency_mean.squeeze(),c='pink')
                 ax.axvline(np.pi/4, c="orange")

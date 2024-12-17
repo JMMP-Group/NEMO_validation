@@ -102,30 +102,42 @@ class masking(object):
         for region, region_mask in self.mask_indices.groupby("region_names"):
 
             mask_ind = region_mask.mask.astype(bool).squeeze()
-            model_profile_region = model_profile.dataset.isel(
-                                                           id_dim=mask_ind)
+            model_profile_region = model_profile.dataset.isel(id_dim=mask_ind)
             model_profile_region = model_profile_region.expand_dims(
                                       "region_names")
             model_profile_regions.append(model_profile_region)
 
         # combine extracted regions
-        model_profile_merged = xr.concat(model_profile_regions,
-                                         dim='id_dim')
+        region_merged = xr.concat(model_profile_regions, dim='id_dim')
+
+        return region_merged
+
 
     def partition_by_region(self):
         """ 
-        partition profile data by region
+        partition profile data by region and season over two nested loops
         """
 
-        self..create_regional_mask()
+        self.create_regional_mask()
 
         seasons = ["DJF","MAM","JJA","SON"]
+        model_profile_seasons = []
         for season in seasons:
             print (f"Partitioning {season} by region")
-            self.partition_profiles_by_region(season=season)
+            region_merged = self.partition_profiles_by_region(season=season)
+
+            region_merged = region_merged.expand_dims(season=[season])
+
+            model_profile_seasons.append(region_merged)
+
+        # combine by season
+        model_profile_merged = xr.concat(model_profile_seasons, dim='id_dim')
 
         # save
         with ProgressBar():
-            path = self.cfg.dn_out + f"profiles/{season}_profiles_by_region.py"
+            path = self.cfg.dn_out +\
+                    f"profiles/profiles_by_region_and_season.py"
             model_profile_merged.to_netcdf(path)
 
+ma = masking()
+ma.partition_by_region()

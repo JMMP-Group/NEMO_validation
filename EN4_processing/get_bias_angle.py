@@ -43,13 +43,21 @@ class bias_angle(object):
         self.da_0 = self.flatten_across_depth(self.da_0)
         self.da_1 = self.flatten_across_depth(self.da_1)
 
-        multiindex = ["season","time","latitude","longitude"]
-        da_0 = self.da_0.set_index(id_dim=multiindex)#.drop_duplicates("id_dim")
-        da_1 = self.da_1.set_index(id_dim=multiindex)#.drop_duplicates("id_dim")
+        # make id_dim an multi-index dimension
+        multiindex = ["depth","season","time","latitude","longitude"]
+        da_0 = self.da_0.set_index(id_dim=multiindex)
+        da_1 = self.da_1.set_index(id_dim=multiindex)
+
+        # drop duplicate records
+        da_0 = da_0.drop_duplicates("id_dim")
+        da_1 = da_1.drop_duplicates("id_dim")
+
+        # align
         da_0, da_1 = xr.align(da_0, da_1)
 
+        # get angle
         self.angle = np.arctan(da_0/da_1)
-        self.angle.name = f"diff {self.var} angle"
+        self.angle.name = f"diff_{self.var}_angle"
 
     def flatten_across_depth(self, da):
         da = da.swap_dims({"z_dim":"depth"})
@@ -91,26 +99,52 @@ class bias_angle(object):
             # randomised sampling
             obs_num = ds.sizes["id_dim"]
             random_sample = np.random.randint(obs_num, size=obs_num)
-            ds_randomised = ds#ds.isel(id_dim=random_sample)
+            ds_randomised = ds.isel(id_dim=random_sample)
 
             # get histogram
             hist, bin_edges = np.histogram(ds_randomised, bins=100,
                                            range=[-np.pi/2,np.pi/2])
             bin_centres = (bin_edges[1:] + bin_edges[:-1]) / 2
             hist = np.expand_dims(hist, axis=[1,2])
+
+            # get stats for this bootstrap sample
+            group_list = []
+            #for season, group in ds_randomised.groupby("season"):
+            #    group = group.drop_vars("season")
+            #    group = group.expand_dims(dim={"season":[season]})
+            #    quant = group.quantile([0.05,0.5,0.95], "id_dim")
+            #    quant.name = f"diff_{self.var}_angle_quant"
+            #    mean = group.mean("id_dim")
+            #    mean.name = f"diff_{self.var}_angle_mean"
+
+            #    # append merged stats
+            #    group_list.append(xr.merge([mean,quant]))
+
+            grouped = ds_randomised.groupby("season")
+            quant = grouped.quantile([0.05,0.5,0.95], "id_dim")
+            quant.name = f"diff_{self.var}_angle_quant"
+            mean = grouped.mean("id_dim")
+            mean.name = f"diff_{self.var}_angle_mean"
+            print (mean)
+            print (qkhdf)
+
+            # merge seasons
+            agg_stats = xr.merge(group_list)
   
             # assign to dataset
             bootstrapped_hist = xr.Dataset(
-                          {f"{self.var}_frequency":(
+                          {
+                           f"{self.var}_frequency":(
                            ["bias_angle","region_names","season"],
-                           hist)},
+                           hist)
+                           },
                           {"bias_angle":bin_centres,
                            "bias_angle_bin_edges": bin_edges,
                            "season":xr.DataArray([season], dims="season"),
                            "region_names":ds.region_names})
-                           #["bias_angle","region_names","season","sample"],
-                           #"sample":i})
-            #bootstrapped_hist = bootstrapped_hist.expand_dims(dim={"sample":i})
+
+            # merge stats with hist
+            bootstrapped_vars = xr.merge([bootstrapped_hist, agg_stats])
 
             # append dataset to list
             bootstrap_set.append(bootstrapped_hist)
@@ -123,8 +157,6 @@ class bias_angle(object):
 
         # get mean
         mean = bootstrap_set_ds.mean("sample")
-        print (mean.to_dataarray())
-        print (sdkf)
         mean = mean.rename({var_str:var_str + "_mean"})
 
         # get percentiles
