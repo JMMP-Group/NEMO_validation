@@ -22,22 +22,12 @@ class regional_climatology(object):
         print(os.popen(f"mkdir -p {cfg.dn_out}").read())
         
     def get_season_bias(self):
-        """ merge seasonal profile bias files into one dataset """
+        """ get seasonal regional bias """
 
+        # get data
+        path = cfg.dn_out + f"profiles/profiles_by_region_and_season.nc"
+        self.season_ds = xr.open_dataset(path, chunks="auto")
 
-        ds_list = []
-        for season in ["DJF","MAM","JJA","SON"]:
-            # get data
-            path = cfg.dn_out + f"profiles/{season}_profiles_by_region.py"
-            #path = cfg.dn_out + f"profiles/{season}_PRO_DIFF.nc"
-            ds = xr.open_dataset(path, chunks="auto")
-            print (ds)
-
-            ds_list.append(ds.assign_coords(
-                           season=('id_dim',[season]*len(ds.id_dim))))
-
-        print (kadjf)
-        self.season_ds = xr.concat(ds_list, dim='id_dim')
 
     def restrict_to_surface(self, depth_lim=5, save=True):
         """ restrict to top x-metres """
@@ -63,10 +53,5 @@ def save_surface_EN4_bias_by_region_and_season():
     sc.get_season_bias()
     sc.restrict_to_surface()
     sc.save_ds(sc.season_ds, "near_surface_EN4_bias_by_season_by_region.nc")
-
-def save_full_depth_EN4_bias_by_region_and_season():
-    sc = regional_climatology()
-    sc.get_season_bias()
-    sc.save_ds(sc.season_ds, "full_depth_EN4_bias_by_season_by_region.nc")
 
 save_full_depth_EN4_bias_by_region_and_season()

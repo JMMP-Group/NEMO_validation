@@ -84,7 +84,7 @@ class masking(object):
             fn_index = self.cfg.dn_out + f"profiles/{season}_PRO_DIFF.nc"
             # get model profiles on EN4 grid
             model_profile = coast.Profile(config=self.cfg.fn_cfg_prof)
-            model_profile.dataset = xr.open_dataset(fn_index, chunks=-1)
+            model_profile.dataset = xr.open_dataset(fn_index, chunks="auto")
         else:
             # TODO add non seasonal handleing
             print ("non-seasonal arguments yet to be implemented")
@@ -112,6 +112,25 @@ class masking(object):
 
         return region_merged
 
+    def flatten_depth(self, da):
+
+        # flatten depth to make 3d (season,region,id_dim) array
+        da = da.swap_dims({"z_dim":"depth"})
+        da_depth = []
+        for i, depth in enumerate(da.depth):
+            da_depth.append(da.sel(depth=depth))
+        da_1d = xr.concat(da_depth, dim="id_dim")
+
+        # make id_dim an multi-index dimension
+        #multiindex = ["depth","time","latitude","longitude"]
+        #da_1d = da_1d.set_index(id_dim=multiindex)
+
+        # drop duplicate records (this removes union of regions!)
+        #da_1d = da_1d.drop_duplicates("id_dim")
+
+        #da_1d = da_1d.reset_index("id_dim")
+
+        return da_1d
 
     def partition_by_region(self):
         """ 
@@ -133,10 +152,13 @@ class masking(object):
         # combine by season
         model_profile_merged = xr.concat(model_profile_seasons, dim='id_dim')
 
+        ## flatten
+        #model_profile_flat = self.flatten_depth(model_profile_merged)
+
         # save
         with ProgressBar():
             path = self.cfg.dn_out +\
-                    f"profiles/profiles_by_region_and_season.py"
+                    f"profiles/profiles_by_region_and_season.nc"
             model_profile_merged.to_netcdf(path)
 
 ma = masking()

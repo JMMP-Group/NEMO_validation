@@ -33,6 +33,7 @@ class bias_angle(object):
         # get data
         ds_path = cfg.dn_out + fn
         da = xr.open_dataset(ds_path)
+        print (da)
 
         # initiate plots
         fig, axs = plt.subplots(9,4, figsize=(6.5,8.5))
@@ -42,19 +43,25 @@ class bias_angle(object):
             for j, (season, subset) in enumerate(region.groupby("season")):
                 ax = axs[i,j]
 
-                s = ax.plot(subset.bias_angle,
-                            subset.temperature_frequency_quant.squeeze()[0],
-                            c="slateblue", lw=0.8)
-                s = ax.plot(subset.bias_angle,
-                            subset.temperature_frequency_quant.squeeze()[1],
-                            c="slateblue", ls="--", lw=0.8)
-                s = ax.plot(subset.bias_angle,
-                            subset.temperature_frequency_quant.squeeze()[2],
-                            c="slateblue", lw=0.8)
-                s = ax.plot(subset.bias_angle,
-                           subset.temperature_frequency_mean.squeeze(),c='pink')
-                ax.axvline(np.pi/4, c="orange")
-                ax.axvline(-np.pi/4, c="orange")
+                #s = ax.plot(subset.bias_angle,
+                #            subset.temperature_frequency_quant.squeeze()[0],
+                #            c="slateblue", lw=0.8)
+                #s = ax.plot(subset.bias_angle,
+                #            subset.temperature_frequency_quant.squeeze()[1],
+                #            c="slateblue", ls="--", lw=0.8)
+                #s = ax.plot(subset.bias_angle,
+                #            subset.temperature_frequency_quant.squeeze()[2],
+                #            c="slateblue", lw=0.8)
+                #s = ax.plot(subset.bias_angle,
+                #           subset.temperature_frequency_mean.squeeze(),c='pink')
+                ax.fill_between(subset.bias_angle,
+                                subset.temperature_frequency_quant.squeeze()[0],
+                                subset.temperature_frequency_quant.squeeze()[-1],
+                                color='slateblue', alpha=0.5)
+                ax.axvline(np.pi/4, c="orange", lw=0.8)
+                #ax.axvline(-np.pi/4, c="orange", lw=0.8)
+                ax.axvline(subset.abs_diff_temperature_angle_quant_quant.squeeze()[1,1], c="red", lw=0.8)
+                ax.axvline(subset.abs_diff_temperature_angle_quant_mean.squeeze()[1], c="green", lw=0.8)
 
                 ax.set_title(f"{season} {region_name}")
 
@@ -65,20 +72,26 @@ class bias_angle(object):
             ax.set_yticklabels([])
 
         for ax in axs.flatten():
-            ax.set_xticks([-np.pi/2,-np.pi/4,0,np.pi/4,np.pi/2])
+            #ax.set_xticks([-np.pi/2,-np.pi/4,0,np.pi/4,np.pi/2])
+            ax.set_xlim([0,np.pi/2])
+            ax.set_xticks([0,np.pi/4,np.pi/2])
 
         for ax in axs[:-1,:].flatten():
             ax.set_xticklabels([])
 
         for ax in axs[-1,:]:
-            ax.set_xticklabels(["$-\pi/2$",
-                                "$-\pi/4$",
+            ax.set_xticklabels([
                                 "0",
                                 "$\pi/4$",
                                 "$\pi/2$"])
+            #ax.set_xticklabels(["$-\pi/2$",
+            #                    "$-\pi/4$",
+            #                    "0",
+            #                    "$\pi/4$",
+            #                    "$\pi/2$"])
             ax.set_xlabel(f"{var} bias")
 
-        png_name = f"FIGS/full_depth_{var}_bias_angle_bootstrapped.png"
+        png_name = f"FIGS/abs_full_depth_{var}_bias_angle_bootstrapped.png"
         plt.savefig(png_name, dpi=600)
 
 bs =  bias_angle()
