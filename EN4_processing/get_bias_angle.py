@@ -78,9 +78,11 @@ class bias_angle(object):
         calculate 1-d histogram from bias angle data
         """
 
+        sample_size=1000
+
         # get data
         fn = cfg.dn_out + f"{self.type}_bias_with_EN4.nc"
-        angle = xr.open_dataarray(fn, chunks=-1)
+        angle = xr.open_dataarray(fn, chunks="auto")
 
         hist_set = []
         for j, (_, region) in enumerate(angle.groupby("region_names")):
@@ -89,19 +91,25 @@ class bias_angle(object):
                 if bootstrapped:
                     bootstrapped_hist = \
                                   self.get_bootstrapped_bias_angle_hist(subset,
-                                                                        season)
+                                                                    sample_size)
                     hist_set.append(bootstrapped_hist)
 
         hist_set_ds = xr.merge(hist_set)
 
-        fn = cfg.dn_out + f"bootstrapped_{self.type}_bias_with_EN4.nc"
+        # set attrs
+        hist_set_ds = hist_set_ds.assign_attrs(
+                      {"bootstrap_sample_size":sample_size})
+
+        fn = cfg.dn_out + f"bootstrapped_{self.type}_bias_with_EN4_{sample_size}.nc"
         with ProgressBar():
             hist_set_ds.to_netcdf(fn)
 
-    def get_bootstrapped_bias_angle_hist(self, ds, season, sample_size=1000):
+    def get_bootstrapped_bias_angle_hist(self, ds, sample_size=1000):
         """
         Single instance bootstrap sample the bias angle and create histogram
         """
+
+        ds = ds.load()
 
         bootstrap_set = []
         for i in range(sample_size):
@@ -120,7 +128,7 @@ class bias_angle(object):
             bin_centres = (bin_edges[1:] + bin_edges[:-1]) / 2
             hist = np.expand_dims(hist, axis=[1,2])
 
-            quant = ds_randomised.quantile([0.05,0.5,0.95], ["id_dim","z_dim"])
+            quant = ds_randomised.quantile(0.5, ["id_dim","z_dim"])
             quant.name = f"{self.type}_angle_quant"
             quant = quant.rename({"quantile":"sample_quant"})
             mean = ds_randomised.mean(["id_dim","z_dim"])
@@ -138,7 +146,7 @@ class bias_angle(object):
                            },
                           {"bias_angle":bin_centres,
                            "bias_angle_bin_edges": bin_edges,
-                           "season":xr.DataArray([season], dims="season"),
+                           "season":ds.season,
                            "region_names":ds.region_names})
 
             # merge stats with hist
@@ -160,7 +168,8 @@ class bias_angle(object):
            f"{self.type}_angle_quant":f"{self.type}_angle_quant_mean"})
 
         # get percentiles
-        quant = bootstrap_set_ds.quantile([0.05, 0.5, 0.95], "sample")
+        quantiles = [0.02,0.05,0.25,0.5,0.75,0.95,0.98]
+        quant = bootstrap_set_ds.quantile(quantiles,"sample")
         quant = quant.rename({var_str:var_str + "_quant",
            f"{self.type}_angle_mean":f"{self.type}_angle_mean_quant",
            f"{self.type}_angle_quant":f"{self.type}_angle_quant_quant"})
