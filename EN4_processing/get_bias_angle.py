@@ -14,16 +14,12 @@ class bias_angle(object):
     def __init__(self, var):
 
         # paths
-        self.fn_dom = cfg.dn_dom + cfg.grid_nc
         self.fn_path = cfg.dn_out + "profiles/"
         self.fn_comp_path = cfg.comp_case["proc_data"] + "profiles/"
-        en4_nc = "/surface_maps/en4_gridded_surface_climatology.nc"
-        m_nc = "/surface_maps/binned_model_surface_climatology.nc"
-        self.en4_grid = cfg.dn_out + en4_nc
-        self.model_binned = cfg.dn_out + m_nc
 
         self.var = var
         self.metric = "abs_diff"
+        self.type = f"{self.metric}_{self.var}"
 
     def get_bias_climatology(self):
 
@@ -31,10 +27,10 @@ class bias_angle(object):
         
         # get data
         path = self.fn_path + fn
-        self.da_0 = xr.open_dataset(path, chunks="auto")[self.metric + "_" + self.var]
+        self.da_0 = xr.open_dataset(path, chunks="auto")[self.type]
 
         path = self.fn_comp_path + fn
-        self.da_1 = xr.open_dataset(path, chunks="auto")[self.metric + "_" + self.var]
+        self.da_1 = xr.open_dataset(path, chunks="auto")[self.type]
 
     def get_bias_angle_ds(self, depth_var=True):
 
@@ -44,21 +40,14 @@ class bias_angle(object):
             da_0_r = self.da_0.sel(region_names=region)
             da_1_r = self.da_1.sel(region_names=region)
 
-            # flatten depth to make 3d (season,region,id_dim) array
-            #da_0_r = self.flatten_across_depth(da_0_r)
-            #da_1_r = self.flatten_across_depth(da_1_r)
-
             # make id_dim an multi-index dimension
             multiindex = ["time","latitude","longitude"]
-            #multiindex = ["depth","time","latitude","longitude"]
             da_0_r = da_0_r.set_index(id_dim=multiindex)
             da_1_r = da_1_r.set_index(id_dim=multiindex)
 
             # drop duplicate records - why are there duplicates?
             da_0_r = da_0_r.dropna("id_dim", how="all")
             da_1_r = da_1_r.dropna("id_dim", how="all")
-            #da_0_r = da_0_r.drop_duplicates("id_dim")
-            #da_1_r = da_1_r.drop_duplicates("id_dim")
 
             # align
             da_0_r, da_1_r = xr.align(da_0_r, da_1_r)
@@ -75,23 +64,14 @@ class bias_angle(object):
 
         # get angle
         self.angle = np.arctan(da_0/da_1)
-        self.angle.name = f"{self.metric}_{self.var}_angle"
+        self.angle.name = f"{self.type}_angle"
 
         self.angle = self.angle.reset_index("id_dim")
 
         # save
-        fn = cfg.dn_out + f"{self.metric}_{self.var}_bias_with_EN4.nc"
+        fn = cfg.dn_out + f"{self.type}_bias_with_EN4.nc"
         with ProgressBar():
             self.angle.to_netcdf(fn)
-
-    #def flatten_across_depth(self, da):
-    #    da = da.swap_dims({"z_dim":"depth"})
-    #    da_depth = []
-    #    for i, depth in enumerate(da.depth):
-    #        da_depth.append(da.sel(depth=depth))
-    #    da_1d = xr.concat(da_depth, dim="id_dim")
-
-    #    return da_1d
 
     def get_bias_angle_hist(self, bootstrapped=True):
         """
@@ -99,7 +79,7 @@ class bias_angle(object):
         """
 
         # get data
-        fn = cfg.dn_out + f"{self.metric}_{self.var}_bias_with_EN4.nc"
+        fn = cfg.dn_out + f"{self.type}_bias_with_EN4.nc"
         angle = xr.open_dataarray(fn, chunks=-1)
 
         hist_set = []
@@ -114,7 +94,7 @@ class bias_angle(object):
 
         hist_set_ds = xr.merge(hist_set)
 
-        fn = cfg.dn_out + f"bootstrapped_{self.metric}_{self.var}_bias_with_EN4.nc"
+        fn = cfg.dn_out + f"bootstrapped_{self.type}_bias_with_EN4.nc"
         with ProgressBar():
             hist_set_ds.to_netcdf(fn)
 
@@ -125,7 +105,6 @@ class bias_angle(object):
 
         bootstrap_set = []
         for i in range(sample_size):
-            #print (i)
 
             # remove nans introduced during season-region broadcasting
             ds = ds.dropna("id_dim", how="all")
@@ -142,10 +121,10 @@ class bias_angle(object):
             hist = np.expand_dims(hist, axis=[1,2])
 
             quant = ds_randomised.quantile([0.05,0.5,0.95], ["id_dim","z_dim"])
-            quant.name = f"{self.metric}_{self.var}_angle_quant"
+            quant.name = f"{self.type}_angle_quant"
             quant = quant.rename({"quantile":"sample_quant"})
             mean = ds_randomised.mean(["id_dim","z_dim"])
-            mean.name = f"{self.metric}_{self.var}_angle_mean"
+            mean.name = f"{self.type}_angle_mean"
 
             # merge seasons
             agg_stats = xr.merge([mean,quant])
@@ -153,7 +132,7 @@ class bias_angle(object):
             # assign to dataset
             bootstrapped_hist = xr.Dataset(
                           {
-                           f"{self.var}_frequency":(
+                           f"{self.type}_frequency":(
                            ["bias_angle","region_names","season"],
                            hist)
                            },
@@ -172,20 +151,19 @@ class bias_angle(object):
         bootstrap_set_ds = xr.concat(bootstrap_set, dim="sample").load()
 
         # alias var name
-        var_str = f"{self.var}_frequency"
+        var_str = f"{self.type}_frequency"
 
         # get mean
         mean = bootstrap_set_ds.mean("sample")
         mean = mean.rename({var_str:var_str + "_mean",
-           f"{self.metric}_{self.var}_angle_mean":f"{self.metric}_{self.var}_angle_mean_mean",
-           f"{self.metric}_{self.var}_angle_quant":f"{self.metric}_{self.var}_angle_quant_mean"})
-
+           f"{self.type}_angle_mean":f"{self.type}_angle_mean_mean",
+           f"{self.type}_angle_quant":f"{self.type}_angle_quant_mean"})
 
         # get percentiles
         quant = bootstrap_set_ds.quantile([0.05, 0.5, 0.95], "sample")
         quant = quant.rename({var_str:var_str + "_quant",
-           f"{self.metric}_{self.var}_angle_mean":f"{self.metric}_{self.var}_angle_mean_quant",
-           f"{self.metric}_{self.var}_angle_quant":f"{self.metric}_{self.var}_angle_quant_quant"})
+           f"{self.type}_angle_mean":f"{self.type}_angle_mean_quant",
+           f"{self.type}_angle_quant":f"{self.type}_angle_quant_quant"})
         
         # merge statistics
         bootstrap_statistics = xr.merge([mean, quant])
