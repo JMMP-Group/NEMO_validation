@@ -46,6 +46,7 @@ class satellite(object):
     Class for validating against satellite data
     """
 
+
     def create_cmems_login(self):
         """ create login config file """
 
@@ -64,11 +65,11 @@ class satellite(object):
         
         if var == "sst":
            data_request["fn"] = "cmems_obs-sst_atl_phy_nrt_l3s_P1D-m",
-           data_request["variables"] = "sea_surface_temperature"
+           data_request["variables"] = ["sea_surface_temperature"]
 
-        if var = "ssh":
+        if var == "ssh":
            data_request["fn"] = "cmems_obs-sl_eur_phy-ssh_my_allsat-l4-duacs-0.0625deg_P1D"
-           data_request["variables"] = "adt"
+           data_request["variables"] = ["adt"]
 
         # Load xarray dataset
         self.ds = copernicusmarine.open_dataset(
@@ -88,17 +89,47 @@ class satellite(object):
 
         self.ds = self.ds.resample(time='1ME').mean()
 
-    def quick_plot(self):
+    def quick_compare(self):
         """ quick plot """
 
-        snapshot = self.ds.isel(time=0).adt
+        snapshot_obs = self.ds.isel(time=0).adt
+        snapshot_co9 = self.ds.isel(time=0)
 
         plt.pcolor(snapshot)
         plt.show()
 
+class model_surface(object):
+
+    def __init__(self, fn_path):
+
+        self.ds = xr.open_mfdataset(fn_path + "*.nc.ppc3", chunks=-1).zos
+
+class satellite_plot(object):
+
+    def plot_model_and_satellite_snapshot_ssh(self, mod_ssh, sat_ssh):
+        """ plot ssh for model and satellite """
+
+        fig, axs = plt.subplots(2)
+
+        # time slice
+        mod_ssh = mod_ssh.sel(time_counter="2004-01")
+        sat_ssh = sat_ssh.sel(time="2004-01")
+
+        axs[0].pcolor(mod_ssh.squeeze())
+        axs[1].pcolor(sat_ssh.squeeze())
+        plt.show()
+
 if __name__ == "__main__":
 
+    # get satellite
     sat = satellite()
     sat.get_cmems()
     sat.monthly_mean()
-    sat.quick_plot()
+
+    # get model
+    fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
+    mod = model_surface(fn)
+
+    # model
+    splot = satellite_plot()
+    splot.plot_model_and_satellite_snapshot_ssh(mod.ds, sat.ds.adt)
