@@ -6,6 +6,8 @@ import xarray as xr
 import os
 import copernicusmarine
 import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
+import numpy as np
 
 class extract_surface(object):
     def __init__(self):
@@ -46,7 +48,6 @@ class satellite(object):
     Class for validating against satellite data
     """
 
-
     def create_cmems_login(self):
         """ create login config file """
 
@@ -82,12 +83,49 @@ class satellite(object):
             end_datetime = data_request["time"][1],
             variables = data_request["variables"]
         )
-        
+        #self.ds = self.ds.transpose("time","longitude","latitude")
 
     def monthly_mean(self):
         """ average over month """
 
-        self.ds = self.ds.resample(time='1ME').mean()
+        self.ds = self.ds.resample(time='1ME').mean().load()
+
+    def interpolate_to_model(self, cfg_fn):
+        """ interpolate lat-lon to horizontal grid """
+
+        self.ds = self.ds.isel(time=slice(None,5))
+        domcfg = xr.open_dataset(cfg_fn)
+
+        tgt_lon =  domcfg.nav_lon
+        tgt_lat =  domcfg.nav_lat
+        
+        target = (tgt_lon, tgt_lat)
+
+        src_lon = self.ds.longitude.values
+        src_lat = self.ds.latitude.values
+
+        src_mlon, src_mlat = np.meshgrid(src_lon, src_lat)
+
+        points = (src_mlon.flatten(), src_mlat.flatten())
+
+        n_grid = []
+        for time, ds_t in self.ds.groupby("time"):
+            print (time)
+            values = (ds_t.to_dataarray().values.flatten())
+            
+            n_grid.append(
+             griddata(points, values, target, method="nearest")[:,:,np.newaxis])
+
+        n_grid_all = np.concatenate(n_grid, axis=2)
+
+        self.ds = xr.DataArray(
+                             data=n_grid_all,
+                             dims=["x","y","time"],
+                             coords={"longitude": (["x","y"],tgt_lon.values),
+                                     "latitude": (["x","y"],tgt_lat.values),
+                                     "time": self.ds.time},
+                             name="adt").to_dataset()
+
 
     def quick_compare(self):
         """ quick plot """
@@ -115,8 +153,11 @@ class satellite_plot(object):
         mod_ssh = mod_ssh.sel(time_counter="2004-01")
         sat_ssh = sat_ssh.sel(time="2004-01")
 
-        axs[0].pcolor(mod_ssh.squeeze())
-        axs[1].pcolor(sat_ssh.squeeze())
+        p0 = axs[0].pcolor(mod_ssh.squeeze(), vmin=-1, vmax=1)
+        p1 = axs[1].pcolor(sat_ssh.squeeze(), vmin=-1, vmax=1)
+
+        plt.colorbar(p0, ax=axs[0])
+        plt.colorbar(p1, ax=axs[1])
         plt.show()
 
 if __name__ == "__main__":
@@ -125,6 +166,8 @@ if __name__ == "__main__":
     sat = satellite()
     sat.get_cmems()
     sat.monthly_mean()
+    cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
+    sat.interpolate_to_model(cfg_fn)
 
     # get model
     fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
