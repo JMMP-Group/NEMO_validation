@@ -8,6 +8,7 @@ import copernicusmarine
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 import numpy as np
+import xeofs as xe
 
 class extract_surface(object):
     def __init__(self):
@@ -83,7 +84,6 @@ class satellite(object):
             end_datetime = data_request["time"][1],
             variables = data_request["variables"]
         )
-        #self.ds = self.ds.transpose("time","longitude","latitude")
 
     def monthly_mean(self):
         """ average over month """
@@ -93,7 +93,6 @@ class satellite(object):
     def interpolate_to_model(self, cfg_fn):
         """ interpolate lat-lon to horizontal grid """
 
-        self.ds = self.ds.isel(time=slice(None,5))
         domcfg = xr.open_dataset(cfg_fn)
 
         tgt_lon =  domcfg.nav_lon
@@ -120,9 +119,9 @@ class satellite(object):
 
         self.ds = xr.DataArray(
                              data=n_grid_all,
-                             dims=["x","y","time"],
-                             coords={"longitude": (["x","y"],tgt_lon.values),
-                                     "latitude": (["x","y"],tgt_lat.values),
+                             dims=["y","x","time"],
+                             coords={"longitude": (["y","x"],tgt_lon.values),
+                                     "latitude": (["y","x"],tgt_lat.values),
                                      "time": self.ds.time},
                              name="adt").to_dataset()
 
@@ -135,6 +134,12 @@ class satellite(object):
 
         plt.pcolor(snapshot)
         plt.show()
+
+    def save_ds(self, fn_name):
+        """ save satellite data """
+
+        fn = f"{cfg.dn_out}/satellite/{fn_name}"
+        self.ds.to_netcdf(fn)
 
 class model_surface(object):
 
@@ -160,19 +165,61 @@ class satellite_plot(object):
         plt.colorbar(p1, ax=axs[1])
         plt.show()
 
+    def plot_eof_validation():
+        """ plot eof breakdown of model versus obs """
+
+
+def get_eof(ds, fn):
+    """ calculate eof of surface data """
+
+    # initiate eof model
+    model = xe.single.EOF(n_modes=5)
+
+    # calculate eof
+    model.fit(ds, dim="time")
+
+    ## save components to netcdf
+    #components = model.components()
+    #del components.adt.attrs["solver_kwargs"]  # attr causes error
+    #components.to_netcdf(f"{cfg.dn_out}/satellite/{fn}_eof_map_components.nc")
+
+    # save scores to netcdf
+    scores = model.scores()
+    del scores.attrs["solver_kwargs"]  # attr causes error
+    scores.to_netcdf(f"{cfg.dn_out}/satellite/{fn}_eof_map_scores.nc")
+
 if __name__ == "__main__":
 
-    # get satellite
-    sat = satellite()
-    sat.get_cmems()
-    sat.monthly_mean()
-    cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
-    sat.interpolate_to_model(cfg_fn)
+    def get_co9_gridded_satellite_data():
+        sat = satellite()
+        sat.get_cmems()
+        sat.monthly_mean()
+        cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
+        sat.interpolate_to_model(cfg_fn)
+        sat.save_ds(f"CMEMS_L4_satellite_gridded_to_{cfg.case}.nc")
+    #get_co9_gridded_satellite_data()
 
-    # get model
-    fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
-    mod = model_surface(fn)
+    def calculate_satellite_eof():
+        path = f"{cfg.dn_out}/satellite/"
+        fn = f"{path}/CMEMS_L4_satellite_gridded_to_{cfg.case}.nc"
+        sat_proc = xr.open_dataset(fn, chunks=-1)
 
-    # model
-    splot = satellite_plot()
-    splot.plot_model_and_satellite_snapshot_ssh(mod.ds, sat.ds.adt)
+        # remove deep water
+        cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
+        domcfg = xr.open_dataset(cfg_fn)
+
+        print (sat_proc)
+        print (domcfg.bathy)
+        sat_proc = sat_proc.where(domcfg.bathy < 200)
+
+        get_eof(sat_proc, "CMEMS_L4_satellite")
+
+    calculate_satellite_eof()
+
+#    # get model
+#    fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
+#    mod = model_surface(fn)
+#
+#    # model
+#    splot = satellite_plot()
+#    splot.plot_model_and_satellite_snapshot_ssh(mod.ds, sat.ds.adt)
