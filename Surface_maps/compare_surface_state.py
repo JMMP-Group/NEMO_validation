@@ -83,7 +83,7 @@ class satellite(object):
             start_datetime = data_request["time"][0],
             end_datetime = data_request["time"][1],
             variables = data_request["variables"]
-        )
+        ).adt
 
     def monthly_mean(self):
         """ average over month """
@@ -123,7 +123,7 @@ class satellite(object):
                              coords={"longitude": (["y","x"],tgt_lon.values),
                                      "latitude": (["y","x"],tgt_lat.values),
                                      "time": self.ds.time},
-                             name="adt").to_dataset()
+                             name="adt")#.to_dataset()
 
 
     def quick_compare(self):
@@ -147,6 +147,11 @@ class model_surface(object):
 
         self.ds = xr.open_mfdataset(fn_path + "*.nc.ppc3", chunks=-1).zos
 
+        # rename time
+        self.ds = self.ds.rename({"time_counter":"time",
+                                  "y_grid_T":"y",
+                                  "x_grid_T":"x"})
+
 class satellite_plot(object):
 
     def plot_model_and_satellite_snapshot_ssh(self, mod_ssh, sat_ssh):
@@ -165,9 +170,46 @@ class satellite_plot(object):
         plt.colorbar(p1, ax=axs[1])
         plt.show()
 
-    def plot_eof_validation():
+    def plot_eof_validation(self, mod, sat):
         """ plot eof breakdown of model versus obs """
 
+        # initialise figure
+        fig, axs = plt.subplots(3,2)
+
+        # get data
+        path = f"{cfg.dn_out}/satellite/"
+        mod_scores = xr.open_dataarray(f"{path}{mod}_eof_map_scores.nc")
+        sat_scores = xr.open_dataarray(f"{path}{sat}_eof_map_scores.nc")
+        mod_comp = xr.open_dataarray(f"{path}{mod}_eof_map_components.nc")
+        sat_comp = xr.open_dataarray(f"{path}{sat}_eof_map_components.nc")
+
+        axs[0,0].plot(mod_scores.sel(mode=1))
+        axs[0,0].plot(sat_scores.sel(mode=1))
+
+        axs[0,1].plot(mod_scores.sel(mode=2))
+        axs[0,1].plot(sat_scores.sel(mode=2))
+
+        axs[1,0].pcolor(mod_comp.sel(mode=1).squeeze())#, vmin=-1, vmax=1)
+        axs[2,0].pcolor(sat_comp.sel(mode=1).squeeze())#, vmin=-1, vmax=1)
+
+        axs[1,1].pcolor(mod_comp.sel(mode=2).squeeze())#, vmin=-1, vmax=1)
+        axs[2,1].pcolor(sat_comp.sel(mode=2).squeeze())#, vmin=-1, vmax=1)
+
+        # set labels
+        axs[0,0].set_title("mode 1")
+        axs[0,1].set_title("mode 2")
+
+        axs[1,0].text(0.05,0.95, "CO9", ha="left", va="top",
+                      transform=axs[1,0].transAxes)
+        axs[2,0].text(0.05,0.95, "Obs", ha="left", va="top",
+                      transform=axs[2,0].transAxes)
+
+        axs[1,1].text(0.05,0.95, "CO9", ha="left", va="top",
+                      transform=axs[1,1].transAxes)
+        axs[2,1].text(0.05,0.95, "Obs", ha="left", va="top",
+                      transform=axs[2,1].transAxes)
+
+        plt.show()
 
 def get_eof(ds, fn):
     """ calculate eof of surface data """
@@ -178,10 +220,10 @@ def get_eof(ds, fn):
     # calculate eof
     model.fit(ds, dim="time")
 
-    ## save components to netcdf
-    #components = model.components()
-    #del components.adt.attrs["solver_kwargs"]  # attr causes error
-    #components.to_netcdf(f"{cfg.dn_out}/satellite/{fn}_eof_map_components.nc")
+    # save components to netcdf
+    components = model.components()
+    del components.attrs["solver_kwargs"]  # attr causes error
+    components.to_netcdf(f"{cfg.dn_out}/satellite/{fn}_eof_map_components.nc")
 
     # save scores to netcdf
     scores = model.scores()
@@ -197,29 +239,41 @@ if __name__ == "__main__":
         cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
         sat.interpolate_to_model(cfg_fn)
         sat.save_ds(f"CMEMS_L4_satellite_gridded_to_{cfg.case}.nc")
-    #get_co9_gridded_satellite_data()
 
     def calculate_satellite_eof():
         path = f"{cfg.dn_out}/satellite/"
         fn = f"{path}/CMEMS_L4_satellite_gridded_to_{cfg.case}.nc"
-        sat_proc = xr.open_dataset(fn, chunks=-1)
+        sat_proc = xr.open_dataset(fn, chunks=-1).adt
 
         # remove deep water
         cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
         domcfg = xr.open_dataset(cfg_fn)
 
-        print (sat_proc)
-        print (domcfg.bathy)
         sat_proc = sat_proc.where(domcfg.bathy < 200)
 
         get_eof(sat_proc, "CMEMS_L4_satellite")
 
-    calculate_satellite_eof()
 
-#    # get model
-#    fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
-#    mod = model_surface(fn)
-#
-#    # model
-#    splot = satellite_plot()
-#    splot.plot_model_and_satellite_snapshot_ssh(mod.ds, sat.ds.adt)
+    def calculate_co9_eof():
+
+        # get model
+        fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
+        mod_proc = model_surface(fn).ds
+
+        # remove deep water
+        cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
+        domcfg = xr.open_dataset(cfg_fn)
+        mod_proc = mod_proc.where(domcfg.bathy < 200)
+        
+
+        get_eof(mod_proc, "CO9")
+
+    def plot_eof():
+        splot = satellite_plot()
+        splot.plot_eof_validation("CO9", "CMEMS_L4_satellite")
+    plot_eof()
+
+    #calculate_co9_eof()
+    #calculate_satellite_eof()
+    #get_co9_gridded_satellite_data()
+ 
