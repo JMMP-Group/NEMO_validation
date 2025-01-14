@@ -152,6 +152,23 @@ class model_surface(object):
                                   "y_grid_T":"y",
                                   "x_grid_T":"x"})
 
+    def remove_inverse_barometer(self):
+        """
+        UNDER CONSTRUCTION
+        remove atmospheric loading 
+        """
+
+        g = 9.80665
+        rho = 1026
+        g_rho = g * rho
+
+        # getting this variable is tricky
+        # it requires the raw surface foring being interpolated
+        # with the same interpolation method use during model run
+        # apr = ...
+
+        #ssh_ib = - ( apr - pref ) / g_rho 
+
 class satellite_plot(object):
 
     def plot_model_and_satellite_snapshot_ssh(self, mod_ssh, sat_ssh):
@@ -182,12 +199,16 @@ class satellite_plot(object):
         sat_scores = xr.open_dataarray(f"{path}{sat}_eof_map_scores.nc")
         mod_comp = xr.open_dataarray(f"{path}{mod}_eof_map_components.nc")
         sat_comp = xr.open_dataarray(f"{path}{sat}_eof_map_components.nc")
+        print (mod_scores)
 
-        axs[0,0].plot(mod_scores.sel(mode=1))
-        axs[0,0].plot(sat_scores.sel(mode=1))
+        axs[0,0].plot(mod_scores.time, mod_scores.sel(mode=1), label="CO9")
+        axs[0,0].plot(sat_scores.time, sat_scores.sel(mode=1), label="Obs")
 
-        axs[0,1].plot(mod_scores.sel(mode=2))
-        axs[0,1].plot(sat_scores.sel(mode=2))
+        axs[0,0].legend(loc="upper left", bbox_to_anchor=(0,1.02),
+                        bbox_transform=fig.transFigure)
+
+        axs[0,1].plot(mod_scores.time, mod_scores.sel(mode=2))
+        axs[0,1].plot(sat_scores.time, sat_scores.sel(mode=2))
 
         axs[1,0].pcolor(mod_comp.sel(mode=1).squeeze())#, vmin=-1, vmax=1)
         axs[2,0].pcolor(sat_comp.sel(mode=1).squeeze())#, vmin=-1, vmax=1)
@@ -209,7 +230,7 @@ class satellite_plot(object):
         axs[2,1].text(0.05,0.95, "Obs", ha="left", va="top",
                       transform=axs[2,1].transAxes)
 
-        plt.show()
+        plt.savefig("FIGS/CO9_CMEMS_Satellite_ssh_pca.png", dpi=600)
 
 def get_eof(ds, fn):
     """ calculate eof of surface data """
