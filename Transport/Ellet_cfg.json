@@ -1,0 +1,30 @@
+{
+	"type": "indexed",
+	"dimensionality": 3,
+	"chunks": {},
+	"dataset": {
+		"dimension_map": {
+			"Refdist": "id_dim",
+			"Depth": "z_dim"
+		},
+		"variable_map": {
+			"LatSta": "latitude",
+			"LonSta": "longitude",
+			"Depth": "depth",
+			"Year": "time",
+			"PTMP": "potential_temperature",
+			"PSAL": "practical_salinity",
+			"Vrel": "relative_velocity",
+			"Sigma0": "Sigma0",
+			"Vladcp": "ladcp_velocity",
+			"Vabs": "absolute_velocity",
+			"Month":"Month"
+		},
+		"coord_vars": ["time","latitude","longitude"],
+		"keep_all_vars": "False"
+	},
+	"processing_flags": [
+		"example_flag"
+	]
+}
+
