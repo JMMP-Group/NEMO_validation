@@ -18,20 +18,22 @@ class Ellet(object):
             
             return ds
         
-        path = "../../analysis_eel_data/data/raw/csv_datagridded/"
+        #path = "../../analysis_eel_data/data/raw/csv_datagridded/"
+        path = "../../analysis_eel_data/data/raw/csv_ctdgrid/"
         data = open_ds("EELCTDandLADCP_3Dfield.csv", path)
     
-        path = "../../analysis_eel_data/data/raw/csv_ctdgrid/"
         pos = open_ds("EELCTDandLADCP_refpos.csv", path)
         time = open_ds("EELCTDandLADCP_refdate.csv", path)
 
         
         # unstack dist, year and depth
+        data["Refdist"] = data.Refdist.astype("int")
         data = data.set_coords(["Refdist","Year","Depth"])
         data = data.set_xindex(["Refdist","Year","Depth"])
         data = data.unstack("index")
         
         # set distance to index
+        pos["Refdist"] = pos.Refdist.astype("int")
         pos = pos.set_coords("Refdist")
         pos = pos.swap_dims({"index":"Refdist"})
         pos = pos.drop_vars("index")
@@ -40,20 +42,8 @@ class Ellet(object):
         time = time.set_coords("Year")
         time = time.swap_dims({"index":"Year"})
         time = time.drop_vars("index")
-        
-        print (data)
-        print ('')
-        print (pos)
-        print ('')
-        print ('')
-        print ('')
-        print (time)
-        print ('')
-        print (sdsfhkj)
+
         ds = xr.merge([data,pos,time])
-        ds = ds.assign_coords(ind=("Refdist",np.arange(len(ds.Refdist.data)).astype("int")))
-        print (ds)
-        ds = ds.swap_dims({"Refdist":"ind"})
 
         # set lat, lon as coords
         self.ds = ds.set_coords(["LonSta","LatSta"])
@@ -64,19 +54,15 @@ class Ellet(object):
         self.ds["Depth"], _ = xr.broadcast(self.ds.Depth, self.ds.CruiseID)
 
         # reduce to rockall trough - two step to maintain dims
-        ind = self.ds.ind.where(
-                (self.ds.LonSta < -9) & (self.ds.LonSta > -14),drop=False)
-        print (ind)
-        print (self.ds)
-        self.ds = self.ds.isel(ind=slice(int(ind.min()), int(ind.max()) ))
-        for i in range(8):
-            self.ds.Vrel.isel(Year=i).plot()
-            plt.show()
-        #self.ds = self.ds.where(
-        #        (self.ds.LonSta < -9) & (self.ds.LonSta > -14), drop=False)
-        print (self.ds)
+        #self.ds = self.ds.where((self.ds.LonSta < -9) & (self.ds.LonSta > -14),
+        #                        drop=True)
+        # using sel in place of where avoids uncesesary broadcasting of Month
+        ind = self.ds.Refdist.where((self.ds.LonSta < -9) & 
+                                    (self.ds.LonSta > -14),
+                                    drop=True)
+        self.ds = self.ds.sel(Refdist=ind)
 
-        self.ds = self.ds.stack(id_dim=["Year","Refdist"])
+        #self.ds = self.ds.stack(id_dim=["Year","Refdist"])
 
     def get_dates(self):
 
@@ -84,6 +70,7 @@ class Ellet(object):
         fn_dates = []
         for year, y_ds in self.ds.groupby("Year"):
             dates.append(str(year) + "-" + str(y_ds.Month.data[0]).zfill(2))
+        print (dates)
         self.ds["time"] =  np.array(dates, dtype="datetime64")
 
         for year, y_ds in self.ds.groupby("Year"):
@@ -223,8 +210,8 @@ class ModelVels(object):
         values = src.values.flatten()
         values = values[~np.isnan(values)]
 
-        tgt_lon =  np.broadcast_to(obs.longitude,obs.ladcp_velocity.shape)
-        tgt_lat =  np.broadcast_to(obs.latitude, obs.ladcp_velocity.shape)
+        tgt_lon =  np.broadcast_to(obs.longitude,obs.ladcp_velocity.shape[::-1])
+        tgt_lat =  np.broadcast_to(obs.latitude, obs.ladcp_velocity.shape[::-1])
         tgt_dep = obs.depth
 
         interp = NearestNDInterpolator(points, values)
@@ -260,7 +247,7 @@ def process_ellet_obs():
     ell.preprocess_annual_cruise_data()
     ell.coast_formatting()
     ell.save_processed_ellet()
-process_ellet_obs()
+#process_ellet_obs()
 
 def get_model_on_ellet_locs():
     ell = Ellet()
@@ -270,4 +257,5 @@ def get_model_on_ellet_locs():
     m = ModelVels(ell.get_dates())
     m.interpolate_vels_to_obs(ell.Ellet_profiles)
 
+get_model_on_ellet_locs()
 
