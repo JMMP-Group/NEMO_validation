@@ -19,65 +19,106 @@ def _get_ellet_line_positions():
     return ds.longitude, ds.latitude
 
 def remove_time_from_GEG_12():
-    ds = xr.open_dataset("/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc")
+    path = "/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc"
+    ds = xr.open_dataset(path)
     ds = ds.isel(t=0)
     ds.to_netcdf("GEG_SF12.nc")
+
+def find_lat_lon_indicies(ds):
+    """
+    Find indicies using lat lon positions
+    Saves compute resource
+    """
+   
+    east = -8
+    west = -14
+    north = 58
+    south = 56.5
+    
+    ind_w = min(np.abs(ds.nav_lon_grid_T - west).argmin("x_grid_T")).values
+    ind_e = max(np.abs(ds.nav_lon_grid_T - east).argmin("x_grid_T")).values
+    ind_n = max(np.abs(ds.nav_lat_grid_T - north).argmin("y_grid_T")).values
+    ind_s = min(np.abs(ds.nav_lat_grid_T - south).argmin("y_grid_T")).values
+    
+    print ('n',ind_n)
+    print ('s',ind_s)
+    print ('e',ind_e)
+    print ('w',ind_w)
    
 
-def _get_montly_means():
+def _get_montly_mean():
     """
-    get monthly means of daily files
+    get monthly means of daily model files
     """
 
-    print ("n")
-    years = np.arange(2004,2006,1)
-    months = np.arange(1,13,1)
-    start_date = "2004-01"
-    end_date = "2006-01"
-    dates = np.arange(start_date, end_date, dtype='datetime64[M]')
-    t_series = []
-    u_series = []
-    v_series = []
-    for date in dates:
-        print (str(date))
-        try:
-            date_str = str(date).replace("-","")
-            file_t=cfg.dn_dat + date_str + "01T0000Z_daily_grid_T.nc"
-            file_u=cfg.dn_dat + date_str + "01T0000Z_daily_grid_U.nc"
-            file_v=cfg.dn_dat + date_str + "01T0000Z_daily_grid_V.nc"
-            chunks={"time_counter":1}
-            t = xr.open_dataset(file_t, chunks=chunk).mean("time_counter")
-            u = xr.open_dataset(file_u, chunks=chunk).mean("time_counter")
-            v = xr.open_dataset(file_v, chunks=chunk).mean("time_counter")
+    def mean(start_date, end_date, vec="T"):
 
-            t = t.expand_dims(time_counter=[date])
-            u = u.expand_dims(time_counter=[date])
-            v = v.expand_dims(time_counter=[date])
+        if vec == "T":
+            grid_var = f"_grid_{vec}"
+        else:
+            grid_var = ""
+        dates = np.arange(start_date, end_date, dtype='datetime64[M]')
+        ds_series = []
+        for date in dates:
+            try:
+                date_str = str(date).replace("-","")
+                fn=cfg.dn_dat + date_str + f"01T0000Z_daily_grid_{vec}.nc"
+                chunks="auto"
+                ds = xr.open_dataset(fn, chunks=chunks, decode_cf=True,
+                                    decode_times=False)#.mean("time_counter")
+                #ds = ds.drop("deptht_bounds")
 
-            t_series.append(t)
-            u_series.append(u)
-            v_series.append(v)
-        except Exception as e:
-            print ("error: ", e)
+                #find_lat_lon_indicies(ds)
 
-    t_full = xr.concat(t_series, dim="time_counter")
-    u_full = xr.concat(u_series, dim="time_counter")
-    v_full = xr.concat(v_series, dim="time_counter")
+                #dt = np.datetime64(date, "ns")
+                #ds = ds.expand_dims(time_counter=[dt])
 
-    # save
-    with ProgressBar():
-        t_full.to_netcdf(cfg.dn_dat + "monthly_mean_grid_T.nc")
-        u_full.to_netcdf(cfg.dn_dat + "monthly_mean_grid_U.nc")
-        v_full.to_netcdf(cfg.dn_dat + "monthly_mean_grid_V.nc")
+                n = 1064
+                s = 837
+                e = 620
+                w = 197
 
-_get_montly_means()
+                
+                ds = ds.isel({f"x{grid_var}":slice(w,e),
+                              f"y{grid_var}":slice(s,n)})
+                # save
+                #with ProgressBar():
+                #    fn = f"{date_str}_Ellet_region_grid_{vec}.nc"
+                #    save_path = cfg.dn_out + "transport/Ellet_cutout/" + fn
+                #    ds.to_netcdf(save_path)
+
+
+                ds_series.append(ds)
+
+            except Exception as e:
+                print ("error: ", e)
+
+        full_series = xr.concat(ds_series, dim="time_counter")
+        #full_series.time_counter.encoding["units"] = "seconds since 1900-01-01"
+        #full_series.time_counter.encoding["dtype"] = "float64"
+        #full_series.time_counter.attrs["dtype"] = "datetime64[ns]"
+
+        # save
+        with ProgressBar():
+            date_range = (start_date + "_" + end_date).replace("-","")
+            fn = f"{date_range}_Ellet_region_grid_{vec}.nc"
+            save_path = cfg.dn_out + "transport/Ellet_cutout/" + fn
+            full_series.to_netcdf(save_path)
+
+
+    start_date = "2013-01"
+    end_date = "2014-01"
+
+    mean(start_date, end_date, vec="T")
+
+#_get_montly_mean()
 
 def _get_flux():
     """
     use straitflux to get transport
     """
 
-    help(master.transports)
+    #help(master.transports)
     lon, lat = _get_ellet_line_positions()
     print (lon.data)
     model='CO9'
@@ -89,14 +130,15 @@ def _get_flux():
 
     #file_zv="GEG_SF12.nc"
 
-    years = np.arange(2004,2014,1)
+    years = np.arange(2004,2005,1)
     for i in years:
         time_start=str(i)+'-01'
         time_end=str(i)+'-12'
         print(time_start,time_end)
-        file_t=cfg.dn_dat + str(i) + "*01T0000Z_daily_grid_T.nc"
-        file_u=cfg.dn_dat + str(i) + "*01T0000Z_daily_grid_U.nc"
-        file_v=cfg.dn_dat + str(i) + "*01T0000Z_daily_grid_V.nc"
+        path = cfg.dn_out + "transport/Ellet_cutout/"
+        file_t= path + str(i) + "*Ellet_region_grid_T.nc"
+        file_u= path + str(i) + "*Ellet_region_grid_U.nc"
+        file_v= path + str(i) + "*Ellet_region_grid_V.nc"
         transport = master.transports(product,
                                   strait,
                                   model,
@@ -123,7 +165,7 @@ def _get_flux():
         print ("here")
         print (sdkjfh)
         print ("here")
-#_get_flux()
+_get_flux()
 
 def plot_elet_obs_summary():
     """
