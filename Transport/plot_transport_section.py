@@ -1,4 +1,4 @@
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from StraitFlux import masterscript_line as master
 import xarray as xr
 from PythonEnvCfg.config import config
@@ -106,10 +106,10 @@ def _get_montly_mean():
             full_series.to_netcdf(save_path)
 
 
-    start_date = "2013-01"
-    end_date = "2014-01"
+    start_date = "2005-01"
+    end_date = "2006-01"
 
-    mean(start_date, end_date, vec="T")
+    mean(start_date, end_date, vec="U")
 
 #_get_montly_mean()
 
@@ -130,7 +130,7 @@ def _get_flux():
 
     #file_zv="GEG_SF12.nc"
 
-    years = np.arange(2004,2005,1)
+    years = np.arange(2006,2009,1)
     for i in years:
         time_start=str(i)+'-01'
         time_end=str(i)+'-12'
@@ -158,14 +158,45 @@ def _get_flux():
                                   lat_p=lat,
                                   Arakawa="Arakawa-C",
                                   saving=False)
-        transport = transport.resample(time="1M").mean()
-        print ("")
-        print ("here")
-        print (transport)
-        print ("here")
-        print (sdkjfh)
-        print ("here")
-_get_flux()
+
+        # get transport statistics
+        transport = transport.CO9
+        mean = transport.resample(time="1MS").mean()
+        mean.name = "mean"
+        quant = transport.resample(time="1MS").quantile([0.025,0.5,0.975])
+        quant.name = "quant"
+        std = transport.resample(time="1MS").std()
+        std.name = "std"
+
+        # merge into ds
+        transport_stats = xr.merge([mean,quant,std])
+
+        # save
+        with ProgressBar():
+            path = cfg.dn_out + "transport/" + str(i) + \
+                    "_Ellet_transport_stats.nc"
+            transport_stats.to_netcdf(path)
+#_get_flux()
+
+def plot_ellet_model_transport():
+    """
+    plot time series of ellet transport
+    """
+
+    # initialise plots
+    fig, ax = plt.subplots(1)
+
+    # access data
+    print (cfg.dn_out + "transport/ModelTransportStats/*")
+    mod = xr.open_mfdataset(cfg.dn_out + "transport/ModelTransportStats/*")
+
+    mod = mod.resample(time="1MS").asfreq()/1e6
+    ax.fill_between(mod.time, mod.quant.sel(quantile=0.025),
+                              mod.quant.sel(quantile=0.975))
+    ax.plot(mod.time, mod["mean"], c='red')
+    plt.show()
+
+plot_ellet_model_transport()
 
 def plot_elet_obs_summary():
     """
