@@ -7,6 +7,6 @@
 source config.sh
 conda activate $CONDA_ENV 
 
-echo "time python mean_season.py $1 $2"  # $1 <-- MOD, $2 <-- season
+echo "time -v python extract_season.py $1 $2"  # $1 <-- MOD, $2 <-- season
 # NB was ipython
-time python mean_season.py $1 $2 > LOGS/mean_season_$1_$2.log
+time python -v extract_season.py $1 $2 > LOGS/extract_season_$1_$2.log
