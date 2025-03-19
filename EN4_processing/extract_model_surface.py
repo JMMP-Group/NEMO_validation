@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python
 
-from NEMO_validation._utils import landmask
+from _utils import landmask
 import coast
 import xarray as xr
 import numpy as np
@@ -62,7 +62,7 @@ class extract_surface(object):
 
         # save
         extracted = extracted.assign_attrs(dict(case=config.case)) 
-        self.fend = "profiles/gridded_model_surface_data_%d%02d.nc"%(self.year,
+        self.fend = "gridded_model_surface_data_%d%02d.nc"%(self.year,
                                                                      self.month)
         extracted.to_netcdf(config.dn_out + self.fend)
 

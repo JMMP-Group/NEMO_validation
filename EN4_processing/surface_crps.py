@@ -12,7 +12,7 @@
 # To run: e.g.
 # python surface_crps.py 2004 1
 
-from config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python
@@ -101,9 +101,7 @@ surface_data = xr.load_dataset(config.dn_out+"surface_data_{0}.nc".format(date))
 # temp
 
 # open gridded model data + LOAD
-mod_path = "gridded_model_surface_data_%d%02d.nc"%(start_year, month)
-print (config.dn_out + mod_path)
-gridded_mod_surf = xr.load_dataset(config.dn_out + mod_path)
+gridded_mod_surf = xr.load_dataset(config.dn_out+"gridded_model_surface_data_{0}.nc".format(date))
 
 print('CRPS analysis')
 print(f"""\n surface_data:
