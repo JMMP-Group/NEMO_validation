@@ -25,18 +25,16 @@ def _preprocess(ds_month):
     return ds_month
 
 args = sys.argv
-season = str(args[1])  # season: 'DJF', 'MAM', 'JJA', SON'
-
+season = str(args[2])  # season: 'DJF', 'MAM', 'JJA', SON'
 # Merge over all available years: "????" are 4-digit year labels
 # interpolated profiles
 ds_index = xr.open_mfdataset(config.dn_out + 
                              "profiles/interpolated_profiles_*.nc",
                              combine='nested', concat_dim="id_dim",
                              parallel=True, preprocess=_preprocess)
-print (ds_index)
+print ("ds_index",ds_index)
 ds_index = extract_season(ds_index, season)
-print (ds_index)
-print (kfjs)
+print ("ds_index",ds_index)
 
 # profile bias
 ds_diff = xr.open_mfdataset(config.dn_out +

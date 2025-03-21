@@ -29,10 +29,22 @@ base_dir = config.dn_out
 if(0):
     # Hack to read files common to specified (P0.0) directory
     base_dir = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/P0.0/profiles/"
-file_names = [f for f in os.listdir(base_dir) if f.startswith('surface_crps_data_')]
+filenames = [f for f in os.listdir(base_dir) if f.startswith('surface_crps_data_')]
 
-ds_index = xr.open_mfdataset([config.dn_out + f for f in file_names],
-                             combine='nested', concat_dim="id_dim", parallel=True)
+#ds_index = xr.open_mfdataset([config.dn_out + f for f in file_names],
+                             #combine='nested', concat_dim="id_dim", parallel=True)
+
+#Issues with times with incosistent resolution having issues with encoding e.g. 2013-10-16T12:00:00 and 2013-06-20. mfdataset cant handle this but manual looping and concating combines the time coordinates in a way that they have a consistent resolution.
+
+i=0
+for file in filenames:
+    if i==0:
+        ds_index = xr.open_dataset(config.dn_out+file, decode_timedelta = True)
+        i+=1
+    else:
+        ds_temp = xr.open_dataset(config.dn_out+file, decode_timedelta = True)
+        ds_index = xr.concat([ds_index , ds_temp],dim="id_dim")
+
 
 with ProgressBar():
   ds_index.to_netcdf(config.dn_out+"%03s_CRPS_MERGED.nc"%(season))

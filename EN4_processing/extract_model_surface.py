@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python
 
-from NEMO_validation._utils import landmask
+from _utils import landmask
 import coast
 import xarray as xr
 import numpy as np

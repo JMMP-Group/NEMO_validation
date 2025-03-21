@@ -20,7 +20,7 @@
 #
 # last field "debug" restricts the number profiles to make manageable for debugging
 
-from PythonEnv.config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python
