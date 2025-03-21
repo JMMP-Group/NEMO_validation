@@ -62,7 +62,7 @@ class extract_surface(object):
 
         # save
         extracted = extracted.assign_attrs(dict(case=config.case)) 
-        self.fend = "gridded_model_surface_data_%d%02d.nc"%(self.year,
+        self.fend = "profiles/gridded_model_surface_data_%d%02d.nc"%(self.year,
                                                                      self.month)
         extracted.to_netcdf(config.dn_out + self.fend)
 
