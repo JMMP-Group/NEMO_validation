@@ -11,4 +11,5 @@ dependencies:
   - bs4
   - scipy=1.12.0
   - cartopy
+  - xesmf
 prefix: /home/users/ryapat30/.conda/envs/nemo_validation

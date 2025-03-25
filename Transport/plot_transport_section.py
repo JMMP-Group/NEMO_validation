@@ -1,9 +1,13 @@
 import matplotlib.pyplot as plt
+import numpy as np
+print (np.__version__)
 from StraitFlux import masterscript_line as master
+from StraitFlux import masterscript_cross as master_cross
+import StraitFlux
+print (StraitFlux.__file__)
 import xarray as xr
 from PythonEnvCfg.config import config
 cfg = config() # initialise variables in python
-import numpy as np
 from dask.diagnostics import ProgressBar
 
 
@@ -106,10 +110,10 @@ def _get_montly_mean():
             full_series.to_netcdf(save_path)
 
 
-    start_date = "2005-01"
-    end_date = "2006-01"
+    start_date = "2012-01"
+    end_date = "2013-01"
 
-    mean(start_date, end_date, vec="U")
+    mean(start_date, end_date, vec="T")
 
 #_get_montly_mean()
 
@@ -130,7 +134,7 @@ def _get_flux():
 
     #file_zv="GEG_SF12.nc"
 
-    years = np.arange(2006,2009,1)
+    years = np.arange(2004,2005,1)
     for i in years:
         time_start=str(i)+'-01'
         time_end=str(i)+'-12'
@@ -163,7 +167,7 @@ def _get_flux():
         transport = transport.CO9
         mean = transport.resample(time="1MS").mean()
         mean.name = "mean"
-        quant = transport.resample(time="1MS").quantile([0.025,0.5,0.975])
+        quant = transport.resample(time="1MS").quantile([0.25,0.5,0.75])
         quant.name = "quant"
         std = transport.resample(time="1MS").std()
         std.name = "std"
@@ -178,23 +182,135 @@ def _get_flux():
             transport_stats.to_netcdf(path)
 #_get_flux()
 
+def _get_cross_section():
+
+    lon, lat = _get_ellet_line_positions()
+    print (lon)
+    model='CO9'
+    product = 'volume'
+    strait='Ellet' 
+
+    years = np.arange(2013,2014,1)
+    for i in years:
+        time_start=str(i)+'-01'
+        time_end=str(i)+'-12'
+        print(time_start,time_end)
+        path = cfg.dn_out + "transport/Ellet_cutout/"
+        file_t= path + str(i) + "*Ellet_region_grid_T.nc"
+        file_u= path + str(i) + "*Ellet_region_grid_U.nc"
+        file_v= path + str(i) + "*Ellet_region_grid_V.nc"
+
+        uv=master_cross.vel_projection(strait,
+                                  model,
+                                  time_start,
+                                  time_end,
+                                  file_u,
+                                  file_v,
+                                  file_t,
+                                  file_z=file_t,
+                                  file_zu=file_u,
+                                  file_zv=file_v,
+                                  set_latlon=True,
+                                  lon_p=lon,
+                                  lat_p=lat,
+                                  Arakawa="Arakawa-C",
+                                  saving=False)
+
+
+        uv_mean = uv.mean("time")
+
+        uv_mean = uv_mean.expand_dims(time=[i])
+        print (uv_mean)
+
+        # save
+        with ProgressBar():
+            path = cfg.dn_out + "transport/ModelTransportStats/" + str(i) + \
+                    "_Ellet_velocity_cross_section_stats.nc"
+            uv_mean.to_netcdf(path, encoding={"time": {"dtype": "i4"}})
+
+#_get_cross_section()
+
 def plot_ellet_model_transport():
     """
     plot time series of ellet transport
     """
 
     # initialise plots
-    fig, ax = plt.subplots(1)
+    fig, ax1 = plt.subplots(1)
+
+    ax2 = ax1.twinx()
 
     # access data
     print (cfg.dn_out + "transport/ModelTransportStats/*")
-    mod = xr.open_mfdataset(cfg.dn_out + "transport/ModelTransportStats/*")
+    mod = xr.open_mfdataset(cfg.dn_out + "transport/ModelTransportStats/*transport*")
+
+    mod_start = mod.time.min()
+    mod_end = mod.time.max()
+    NAO = get_climate_variables()
+    NAO = NAO.sel(time=slice("2006-02-01",mod_end))
+    mod = mod.sel(time=slice("2006-02-01",mod_end))
+    NAO = NAO.sel(time=slice(mod_start,mod_end))
 
     mod = mod.resample(time="1MS").asfreq()/1e6
-    ax.fill_between(mod.time, mod.quant.sel(quantile=0.025),
-                              mod.quant.sel(quantile=0.975))
-    ax.plot(mod.time, mod["mean"], c='red')
+
+    #NAO = NAO.rolling(time=3).mean()
+    #mod = mod.rolling(time=3).mean()
+    mod = mod/abs(mod).max("time")
+    NAO = NAO/abs(NAO).max("time")
+    print (NAO.max())
+    print (mod.max())
+    print (NAO.min())
+    print (mod.min("time"))
+    cov = np.ma.correlate(np.ma.masked_invalid(NAO), np.ma.masked_invalid(mod["mean"]), mode="same")
+    print (NAO)
+    print (mod["mean"])
+    print (cov)
+    print (skjdfh)
+    ax1.fill_between(mod.time, mod.quant.sel(quantile=0.25),
+                              mod.quant.sel(quantile=0.75))
+    ax1.plot(mod.time, mod["mean"], c='red')
+
+    ax2.plot(NAO.time, NAO, c="orange")
+
     plt.show()
+
+def plot_ellet_model_transport_cross_section():
+    """
+    plot cross section of velocities through Rockall Trough
+    """
+
+    
+    path = cfg.dn_out + "transport/ModelTransportStats/*cross*"
+    mod = xr.open_mfdataset(path, preprocess=expand_time)
+
+    # initialise plots
+    fig, ax = plt.subplots(1)
+
+    print (mod)
+
+
+#plot_ellet_model_transport_cross_section()
+
+def get_climate_variables():
+    """
+    get NAO
+    """
+
+    NAO = np.loadtxt(cfg.dn_out + "transport/NAO/nao_station_monthly.txt",
+                     skiprows=2)
+    NAO_data = NAO[:,1:].flatten()
+    NAO_years = NAO[:,0].astype("int")
+    NAO_time = np.arange(str(NAO_years[0]) + "-01",
+                         str(NAO_years[-1]+1) + "-01",
+                             dtype="datetime64[M]")
+    print (NAO_time)
+    
+
+    NAO_xr = xr.DataArray(NAO_data, dims=("time"),
+                          coords={"time": NAO_time})
+
+    return NAO_xr
+
 
 plot_ellet_model_transport()
 
