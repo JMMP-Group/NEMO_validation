@@ -51,7 +51,9 @@ class Ellet(object):
         # reduce to decade
         self.ds = self.ds.sel(Year=slice("2003","2014"))
         self.ds = self.ds.swap_dims({"Depth":"z_dim"})
-        self.ds["Depth"], _ = xr.broadcast(self.ds.Depth, self.ds.CruiseID)
+        #self.ds["Depth"], _ = xr.broadcast(self.ds.Depth, self.ds.CruiseID)
+        #print (self.ds)
+        #print (ksdj)
 
         # reduce to rockall trough - two step to maintain dims
         #self.ds = self.ds.where((self.ds.LonSta < -9) & (self.ds.LonSta > -14),
@@ -61,8 +63,41 @@ class Ellet(object):
                                     (self.ds.LonSta > -14),
                                     drop=True)
         self.ds = self.ds.sel(Refdist=ind)
+        self.get_dz()
+        self.get_dx()
 
         #self.ds = self.ds.stack(id_dim=["Year","Refdist"])
+
+    def get_dz(self):
+        """
+        get integral distances
+        """
+
+        dz = self.ds.Depth.data[1:] - self.ds.Depth.data[:-1]
+        dz_0 = [self.ds.Depth.data[0] + dz[0]]
+        dz_end = [dz[-1]*2]
+        dz = dz[1:]/2 + dz[:-1]/2
+        self.ds['dz'] = xr.DataArray(np.concatenate((dz_0, dz, dz_end)),
+                                     dims=("z_dim"))
+    def get_dx(self):
+        """
+        get integral distances
+        """
+
+        dx = self.ds.Refdist.data[1:] - self.ds.Refdist.data[:-1]
+        dx_0 = [dx[0]]
+        dx_end = [dx[-1]]
+        dx = dx[1:]/2 + dx[:-1]/2
+        self.ds['dx'] = xr.DataArray(np.concatenate((dx_0, dx, dx_end)),
+                                     dims=("Refdist"))
+    def get_volume_transport(self):
+        """
+        get volume transport
+        """
+
+        ds = self.Ellet_profiles.dataset
+        dims = ["id_dim","z_dim"]
+        ds["volume_transport"] = (ds.ladcp_velocity * ds.dx * ds.dz).sum(dims)
 
     def get_dates(self):
 
@@ -90,10 +125,7 @@ class Ellet(object):
     def save_processed_ellet(self):
         """ save processed ellet line data """
 
-        self.Ellet_profiles.dataset = self.Ellet_profiles.dataset.reset_index("id_dim")
-        self.Ellet_profiles.dataset.Sigma0.plot()
-        plt.show()
-        print (self.Ellet_profiles.dataset)
+        #self.Ellet_profiles.dataset = self.Ellet_profiles.dataset.reset_index("id_dim")
         path = cfg.dn_out + "transport/obs_for_ellet_line.nc"
         self.Ellet_profiles.dataset.to_netcdf(path)
 
@@ -246,8 +278,9 @@ def process_ellet_obs():
     ell = Ellet()
     ell.preprocess_annual_cruise_data()
     ell.coast_formatting()
+    ell.get_volume_transport()
     ell.save_processed_ellet()
-#process_ellet_obs()
+process_ellet_obs()
 
 def get_model_on_ellet_locs():
     ell = Ellet()
@@ -257,5 +290,5 @@ def get_model_on_ellet_locs():
     m = ModelVels(ell.get_dates())
     m.interpolate_vels_to_obs(ell.Ellet_profiles)
 
-get_model_on_ellet_locs()
+#get_model_on_ellet_locs()
 

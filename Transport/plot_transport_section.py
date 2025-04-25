@@ -9,6 +9,7 @@ import xarray as xr
 from PythonEnvCfg.config import config
 cfg = config() # initialise variables in python
 from dask.diagnostics import ProgressBar
+import datetime
 
 
 def _get_ellet_line_positions():
@@ -190,7 +191,8 @@ def _get_cross_section():
     product = 'volume'
     strait='Ellet' 
 
-    years = np.arange(2013,2014,1)
+    out_path = cfg.dn_out + "transport/CrossSection/"
+    years = np.arange(2004,2005,1)
     for i in years:
         time_start=str(i)+'-01'
         time_end=str(i)+'-12'
@@ -214,23 +216,19 @@ def _get_cross_section():
                                   lon_p=lon,
                                   lat_p=lat,
                                   Arakawa="Arakawa-C",
-                                  saving=False)
+                                  saving=True,
+                                  path_save=out_path)
 
-
-        uv_mean = uv.mean("time")
-
-        uv_mean = uv_mean.expand_dims(time=[i])
-        print (uv_mean)
 
         # save
-        with ProgressBar():
-            path = cfg.dn_out + "transport/ModelTransportStats/" + str(i) + \
-                    "_Ellet_velocity_cross_section_stats.nc"
-            uv_mean.to_netcdf(path, encoding={"time": {"dtype": "i4"}})
+        #with ProgressBar():
+        #    path = cfg.dn_out + "transport/CrossSection/" + str(i) + \
+        #            "_Ellet_velocity_cross_section.nc"
+        #    uv.to_netcdf(path)#, encoding={"time": {"dtype": "i4"}})
 
-#_get_cross_section()
+_get_cross_section()
 
-def plot_ellet_model_transport():
+def plot_ellet_transport():
     """
     plot time series of ellet transport
     """
@@ -253,10 +251,10 @@ def plot_ellet_model_transport():
 
     mod = mod.resample(time="1MS").asfreq()/1e6
 
-    #NAO = NAO.rolling(time=3).mean()
-    #mod = mod.rolling(time=3).mean()
-    mod = mod/abs(mod).max("time")
-    NAO = NAO/abs(NAO).max("time")
+    NAO = NAO.rolling(time=12).mean()
+    mod = mod.rolling(time=12).mean()
+    #mod = mod/abs(mod).max("time")
+    #NAO = NAO/abs(NAO).max("time")
     print (NAO.max())
     print (mod.max())
     print (NAO.min())
@@ -265,12 +263,24 @@ def plot_ellet_model_transport():
     print (NAO)
     print (mod["mean"])
     print (cov)
-    print (skjdfh)
+    #print (skjdfh)
     ax1.fill_between(mod.time, mod.quant.sel(quantile=0.25),
                               mod.quant.sel(quantile=0.75))
     ax1.plot(mod.time, mod["mean"], c='red')
 
     ax2.plot(NAO.time, NAO, c="orange")
+
+    # observations
+    path = cfg.dn_out + "transport/obs_for_ellet_line.nc"
+    obs = xr.open_dataset(path)
+    date = []
+    for year, year_ds in obs.groupby("time"):
+        print (year)
+        print (year_ds)
+        date.append(datetime.datetime(year, int(year_ds.Month), 1))
+    vol = obs.volume_transport / 1e4
+    print (date)
+    plt.scatter(date, vol, c='g')
 
     plt.show()
 
@@ -278,15 +288,20 @@ def plot_ellet_model_transport_cross_section():
     """
     plot cross section of velocities through Rockall Trough
     """
+    def preprocess(ds):
+        ds["x"] = ds.x.round(5)
+        return ds
 
-    
-    path = cfg.dn_out + "transport/ModelTransportStats/*cross*"
-    mod = xr.open_mfdataset(path, preprocess=expand_time)
+    path = cfg.dn_out + "transport/CrossSection/*cross*"
+    mod = xr.open_mfdataset(path, preprocess=preprocess)
+
+    print (mod)
 
     # initialise plots
     fig, ax = plt.subplots(1)
 
-    print (mod)
+    print (sjdk)
+
 
 
 #plot_ellet_model_transport_cross_section()
@@ -312,7 +327,7 @@ def get_climate_variables():
     return NAO_xr
 
 
-plot_ellet_model_transport()
+#plot_ellet_transport()
 
 def plot_elet_obs_summary():
     """

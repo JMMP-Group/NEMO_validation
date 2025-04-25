@@ -18,6 +18,8 @@
 			"Sigma0": "Sigma0",
 			"Vladcp": "ladcp_velocity",
 			"Vabs": "absolute_velocity",
+			"dx":"dx",
+			"dz":"dz",
 			"Month":"Month"
 		},
 		"coord_vars": ["time","latitude","longitude"],
