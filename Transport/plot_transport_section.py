@@ -226,9 +226,9 @@ def _get_cross_section():
         #            "_Ellet_velocity_cross_section.nc"
         #    uv.to_netcdf(path)#, encoding={"time": {"dtype": "i4"}})
 
-_get_cross_section()
+#_get_cross_section()
 
-def plot_ellet_transport():
+def plot_ellet_transport(rolling=None):
     """
     plot time series of ellet transport
     """
@@ -251,8 +251,9 @@ def plot_ellet_transport():
 
     mod = mod.resample(time="1MS").asfreq()/1e6
 
-    NAO = NAO.rolling(time=12).mean()
-    mod = mod.rolling(time=12).mean()
+    if rolling:
+        NAO = NAO.rolling(time=rolling).mean()
+        mod = mod.rolling(time=rolling).mean()
     #mod = mod/abs(mod).max("time")
     #NAO = NAO/abs(NAO).max("time")
     print (NAO.max())
@@ -268,7 +269,7 @@ def plot_ellet_transport():
                               mod.quant.sel(quantile=0.75))
     ax1.plot(mod.time, mod["mean"], c='red')
 
-    ax2.plot(NAO.time, NAO, c="orange")
+    #ax2.plot(NAO.time, NAO, c="orange")
 
     # observations
     path = cfg.dn_out + "transport/obs_for_ellet_line.nc"
@@ -282,7 +283,7 @@ def plot_ellet_transport():
     print (date)
     plt.scatter(date, vol, c='g')
 
-    plt.show()
+    plt.savefig("ellet_transport_timeseries.png")
 
 def plot_ellet_model_transport_cross_section():
     """
@@ -292,19 +293,44 @@ def plot_ellet_model_transport_cross_section():
         ds["x"] = ds.x.round(5)
         return ds
 
-    path = cfg.dn_out + "transport/CrossSection/*cross*"
-    mod = xr.open_mfdataset(path, preprocess=preprocess)
-
-    print (mod)
+    path = cfg.dn_out + "transport/CrossSection/"
+    mod = xr.open_mfdataset(path + "*cross*", preprocess=preprocess)
+    lons = xr.open_mfdataset(path + "T_proj_points_CO9Ellet.nc").lon
+    lats = xr.open_mfdataset(path + "T_proj_points_CO9Ellet.nc").lat
+            
 
     # initialise plots
-    fig, ax = plt.subplots(1)
+    fig, axs = plt.subplots(2)
 
-    print (sjdk)
+    # need to plot mod and obs on same frame but for now plot separate 
+    path = cfg.dn_out + "transport/obs_for_ellet_line.nc"
+    obs = xr.open_dataset(path)
+
+    vmin = -0.5 
+    vmax = 0.5
+
+    obs = obs.where(obs.time==2006, drop=True).squeeze()
+    month = int(obs.Month.data)
+
+    mod = mod.sel(time="2006-10").mean("time")
+    mod = mod.sel(depth=slice(0,2500))
+    print (mod)
+    
+    axs[0].pcolor(obs.Refdist, -obs.depth, obs.ladcp_velocity.T,
+                        vmin=vmin, vmax=vmax, shading="auto", cmap=plt.cm.RdBu)
+
+
+    #axs[1].pcolor(mod.x/1000, -mod.depth, mod.uv,
+    #                    vmin=vmin, vmax=vmax, cmap=plt.cm.RdBu)
+    plt.savefig("ellet_cross_200610.png")
+    plt.show()
+    
 
 
 
-#plot_ellet_model_transport_cross_section()
+
+
+plot_ellet_model_transport_cross_section()
 
 def get_climate_variables():
     """
