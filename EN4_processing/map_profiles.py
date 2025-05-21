@@ -14,9 +14,9 @@
 # all that needs to change between processes).
 #
 # To run: e.g.
-# python GEN_MOD_Dave_example_profile_validation.py P0.0 2004 2005 
+# python map_profiles.py P0.0 2004 2005 
 # or
-# python GEN_MOD_Dave_example_profile_validation.py P0.0 2004 2005 debug
+# python map_profiles.py P0.0 2004 2005 debug
 #
 # last field "debug" restricts the number profiles to make manageable for debugging
 
@@ -193,7 +193,7 @@ fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, startyear, month)  # NB config.dn_dat c
 #fn_dat = "%scoast_example_nemo_subset_data.nc"%(config.dn_dat)  # NB config.dn_dat contains $MOD/exper
 print(fn_dat)
 
-dn_out = f"{config.dn_out}"
+dn_out = f"{config.dn_out}/profiles"
 
 # Make them in case they are not there.
 print(os.popen(f"mkdir -p {dn_out}").read())

@@ -1,5 +1,5 @@
 ### work in progress ###
-### replication of  EN4_processing/GEN_MOD_Dave_example_profile_validation.py
+### replication of  EN4_processing/map_profiles.py
 ### purpose > make gridded version of en4 data?
 
 from PythonEnvCfg.config import config, bounds
