@@ -8,8 +8,8 @@
 #SBATCH --ntasks=1
 #SBATCH --time=08:00:00
 
-module load jaspy
-#conda activate nemo_validation
+#module load jaspy
+conda activate nemo_validation
 
 python -u plot_transport_section.py 
 

@@ -40,11 +40,11 @@ export DN_DOM="/gws/nopw/j04/jmmp/jmmp_collab/AMM15/DOMAIN_CFG/"
 #export DN_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/p0/daily/"  # Dave 25h data
 if [[ $MOD = "co7" ]]; then
  export DN_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/co7/daily/"  # co7 24h ave
-export GRID="CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
+export GRID="/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
 else
  export DN_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/daily/"  # MOD 24h ave
  if [[ $MOD = "P2.0" ]]; then
-   export GRID="GEG_SF12.nc"
+   export GRID="/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc"
  else
    echo "WARNING: grid not set find matching grid and add to lotus_config.sh"
    # options?: "domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
@@ -55,11 +55,11 @@ fi
 # temporary fix for adding comparison model
 if [[ $COMP_MOD = "co7" ]]; then
  export COMP_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/co7/daily/"  # co7 24h ave
-export COMP_GRID="CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
+export COMP_GRID="/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
 else
  export COMP_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/daily/"  # MOD 24h ave
  if [[ $COM_MOD = "P2.0" ]]; then
-   export COMP_GRID="GEG_SF12.nc"
+   export COMP_GRID="/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc"
  else
    echo "WARNING: grid not set find matching grid and add to lotus_config.sh"
    # options?: "domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
