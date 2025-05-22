@@ -20,7 +20,7 @@
 #
 # last field "debug" restricts the number profiles to make manageable for debugging
 
-from PythonEnv.config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python
@@ -74,7 +74,7 @@ def reduce_resolution(profile_mod, profile_obs):
     # Find the unique triples of nearest model x,y,t indices (within the Profile obj). And the indices where they are found (in the parent Profile object)
     unique_mod_indices, unique_mod_indices_id = np.unique(np.array([[int(ds_mod.nearest_index_x[i].values),
         int(ds_mod.nearest_index_y[i].values),
-        int(ds_mod.nearest_index_t[i].values)] for i in range(ds_mod.dims['id_dim'])]), axis=0, return_index=True) # find unique rows
+        int(ds_mod.nearest_index_t[i].values)] for i in range(ds_mod.sizes['id_dim'])]), axis=0, return_index=True) # find unique rows
 
 
     # Get a list of variables in this dataset
@@ -83,7 +83,7 @@ def reduce_resolution(profile_mod, profile_obs):
 
     # Get output dimensions and create 2D id, depth arrays
     n_id = len(unique_mod_indices)
-    n_z = ds.dims['z_dim']
+    n_z = ds.sizes['z_dim']
 
     # Create output dataset and fill in new coordinates
     depth_arr = ds_mod.depth.isel(id_dim=unique_mod_indices_id).values
@@ -312,6 +312,18 @@ print("THIS FAR C.1 %s %s ",ALLTIME,DT)
 #profile.dataset.load()
 print('Model interpolated to obs locations')
 
+def format_time_delta(ds):
+    """ format time to conform with coast (expects ns) """
+    for vv in list(ds.keys()):
+        if ds[vv].dtype == "timedelta64[s]":
+            ds[vv] = ds[vv].astype("timedelta64[ns]")
+
+    return ds
+
+# format time to comply with COAsT
+profile.dataset = format_time_delta(profile.dataset)
+model_profiles.dataset = format_time_delta(model_profiles.dataset)
+
 ## Perform analysis
 ###################
 analysis = coast.ProfileAnalysis()
@@ -320,7 +332,8 @@ BEFORE = NOW
 NOW = time.perf_counter()
 ALLTIME = NOW-starttime
 DT = NOW-BEFORE
-print("THIS FAR C.2 %s %s ",ALLTIME,DT)
+
+print("THIS FAR C.2 {0} {1}".format(ALLTIME,DT))
 
 # Interpolate model profiles onto observation depths
 model_profiles_interp = analysis.interpolate_vertical(model_profiles, profile, interp_method="linear")

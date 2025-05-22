@@ -19,6 +19,8 @@ class config:
 
         # read SHELL variables. Set in config.sh
         #self.machine = environ.get('MACHINE')
+        self.y000 = self.get_shell_var('STARTYEAR', True)
+        self.yend = self.get_shell_var('ENDYEAR', True)
         self.region      = self.get_shell_var('REGION', True)
         self.machine     = self.get_shell_var('MACHINE', True)
         self.coast_repo  = self.get_shell_var('COAST_REPO', True)
