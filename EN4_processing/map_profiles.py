@@ -160,13 +160,10 @@ starttime =time.perf_counter()
 
 args = sys.argv
 
-exper = args[1]
-startyear=int(args[2])
-month=int(args[3])
-endyear=int(args[4])
-grid=args[5]
+startyear=int(args[1])
+month=int(args[2])
 try:
-	debug_flag = str(args[6])=="debug"
+	debug_flag = str(args[4])=="debug"
 except: debug_flag = False
 
 print('Modules loaded')
@@ -174,8 +171,7 @@ print('Modules loaded')
 # Start and end dates for the analysis. The script will cut down model
 # and EN4 data to be witin this range.
 start_date = np.datetime64(str(startyear)+"-01-01")
-end_date = np.datetime64(str(endyear)+"-01-01")
-#end_date = np.datetime64(str(startyear)+"-02-01")
+end_date = np.datetime64(str(startyear)+"-02-01")
 
 
 # Reference depths (in metres)
@@ -185,15 +181,15 @@ ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(
 run_name='%d%02d'%(startyear,month)
 
 # File paths (All)
-fn_dom = "%s%s"%(config.dn_dom, grid)
+fn_dom = "%s%s"%(config.dn_dom, config.grid_nc)
 
 
 # Say a month at a time
-fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper  ## NEEDS TO MOVE TO CONFIG
+fn_dat = "%s%s%02d*T.nc*"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper  ## NEEDS TO MOVE TO CONFIG
 #fn_dat = "%scoast_example_nemo_subset_data.nc"%(config.dn_dat)  # NB config.dn_dat contains $MOD/exper
 print(fn_dat)
 
-dn_out = f"{config.dn_out}/profiles"
+dn_out = f"{config.dn_out}/profiles/"
 
 # Make them in case they are not there.
 print(os.popen(f"mkdir -p {dn_out}").read())
@@ -235,7 +231,8 @@ print('Landmask calculated')
 # CREATE EN4 PROFILE OBJECT containing processed data. We just need to
 # create a Profile object and place the data straight into its dataset
 profile = coast.Profile(config=fn_cfg_prof)
-profile.dataset = xr.open_dataset(fn_prof, chunks={'id_dim':10000})
+profile.dataset = xr.open_dataset(fn_prof, chunks='auto')
+#profile.dataset = xr.open_dataset(fn_prof, chunks={'id_dim':10000})
 print('Profile object created')
 ## Extract time indices between start and end dates for Profile data.
 #t_ind = pd.to_datetime(profile.dataset.time.values) >= start_date
