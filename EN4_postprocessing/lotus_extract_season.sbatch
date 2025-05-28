@@ -11,4 +11,4 @@ module add jaspy
 source activate $CONDA_ENV
 
 echo "python extract_season.py $1 "  # $1 <-- season
-python extract.py $1 > LOGS/extract_season_$1.log
+python extract_season.py $1 > LOGS/extract_season_$1.log

@@ -20,7 +20,7 @@ def extract_season(ds, season):
 
 def _preprocess(ds_month):
     """ drop broadcasting of depth variable """
-    # TODO: this should be done in GEN_MOD_Dave_example_profile_vali...
+    # TODO: this should be done in map_profiles.py
     ds_month["depth"] = ds_month.depth.isel(id_dim=0)
     return ds_month
 

@@ -13,4 +13,5 @@ source activate $CONDA_ENV
 #time -v python  map_profiles.py $1 $2  $3 $4 > OUTPUTS/OUT_$1_$2_$3_$4
 #time -v python  map_profiles.py $1 $2  $3 $4  > OUTPUTS/OUT_$1_$2_$3_$4
 echo $1 $2 $3 $4 
-python  map_profiles.py $1 $2 $3 $4  > LOGS/OUT_$1_$2_$3_$4_$5.log
+ls $DN_OUT
+python  map_profiles.py $1 $2 $3 $4  > LOGS/OUT_$1_$2_$3_$4.log

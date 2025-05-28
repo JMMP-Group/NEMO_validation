@@ -76,39 +76,36 @@ Output files are stored in the directory `config.sh: DOUT_EN4` with file structu
 
 2. `config.sh` and `<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
 
-We use `iter_sub_METEST.sh`  to submit over all years and months separately. This allows for simple parallelisation 
+We use `iter_map_profiles.sh`  to submit over all years and months separately. This allows for simple parallelisation 
 as each month can be independently processed. This script sets the paths and variable names and launches a machine specific
 script to process each month.
 
 ```
-sbatch ${MACHINE,,}_ana_MOD_METEST.sh $MOD $start $month $end $GRID
+sbatch ${MACHINE,,}_map_profiles.sh $start $month 
 ```
 
 where:
 
-* $MOD is the Experiment e.g. P0.0
 * $start is the start year
 * $month is the month
-* $end is the endyear
-* $GRID contains is the domain file with grid info for that experiment
 
-`spice_ana_MOD_METEST.sh` in turn calls the machine independent python script:
+`lotus_map_profiles.sh` in turn calls the machine independent python script:
 
 ```
-python  GEN_MOD_Dave_example_profile_validation.py $1 $2 $3 $4 $5  > LOGS/OUT_$1_$2_$3_$4_$5.log
+python  map_profiles.py $1 $2 > LOGS/OUT_$1_$2.log
 ```
-using arguments: $1 $2 $3 $4 $5 corresponding to the above.
+using arguments: $1 $2 corresponding to the above.
 
-This outputs, in `DN_OUT/$REGION/`, files like: 
+This outputs, in `DN_OUT/profiles/`, files like: 
 ```
-extracted_profiles_p0_200401_2005.nc
-interpolated_profiles_p0_200401_2005.nc
-interpolated_obs_p0_200401_2005.nc
-profile_errors_p0_200401_2005.nc
-surface_data_p0_200401_2005.nc
-mid_data_p0_200401_2005.nc
-bottom_data_p0_200401_2005.nc
-mask_means_daily_p0_200401_2005.nc
+extracted_profiles_200401.nc
+interpolated_profiles_200401.nc
+interpolated_obs_200401.nc
+profile_errors_200401.nc
+surface_data_200401.nc
+mid_data_200401.nc
+bottom_data_200401.nc
+mask_means_daily_200401.nc
 
 ```
 
@@ -118,18 +115,19 @@ A short script with commandline control of the allocated walltime can see the sl
 walltime, through. For example:
 ```
 #!/bin/bash
-# comment out --time in lotus_ana_MOD_METEST.sh so it can be specified here
 echo "Bash version ${BASH_VERSION}..."
+cd ../PythonEnvCfg/
 source config.sh
+cd ../EN4_processing
 
 rm LOGS/OUT* LOGS/*.err LOGS/*.out
 
-#sbatch -J 201407 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2014 7 2015 CO7_EXACT_CFG_FILE.nc
-#sbatch -J 201010 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2010 10 2011 CO7_EXACT_CFG_FILE.nc
-#sbatch -J 201011 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2010 11 2011 CO7_EXACT_CFG_FILE.nc
-sbatch -J 201109 --time=3:00:00 lotus_ana_MOD_METEST.sh P0.0 2011 9 2012 CO7_EXACT_CFG_FILE.nc
-#sbatch -J 201110 --time=2:00:00 lotus_ana_MOD_METEST.sh P0.0 2011 10 2012 CO7_EXACT_CFG_FILE.nc
-sbatch -J 200905 --time=3:00:00 lotus_ana_MOD_METEST.sh P0.0 2009 5 2010 CO7_EXACT_CFG_FILE.nc
+#sbatch -J 201407 --time=2:00:00 lotus_ana_MOD_METEST.sh 2014 7 
+#sbatch -J 201010 --time=2:00:00 lotus_ana_MOD_METEST.sh 2010 10 
+#sbatch -J 201011 --time=2:00:00 lotus_ana_MOD_METEST.sh 2010 11 
+sbatch -J 201109 --time=3:00:00 lotus_ana_MOD_METEST.sh 2011 9
+#sbatch -J 201110 --time=2:00:00 lotus_ana_MOD_METEST.sh 2011 10 
+sbatch -J 200905 --time=3:00:00 lotus_ana_MOD_METEST.sh 2009 5
 ```
 
 ### CRPS values

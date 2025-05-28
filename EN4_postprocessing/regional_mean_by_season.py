@@ -28,6 +28,7 @@ import xarray as xr
 import numpy as np
 import datetime
 import pandas as pd
+from dask.diagnostics import ProgressBar
 
 #args = sys.argv
 
@@ -38,7 +39,7 @@ import pandas as pd
 
 def get_regional_means_by_season(season):
     # File paths (All)
-    model_path = cfg.dn_out
+    model_path = config.dn_out
     fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
     fn_cfg_nemo = config.fn_cfg_nemo
     fn_cfg_prof = config.fn_cfg_prof
@@ -51,7 +52,8 @@ def get_regional_means_by_season(season):
     differences.dataset = xr.open_dataset(fn_analysis_diff, chunks={'id_dim':10000})
     
     # collapse depth to 1d
-    differences.dataset["depth"] = differences.dataset.depth.mean("id_dim")
+    #print (differences.dataset.depth)
+    #differences.dataset["depth"] = differences.dataset.depth.mean("id_dim")
     
     # get model profiles to retrieve mask indicies
     model_profiles_interp = coast.Profile(config=fn_cfg_prof)

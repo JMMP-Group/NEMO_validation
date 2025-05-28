@@ -170,9 +170,9 @@ print('Modules loaded')
 
 # Start and end dates for the analysis. The script will cut down model
 # and EN4 data to be witin this range.
-start_date = np.datetime64(str(startyear)+"-01-01")
-end_date = np.datetime64(str(startyear)+"-02-01")
-
+start_month = np.datetime64(str(startyear)+"-" + str(month).zfill(2))
+end_date = (start_month + np.timedelta64(1, "M")).astype("datetime64[D]")
+start_date = start_month.astype("datetime64[D]")
 
 # Reference depths (in metres)
 ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50), np.arange(1000,4000,100)))
@@ -189,7 +189,7 @@ fn_dat = "%s%s%02d*T.nc*"%(config.dn_dat, startyear, month)  # NB config.dn_dat 
 #fn_dat = "%scoast_example_nemo_subset_data.nc"%(config.dn_dat)  # NB config.dn_dat contains $MOD/exper
 print(fn_dat)
 
-dn_out = f"{config.dn_out}/profiles/"
+dn_out = f"{config.dn_out}profiles/"
 
 # Make them in case they are not there.
 print(os.popen(f"mkdir -p {dn_out}").read())
@@ -446,9 +446,6 @@ bottom_errors = analysis.difference( obs_profiles_bottom, model_profiles_bottom)
 bottom_data = xr.merge((bottom_errors.dataset, model_profiles_bottom.dataset, obs_profiles_bottom.dataset),
 			  compat="override")
 
-print(surface_errors.dataset)
-print(model_profiles_surface.dataset)
-print(obs_profiles_surface.dataset)
 BEFORE = NOW
 NOW = time.perf_counter()
 ALLTIME = NOW-starttime
@@ -457,6 +454,7 @@ print("THIS FAR F %s %s ",ALLTIME,DT)
 print('Bottom and surface data estimated')
 
 # Write datasets to file
+print ("THIS is the outpath: ", dn_out)
 model_profiles.dataset.to_netcdf(dn_out+"extracted_profiles_{0}.nc".format(run_name))
 model_profiles_interp_ref.dataset.to_netcdf(dn_out + "interpolated_profiles_{0}.nc".format(run_name))
 profile_interp_ref.dataset.to_netcdf(dn_out + "interpolated_obs_{0}.nc".format(run_name))
