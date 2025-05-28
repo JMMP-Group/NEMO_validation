@@ -3,7 +3,7 @@ config = config() # initialise variables in python
 
 import xarray as xr
 
-def merge_mask_mean_seasons(path):
+def merge_mask_mean_seasons():
     """
     Merge seasonal regional errors in profiles of temperature and salinity
 
@@ -24,11 +24,8 @@ def merge_mask_mean_seasons(path):
     merged = xr.merge(seasons)
 
     # save
-    save_path = path + "profiles/season_merged_mask_means_daily.nc"
+    save_path = config.dn_out + "profiles/season_merged_mask_means_daily.nc"
     merged.to_netcdf(save_path)
 
 if __name__ == "__main__":
-    co7_path = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/co7/"
-    co9_path = config.dn_out
-    
     merge_mask_mean_seasons(co7_path)
