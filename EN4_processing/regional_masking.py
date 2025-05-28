@@ -1,17 +1,8 @@
 from PythonEnvCfg.config import config
 
 import xarray as xr
-import matplotlib.pyplot as plt
 import coast
-import numpy as np
-import cartopy.crs as ccrs
-import matplotlib.colors as mcolors
-import cartopy.feature as cfeature
-import matplotlib
 from dask.diagnostics import ProgressBar
-
-matplotlib.rcParams.update({'font.size': 8})
-plt.rcParams['figure.facecolor'] = 'black'
 
 class masking(object):
     """
