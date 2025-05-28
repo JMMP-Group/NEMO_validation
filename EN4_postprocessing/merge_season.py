@@ -15,7 +15,7 @@ def merge_mask_mean_seasons():
     for season in ["DJF", "MAM", "JJA", "SON"]:
         # open dataset 
         ds_season = xr.open_dataset(
-                             path+ "profiles/" + season + fn_append)
+                             path + "profiles/" + season + fn_append)
 
         # expand season dimension
         seasons.append(ds_season.expand_dims({"season": [season]}))
@@ -26,6 +26,6 @@ def merge_mask_mean_seasons():
     # save
     save_path = config.dn_out + "profiles/season_merged_mask_means_daily.nc"
     merged.to_netcdf(save_path)
-
+    print(f'file written to saved to {save_path}')
 if __name__ == "__main__":
-    merge_mask_mean_seasons(co7_path)
+    merge_mask_mean_seasons()

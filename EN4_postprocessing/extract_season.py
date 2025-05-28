@@ -25,8 +25,7 @@ def _preprocess(ds_month):
     return ds_month
 
 args = sys.argv
-season = str(args[1])  # season: 'DJF', 'MAM', 'JJA', SON'
-
+season = str(args[2])  # season: 'DJF', 'MAM', 'JJA', SON'
 # Merge over all available years: "????" are 4-digit year labels
 # interpolated profiles
 ds_index = xr.open_mfdataset(config.dn_out + 
