@@ -21,6 +21,21 @@ class masking(object):
         self.nemo = coast.Gridded(fn_domain=self.fn_dom_nemo,
                                   config=self.fn_cfg_nemo)
 
+    def choose_data(self, ds_option):
+        """ select profile dataset to process """
+
+        if ds_option == "profiles": # model profiles
+            self.fn_read = f"profiles/{season}_PRO_INDEX.nc"
+            self.fn_save = "profiles/profiles_by_region_and_season"
+
+
+        elif ds_option == "bias": # difference between model and obs
+            self.fn_read = f"profiles/{season}_PRO_DIFF.nc"
+            self.fn_save = "profiles/profile_bias_by_region_and_season"
+
+        else:
+            print ("Error: Option not implemented")
+
     def get_model_bathymetry(self):
         """ get nemo model bathymetry """
         
@@ -72,7 +87,7 @@ class masking(object):
         """ partition processed profiles by region """
 
         if season:
-            fn_index = self.cfg.dn_out + f"profiles/{season}_PRO_DIFF.nc"
+            fn_index = self.cfg.dn_out + fn_read
             # get model profiles on EN4 grid
             model_profile = coast.Profile(config=self.cfg.fn_cfg_prof)
             model_profile.dataset = xr.open_dataset(fn_index, chunks="auto")
@@ -123,10 +138,12 @@ class masking(object):
 
         return da_1d
 
-    def partition_by_region(self):
+    def partition_by_region(self, ds="profiles"):
         """ 
         partition profile data by region and season over two nested loops
         """
+
+        self.choose_data(ds)
 
         self.create_regional_mask()
 
@@ -141,16 +158,39 @@ class masking(object):
             model_profile_seasons.append(region_merged)
 
         # combine by season
-        model_profile_merged = xr.concat(model_profile_seasons, dim='id_dim')
+        self.model_profile_merged = xr.concat(model_profile_seasons,
+                                              dim='id_dim')
 
         ## flatten
         #model_profile_flat = self.flatten_depth(model_profile_merged)
 
         # save
         with ProgressBar():
-            path = self.cfg.dn_out +\
-                    f"profiles/profiles_by_region_and_season.nc"
-            model_profile_merged.to_netcdf(path)
+            path = self.cfg.dn_out + self.fn_save + ".nc"
+            self.model_profile_merged.to_netcdf(path)
 
-ma = masking()
-ma.partition_by_region()
+    def create_masked_stats(self):
+        """
+        Use partitioned data to create masked statistics
+
+        None partition_by_region() should be run first
+        """
+
+        # initialise analysis object
+        analysis = coast.ProfileAnalysis()
+
+        stats = analysis.mask_stats(self.model_profile_merged, self.mask_xr)
+
+        # save
+        with ProgressBar():
+            path = self.cfg.dn_out + self.fn_save + "_stats.nc"
+            self.model_profile_merged.to_netcdf(path)
+
+
+if __name__ == "__main__":
+    ma = masking()
+    ma.partition_by_region("profiles")
+    ma.create_masked_stats()
+    
+    ma.partition_by_region("bias")
+    ma.create_masked_stats()
