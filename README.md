@@ -74,7 +74,7 @@ Output files are stored in the directory `config.sh: DOUT_EN4` with file structu
 
 1. `cd EN4_processing`
 
-2. `config.sh` and `<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
+2. `PythonEnvCfg/<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
 
 We use `iter_map_profiles.sh`  to submit over all years and months separately. This allows for simple parallelisation 
 as each month can be independently processed. This script sets the paths and variable names and launches a machine specific
@@ -130,34 +130,7 @@ sbatch -J 201109 --time=3:00:00 lotus_ana_MOD_METEST.sh 2011 9
 sbatch -J 200905 --time=3:00:00 lotus_ana_MOD_METEST.sh 2009 5
 ```
 
-### CRPS values
-There is a separate processing step to generate the surface CRPS values as a function of distance from the
-observation locations. The CRPS algorithm loops over each observation, find the model indices with prescribed radii, and 
-then calculates the CRPS. This is poorly optimised so is computed as a separate (optional) process. Each month is 
-calculated individually, then merged and averaged over regions.
-
-Execute: `. ./iter_surface_crps.sh`
-This deploy monthly processes on ${MACHINE} (currently only tested on JASMIN's lotus)
-
-```
-sbatch "${MACHINE,,}"_surface_crps.sh $MOD $start $month $end $GRID"
-```
-which in turn launches the python script
-
-```
-python  surface_crps.py $1 $2 $3 $4 $5
-```
-
-following the appropriate header commands for the batch scheduler.
-Output files take the form: `surface_crps_data_p0_201101_2012.nc`
-
-Next merge and compute regional averages. E.g. merge_mean_surface_crps.py in EN4_postprocessing.
-
-## 3.Postprocessing
-
-1. `cd EN4_postprocessing`
-
-2. `config.sh` and `<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
+2. `PythonEnvCfg/<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
 
 ### Concatenate error profiles (merge seasons)
 
@@ -203,6 +176,33 @@ MAM_mask_means_daily.nc
 JJA_mask_means_daily.nc
 SON_mask_means_daily.nc
 ```
+
+### CRPS values
+There is a separate processing step to generate the surface CRPS values as a function of distance from the
+observation locations. The CRPS algorithm loops over each observation, find the model indices with prescribed radii, and 
+then calculates the CRPS. This is poorly optimised so is computed as a separate (optional) process. Each month is 
+calculated individually, then merged and averaged over regions.
+
+Execute: `. ./iter_surface_crps.sh`
+This deploy monthly processes on ${MACHINE} (currently only tested on JASMIN's lotus)
+
+```
+sbatch "${MACHINE,,}"_surface_crps.sh $MOD $start $month $end $GRID"
+```
+which in turn launches the python script
+
+```
+python  surface_crps.py $1 $2 $3 $4 $5
+```
+
+following the appropriate header commands for the batch scheduler.
+Output files take the form: `surface_crps_data_p0_201101_2012.nc`
+
+Next merge and compute regional averages. E.g. merge_mean_surface_crps.py in EN4_postprocessing.
+
+## 3.Postprocessing
+
+1. `cd EN4_postprocessing`
 
 
 ### Plot the results.
