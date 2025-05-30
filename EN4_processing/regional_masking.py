@@ -25,12 +25,12 @@ class masking(object):
         """ select profile dataset to process """
 
         if ds_option == "profiles": # model profiles
-            self.fn_read = f"profiles/{season}_PRO_INDEX.nc"
+            self.fn_read = "profiles/{}_PRO_INDEX.nc"
             self.fn_save = "profiles/profiles_by_region_and_season"
 
 
         elif ds_option == "bias": # difference between model and obs
-            self.fn_read = f"profiles/{season}_PRO_DIFF.nc"
+            self.fn_read = "profiles/{}_PRO_DIFF.nc"
             self.fn_save = "profiles/profile_bias_by_region_and_season"
 
         else:
@@ -87,7 +87,7 @@ class masking(object):
         """ partition processed profiles by region """
 
         if season:
-            fn_index = self.cfg.dn_out + fn_read
+            fn_index = self.cfg.dn_out + self.fn_read.format(season)
             # get model profiles on EN4 grid
             model_profile = coast.Profile(config=self.cfg.fn_cfg_prof)
             model_profile.dataset = xr.open_dataset(fn_index, chunks="auto")
@@ -176,15 +176,32 @@ class masking(object):
         None partition_by_region() should be run first
         """
 
-        # initialise analysis object
-        analysis = coast.ProfileAnalysis()
+     
+        # rename for COAsT
+        self.mask_indices = self.mask_indices.swap_dims(
+                                                    {"region_names":"dim_mask"})
 
-        stats = analysis.mask_stats(self.model_profile_merged, self.mask_xr)
+        # Formatting for COAsT profile_analysis
+        # COAsT does not handle datetime for stats
+        # + error handleing does not catch > 1d arrays
+        time_type_list = ["datetime64[ns]","timedelta64[ns]"]
+        for var in self.model_profile_merged.data_vars:
+            if self.model_profile_merged[var].dtype in time_type_list:
+                self.model_profile_merged = self.model_profile_merged.drop_vars(
+                                                                       [var])
+
+        # masked stats requires COAsT objects
+        analysis = coast.ProfileAnalysis()
+        profile_object = coast.Profile(config=self.cfg.fn_cfg_prof)
+        profile_object.dataset = self.model_profile_merged
+
+        # get stats
+        stats = analysis.mask_stats(profile_object, self.mask_indices)
 
         # save
         with ProgressBar():
             path = self.cfg.dn_out + self.fn_save + "_stats.nc"
-            self.model_profile_merged.to_netcdf(path)
+            stats.to_netcdf(path)
 
 
 if __name__ == "__main__":
