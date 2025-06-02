@@ -73,12 +73,12 @@ class masking(object):
         masks_list.append(mm.region_def_nws_off_shelf(lon, lat, bath))
         masks_list.append(mm.region_def_nws_irish_sea(lon, lat, bath))
         
-        masks_names = ["N North Sea", "Outer shelf","Eng channel",
-                       "Norwegian Trench", "Kattegat", "FSC",
-                       "S North Sea", "Off shelf", "Irish Sea" ]
-        print("Size of names is ", len(masks_names[:]))
+        mask_id = ['northern_north_sea','outer_shelf',
+                   'eng_channel','nor_trench', 'kattegat', 'fsc',
+                   'southern_north_sea', 'off_shelf', 'irish_sea' ]
+        print("Size of names is ", len(mask_id))
         
-        self.mask_xr = mm.make_mask_dataset(lon, lat, masks_list, masks_names)
+        self.mask_xr = mm.make_mask_dataset(lon, lat, masks_list, mask_id)
 
         # make regions selectable
         self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
@@ -98,14 +98,32 @@ class masking(object):
         # create mask
         self.create_regional_mask()
 
+        # tmp switch of dims for COAsT
+        self.mask_xr = self.mask_xr.swap_dims({"region_names":"dim_mask"})
+
         # get mask indicies
         analysis = coast.ProfileAnalysis()
-        self.mask_indices = analysis.determine_mask_indices(model_profile,
+        mask_indices = analysis.determine_mask_indices(model_profile,
                                                             self.mask_xr)
+
+        # make region names a coordinate dim
+        self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
+
+        # get stats per mask
+        mask_stats = analysis.mask_stats(model_profile, mask_indices)
+
+    
+        # load stats for speed
+        print ("loading mask stats")
+        with ProgressBar():
+            mask_stats = mask_stats.load()
+
+        # make region names a coordinate dim
+        mask_stats = mask_stats.swap_dims({"dim_mask":"region_names"})
 
         # extract regions
         model_profile_regions = []
-        for region, region_mask in self.mask_indices.groupby("region_names"):
+        for region, region_mask in mask_indices.groupby("region_names"):
 
             mask_ind = region_mask.mask.astype(bool).squeeze()
             model_profile_region = model_profile.dataset.isel(id_dim=mask_ind)
@@ -116,7 +134,7 @@ class masking(object):
         # combine extracted regions
         region_merged = xr.concat(model_profile_regions, dim='id_dim')
 
-        return region_merged
+        return region_merged, mask_stats
 
     def flatten_depth(self, da):
 
@@ -148,66 +166,77 @@ class masking(object):
         self.create_regional_mask()
 
         seasons = ["DJF","MAM","JJA","SON"]
-        model_profile_seasons = []
+        model_profile_seasons, mask_stats_seasons = [], []
         for season in seasons:
             print (f"Partitioning {season} by region")
-            region_merged = self.partition_profiles_by_region(season=season)
+            region_merged, stats = self.partition_profiles_by_region(
+                                                 season=season)
 
+            # expand dims to include season
             region_merged = region_merged.expand_dims(season=[season])
+            stats = stats.expand_dims(season=[season])
 
             model_profile_seasons.append(region_merged)
+            mask_stats_seasons.append(stats)
 
         # combine by season
-        self.model_profile_merged = xr.concat(model_profile_seasons,
-                                              dim='id_dim')
+        model_profile_merged = xr.concat(model_profile_seasons, dim='id_dim')
+        mask_stats_merged = xr.concat(mask_stats_seasons, dim='id_dim')
 
         ## flatten
         #model_profile_flat = self.flatten_depth(model_profile_merged)
 
         # save
         with ProgressBar():
+            print ("saving regional profiles")
+            # region assigned profiles
             path = self.cfg.dn_out + self.fn_save + ".nc"
-            self.model_profile_merged.to_netcdf(path)
+            model_profile_merged.to_netcdf(path)
 
-    def create_masked_stats(self):
-        """
-        Use partitioned data to create masked statistics
-
-        None partition_by_region() should be run first
-        """
-
-     
-        # rename for COAsT
-        self.mask_indices = self.mask_indices.swap_dims(
-                                                    {"region_names":"dim_mask"})
-
-        # Formatting for COAsT profile_analysis
-        # COAsT does not handle datetime for stats
-        # + error handleing does not catch > 1d arrays
-        time_type_list = ["datetime64[ns]","timedelta64[ns]"]
-        for var in self.model_profile_merged.data_vars:
-            if self.model_profile_merged[var].dtype in time_type_list:
-                self.model_profile_merged = self.model_profile_merged.drop_vars(
-                                                                       [var])
-
-        # masked stats requires COAsT objects
-        analysis = coast.ProfileAnalysis()
-        profile_object = coast.Profile(config=self.cfg.fn_cfg_prof)
-        profile_object.dataset = self.model_profile_merged
-
-        # get stats
-        stats = analysis.mask_stats(profile_object, self.mask_indices)
-
-        # save
-        with ProgressBar():
+            print ("saving regional stats")
+            # regional stats
             path = self.cfg.dn_out + self.fn_save + "_stats.nc"
-            stats.to_netcdf(path)
+            mask_stats_merged.to_netcdf(path)
+
+#    def create_masked_stats(self):
+#        """
+#        Use partitioned data to create masked statistics
+#
+#        None partition_by_region() should be run first
+#        """
+#
+#     
+#        # rename for COAsT
+#        self.mask_indices = self.mask_indices.swap_dims(
+#                                                    {"region_names":"dim_mask"})
+#        self.model_profile_merged = self.model_profile_merged.swap_dims(
+#                                                    {"region_names":"dim_mask"})
+#
+#        # Formatting for COAsT profile_analysis
+#        # COAsT does not handle datetime for stats
+#        # + error handleing does not catch > 1d arrays
+#        time_type_list = ["datetime64[ns]","timedelta64[ns]"]
+#        for var in self.model_profile_merged.data_vars:
+#            if self.model_profile_merged[var].dtype in time_type_list:
+#                self.model_profile_merged = self.model_profile_merged.drop_vars(
+#                                                                       [var])
+#
+#        # masked stats requires COAsT objects
+#        analysis = coast.ProfileAnalysis()
+#        profile_object = coast.Profile(config=self.cfg.fn_cfg_prof)
+#        profile_object.dataset = self.model_profile_merged
+#
+#
+#        print (stats)
+#
+#        # save
+#        with ProgressBar():
 
 
 if __name__ == "__main__":
     ma = masking()
     ma.partition_by_region("profiles")
-    ma.create_masked_stats()
+#    ma.create_masked_stats()
     
     ma.partition_by_region("bias")
-    ma.create_masked_stats()
+#    ma.create_masked_stats()

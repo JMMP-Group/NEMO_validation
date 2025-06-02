@@ -4,10 +4,12 @@
 export MACHINE="LOTUS"  # resource on JASMIN
 
 ## Years to loop over during monthly preprocessing: called in iter_en4_proc.sh, iter_sub_METEST.sh
-export STARTYEAR=2005 #1980  # 2004
+export STARTYEAR=2004 #1980  # 2004
 export ENDYEAR=2014 #1980    # 2014
 
 ## Process monthly data. Required in iter_sub_METEST.sh
+#export MOD="co7"  # Model reference name
+#export COMP_MOD="P2.0"
 export MOD="P2.0"  # Model reference name
 export COMP_MOD="co7"
 

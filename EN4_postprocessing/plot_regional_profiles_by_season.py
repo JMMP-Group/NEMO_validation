@@ -29,19 +29,21 @@ class seasonal_profiles(object):
         
         # Get two configurations: co7 and config.py defined model.
         # HARD WIRING co7. NOT IDEAL
-        fn = "_mask_means_daily.nc"
-        co7_path = '/gws/nopw/j04/jmmp/CO9_AMM15_validation/co7/profiles/'
-        self.fn_list_DJF = [config.dn_out+"profiles/DJF" + fn,
-                            co7_path+ "DJF" + fn]
-        self.fn_list_MAM = [config.dn_out+"profiles/MAM" + fn,
-                            co7_path+ "MAM" + fn]
-        self.fn_list_JJA = [config.dn_out+"profiles/JJA" + fn,
-                            co7_path+ "JJA" + fn]
-        self.fn_list_SON = [config.dn_out+ "profiles/SON" + fn,
-                            co7_path+ "SON" + fn]
+        fn = "profile_bias_by_region_and_season_stats.nc"
+        co7_path = config.comp_case["proc_data"] + '/profiles/'
+        self.fn_list = [config.dn_out+"profiles/" + fn,
+                        config.comp_case["proc_data"] + "/profiles/"+ fn]
+        #self.fn_list_DJF = [config.dn_out+"profiles/DJF" + fn,
+        #                    comp_path+ "DJF" + fn]
+        #self.fn_list_MAM = [config.dn_out+"profiles/MAM" + fn,
+        #                    comp_path+ "MAM" + fn]
+        #self.fn_list_JJA = [config.dn_out+"profiles/JJA" + fn,
+        #                    comp_path+ "JJA" + fn]
+        #self.fn_list_SON = [config.dn_out+ "profiles/SON" + fn,
+        #                    comp_path+ "SON" + fn]
 
         self.legend_str = ["CO9p2","CO7"]
-        self.n_ds = len(self.fn_list_SON)
+        self.n_ds = len(self.fn_list)
     
     def plot_all_djf_jja(self):
         """
@@ -183,7 +185,6 @@ class seasonal_profiles(object):
                     axs[row,ii].set_xlim(-0.1, 3.5)
                 if scalar == 'Temperature':
                     axs[row,ii].set_xlim(-0.1, 4.0)
-    
                 # Plot fixed lines at 0 and mean depth
                 if self.plot_zero_line:
                     axs[row,ii].plot([0,0], [0, self.max_depth], c='k',
@@ -236,10 +237,11 @@ class seasonal_profiles(object):
         """
     
         # get data
-        ds_list_DJF = [xr.open_dataset(dd) for dd in self.fn_list_DJF]
-        ds_list_MAM = [xr.open_dataset(dd) for dd in self.fn_list_MAM]
-        ds_list_JJA = [xr.open_dataset(dd) for dd in self.fn_list_JJA]
-        ds_list_SON = [xr.open_dataset(dd) for dd in self.fn_list_SON]
+        #ds_list_DJF = [xr.open_dataset(dd) for dd in self.fn_list_DJF]
+        #ds_list_MAM = [xr.open_dataset(dd) for dd in self.fn_list_MAM]
+        #ds_list_JJA = [xr.open_dataset(dd) for dd in self.fn_list_JJA]
+        #ds_list_SON = [xr.open_dataset(dd) for dd in self.fn_list_SON]
+        ds_list = [xr.load_dataset(dd) for dd in self.fn_list]
 
         ref_depth = np.concatenate((np.arange(1,100,2), 
                                     np.arange(100,300,5), 
@@ -267,10 +269,16 @@ class seasonal_profiles(object):
             axs.append(fig.add_subplot(gs1[i]))
 
         ## plot
-        def render(da, ax):
+        def render(da, ax, season="DJF", region=""):
             """
             render scalar on specified axis
             """
+
+            # select season
+            da = da.sel(season=season)
+
+            # select region
+            da = da.sel(region_names=region)
 
             da_cut = da.isel(z_dim=slice(None,100))
             p, = ax.plot(da_cut["profile_mean_abs_diff_" + scalar],
@@ -279,18 +287,18 @@ class seasonal_profiles(object):
 
         p_list = []
         for i, case in enumerate(self.legend_str):
-            DJF = ds_list_DJF[i].swap_dims({"dim_mask":"region_names"})
-            MAM = ds_list_MAM[i].swap_dims({"dim_mask":"region_names"})
-            JJA = ds_list_JJA[i].swap_dims({"dim_mask":"region_names"})
-            SON = ds_list_SON[i].swap_dims({"dim_mask":"region_names"})
+            ds = ds_list[i]
             region_names = [r1_dict["region_id"],
                             r2_dict["region_id"]]
-            print (DJF.region_names)
+            print (region_names)
+            print (ds.region_names)
+            print (ejfh)
             for j, region in enumerate(region_names):
-                render(DJF.sel(region_names=region), axs[0+4*(j-1)])
-                render(MAM.sel(region_names=region), axs[1+4*(j-1)])
-                render(JJA.sel(region_names=region), axs[2+4*(j-1)])
-                p0 = render(SON.sel(region_names=region), axs[3+4*(j-1)])
+                print (region)
+                render(ds, axs[0+4*(j-1)], "DJF", region)
+                render(ds, axs[1+4*(j-1)], "MAM", region)
+                render(ds, axs[2+4*(j-1)], "JJA", region)
+                p0 = render(ds, axs[3+4*(j-1)], "SON", region)
                 if j == 0:
                     p_list.append(p0)
 
