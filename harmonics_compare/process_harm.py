@@ -2,6 +2,8 @@
 This script has been developed using local data on my macbook.
 The idea would be to port it to JASMIN, or somewhere once all the debugging is done.
 
+Note: this is a tidied version of process_harm_gs1p1_gs1p7_obs_fes.py
+
 Useage:
 python process_harm.py
 """
@@ -722,57 +724,6 @@ def plot_overlay_taylor_tides():
         plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_" + "_" + subset + "_" + family_str + "_tree.png")
 
 
-        # Plot Taylor with polars
-        #########################
-        if(0):
-            #theta = np.linspace(0, 1, 100)* 45
-            #r = np.ones((100,1))
-            r = np.arange(0, 1, 0.01)
-            theta = 0.25 * np.pi * r
-
-            fig, ax_polar = plt.subplots(subplot_kw={'projection': 'polar'})
-            ax_polar.grid(False)
-
-            ## Loop over constituents to create plot
-            for i in range(len(constit_family_list)):
-                # Add data to axes
-                ax_polar.scatter( np.arccos(R[0:nsim,i]), rms_amp[0:nsim,i],
-                              s=20, c=['b', 'g', 'r', 'y'])
-                # Add vectors between points and obs
-                ax_polar.plot([np.zeros(nsim-1), np.arccos(R[1:nsim,i])],
-                              [np.repeat(rms_amp[0,i],nsim-1), rms_amp[1:nsim,i]])
-                #ax_polar.plot([np.repeat(rms_amp[0,i],nsim-1), rms_amp[1:nsim,i] * R[1:nsim,i]],
-                #           [np.zeros(nsim-1), rms_amp[1:nsim,i] * np.sqrt(1 - R[1:nsim,i] ** 2)])
-                if nsim != 4: print('Colours and lines not as expected here')
-                #tt.ax.lines[-4].set_color('k')
-                ax_polar.lines[-3].set_color('g')
-                ax_polar.lines[-2].set_color('r')
-                ax_polar.lines[-1].set_color('y')
-
-                # Blue arc through obs and label
-                ax_polar.plot(theta,
-                                 np.repeat(rms_amp[0,i],100), '-', color='blue')  # obs point
-                ax_polar.text( 0, rms_amp[0,i]+0.02, constit_family_list[i], rotation=0, color='b')
-
-                # Add error arc for each constituent
-                #theta_rad = np.array([0, np.pi/4, np.pi/2, np.pi*0.75, np.pi]) #
-                theta_rad = np.arange(0, np.pi, 0.01)
-                for ir in np.linspace(rms_err[1,i]/5, rms_err[1,i], 4):
-                    rr = ir # rms_err[1,i]
-                    xx = rms_amp[0,i] + rr * np.cos(theta_rad)
-                    yy = rr * np.sin(theta_rad)
-                    rrr = np.sqrt( xx**2 + yy**2 )
-                    phi = np.arctan2(yy,xx)
-                    ax_polar.plot( phi, rrr, '--', color='grey')
-            ax_polar.set_thetamin(0)
-            ax_polar.set_thetamax(35)
-            ax_polar.set_rmin(0.45)
-            ax_polar.set_rmax(0.6)
-            ax_polar.set_rorigin(0)
-
-            #plt.show()
-            plt.savefig(config.dn_out + "PROCESSED/FIGS/Taylor_" + "_" + subset + "_" + family_str + "_tree_polar.png")
-
 def make_table():
     nsim=4 # number of simulations + obs.  labels = ["GS1p1", "GS1p2", "FES2014", "obs"]
     dict = {'shal':{"M2":{"obs":{}, "ZPS_TIDE":{}, "MES_TIDE":{}, "FES":{}},
@@ -824,8 +775,7 @@ def make_table():
                                               'theta': 0,
                                               'error': 0}
 
-
-            # nemo1
+            # NEMO1
             try:
                 del z1mod, z2mod
             except:
@@ -842,8 +792,7 @@ def make_table():
                                                  'theta': f"{np.arccos(R[1,count])*180/np.pi:.1f}",
                                                  'error': f"{rms_err[1,count]:.3f}"}
 
-
-            # nemo2
+            # NEMO2
             del z1mod, z2mod
             #try:
             z1mod, z2mod = nemo2.dataset[constit + 'x'][II], nemo2.dataset[constit + 'y'][II]
@@ -976,11 +925,6 @@ def plot_cloud():
             rms_err = np.hstack((rms_err, rms_abs_error(z1obs[ii], z2obs[ii], z1mod[ii], z2mod[ii])))
 
 
-
-
-        #label = ['obs:s', 'fes:s', 'gs1p1:s', 'gs1p2:s',
-        #         'obs:d', 'fes:d', 'gs1p1:d', 'gs1p2:d']
-
         print(f"R= {[format(R[i], '.2f') for i in range(len(R))]}")
         print(f"rms_amp= {[format(rms_amp[i], '.2f') for i in range(len(R))]}")
         print(f"rms_err= {[format(rms_err[i], '.2f') for i in range(len(R))]}")
@@ -1085,7 +1029,6 @@ def load_nemo_data(filename="GS1p7_triads_extracted.nc"):
 
     nemo = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/"+filename))
     nemo.dataset['A'], nemo.dataset['G'] = amp_pha_from_re_im(nemo.dataset.M2x, nemo.dataset.M2y)
-
     nemo.dataset['G'] = +(nemo.dataset.G+180)%360-180  # set phase: -180,180
     #nemo.dataset['M2y'] = +nemo.dataset.M2y
     nemo.dataset = nemo.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
@@ -1108,39 +1051,12 @@ def load_data(filename1:str="GS1p1_tide_final_extracted.nc", filename2:str="GS1p
     nemo1 = load_nemo_data(filename1)
     nemo2 = load_nemo_data(filename2)
 
-
-    #tdiss = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/G1p2_full_extracted.nc"))
-    #tdiss.dataset['A'], tdiss.dataset['G'] = amp_pha_from_re_im(tdiss.dataset.M2x, tdiss.dataset.M2y)
-
-    #tdiss.dataset['G'] = (tdiss.dataset.G+180)%360-180  # set phase: -180,180
-    #tdiss.dataset['M2y'] = +tdiss.dataset.M2y
-    #tdiss.dataset = tdiss.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
-    if(0):
-        nemo1 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/GS1p1_tide_final_extracted.nc"))
-        nemo1.dataset['A'], nemo1.dataset['G'] = amp_pha_from_re_im(nemo1.dataset.M2x, nemo1.dataset.M2y)
-
-        nemo1.dataset['G'] = (nemo1.dataset.G+180)%360-180  # set phase: -180,180
-        nemo1.dataset['M2y'] = +nemo1.dataset.M2y
-        nemo1.dataset = nemo1.dataset.drop_dims(["nvertex", "nav_lev", "z_dim"])  # drop unwanted dimensions and associated variables
-
-        nemo2 = coast.Tidegauge(dataset=xr.open_dataset(config.dn_out+"PROCESSED/GS1p7_triads_extracted.nc"))
-        #gs1p2.dataset = gs1p2.dataset.drop_vars(["G", "A"]) # Unlabelled amp/pha parts should not be in the file
-        nemo2.dataset['A'], nemo2.dataset['G'] = amp_pha_from_re_im(nemo2.dataset.M2x, nemo2.dataset.M2y)
-
-        nemo2.dataset['G'] = +(nemo2.dataset.G+180)%360-180  # set phase: -180,180
-        nemo2.dataset['M2y'] = +nemo2.dataset.M2y
-        nemo2.dataset = nemo2.dataset.drop_dims(["nvertex", "z_dim"])  # drop unwanted dimensions and associated variables
-
     return obs, nemo1, nemo2, fes
 
 def scatter_phase_on_map(list_of_datasets, list_of_titles):
     """ Primary purpose: Check that the phases are all aligned """
     ## Basic map plot of phases
     # Phase alignment
-
-    #extent = [90, 125, -10, 10]
-    #central_lat = np.mean(extent[2:])
-    #central_lon = np.mean(extent[:2])
 
     ylims = [-80,80] #[45,60]
     xlims = [-180,180] #[-60, -25]
@@ -1149,8 +1065,6 @@ def scatter_phase_on_map(list_of_datasets, list_of_titles):
 
     fig, ax = plt.subplots(2, 2, figsize=(10,5),
                         subplot_kw={'projection': ccrs.PlateCarree()})
-    #ax = plt.axes(projection=ccrs.AlbersEqualArea(central_lon, central_lat))
-    #ax.set_extent(extent)
 
     ax[0,0].coastlines(resolution='10m', color='k', linestyle='-', alpha=1)
     tt = ax[0,0].scatter(list_of_datasets[0].dataset.longitude, list_of_datasets[0].dataset.latitude,
@@ -1191,26 +1105,12 @@ def scatter_phase_on_map(list_of_datasets, list_of_titles):
     fig.savefig(config.dn_out+"PROCESSED/FIGS/scatter_M2_phase_on_map.png")
     plt.close('all')
 
+#############################################################################
 ### Main script
 # load data
 obs, nemo1, nemo2, fes = load_data(filename1="GS1p1_tide_final_extracted.nc", filename2="GS1p7_triads_extracted.nc")
 
 # Compare maps
-if(0):
- # Plot utility for COAsT.tidegauge objects
- obs.plot_on_map_multiple([obs], color_var_str="G")
- #plt.savefig(config.dn_out+"PROCESSED/FIGS/obs_phase_on_map.png")
-
-
-
-if(0):
-    # definitions for M2x and M2y are opposite to NEMO, but work:
-    fig, [ax0, ax1] = plt.subplots(ncols=2)
-    fes.dataset.M2x.plot(ax=ax0)
-    nemo1.dataset.M2x.plot(ax=ax1)
-    plt.show()
-
-
 # Check that the phases are all aligned
 list_of_datasets, list_of_titles = [obs, fes, nemo1, nemo2], ['obs', 'FES', 'GS1P1', 'GS1P7']
 scatter_phase_on_map(list_of_datasets, list_of_titles)
@@ -1238,19 +1138,12 @@ ind8 = np.isnan(nemo2.dataset.M2y.values)
 #ind10 = np.isnan(tdiss.dataset.M2y.values)
 I = ~ind1 * ~ind2 * ~ind3 * ~ind4 * ~ind5 * ~ind6 * ~ind7 * ~ind8 #* ~ind8 * ~ind10
 
-#obs.dataset.M2x[~I] = np.nan
-#obs.dataset.M2y[~I] = np.nan
-#fes.dataset.M2x[~I] = np.nan
-#fes.dataset.M2y[~I] = np.nan
-#nemo1.dataset.M2x[~I] = np.nan
-#nemo1.dataset.M2y[~I] = np.nan
-#gs1p2.dataset.M2x[~I] = np.nan
-#gs1p2.dataset.M2y[~I] = np.nan
-obs.dataset = obs.dataset.isel(id_dim=I)
-fes.dataset = fes.dataset.isel(id_dim=I)
-nemo1.dataset = nemo1.dataset.isel(id_dim=I)
-nemo2.dataset = nemo2.dataset.isel(id_dim=I)
-#tdiss.dataset = tdiss.dataset.where(I)
+if(0):  # This masks all the constituents at locations with NaN for M2. Not necessary.
+    obs.dataset = obs.dataset.isel(id_dim=I)
+    fes.dataset = fes.dataset.isel(id_dim=I)
+    nemo1.dataset = nemo1.dataset.isel(id_dim=I)
+    nemo2.dataset = nemo2.dataset.isel(id_dim=I)
+    #tdiss.dataset = tdiss.dataset.where(I)
 
 print(ind1.flatten().sum())
 print(ind2.flatten().sum())
@@ -1279,9 +1172,9 @@ plt.title("distribution of depths at observation sites")
 plt.legend()
 plt.savefig(config.dn_out+"PROCESSED/FIGS/dist_bathy.png")
 
+obs, fes = align_datasets(obs, fes)
 obs, nemo1 = align_datasets(obs, nemo1)
 obs, nemo2 = align_datasets(obs, nemo2)
-obs, fes = align_datasets(obs, fes)
 #obs, tdiss = align_datasets(obs, tdiss)
 
 # define colors
