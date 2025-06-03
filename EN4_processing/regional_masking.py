@@ -3,6 +3,7 @@ from PythonEnvCfg.config import config
 import xarray as xr
 import coast
 from dask.diagnostics import ProgressBar
+import numpy as np
 
 class masking(object):
     """
@@ -23,6 +24,9 @@ class masking(object):
 
     def choose_data(self, ds_option):
         """ select profile dataset to process """
+
+        # set as global variable
+        self.ds_option = ds_option
 
         if ds_option == "profiles": # model profiles
             self.fn_read = "profiles/{}_PRO_INDEX.nc"
@@ -106,13 +110,22 @@ class masking(object):
         mask_indices = analysis.determine_mask_indices(model_profile,
                                                             self.mask_xr)
 
+
         # make region names a coordinate dim
         self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
+
+        if self.ds_option == "bias": # difference between model and obs
+            # get model profiles bathymetry - this seems clunky
+            bathy_src = coast.Profile(config=self.cfg.fn_cfg_prof)
+            fn_prof = self.cfg.dn_out + "profiles/{}_PRO_INDEX.nc".format(season)
+            bathy_src.dataset = xr.open_dataset(fn_prof, chunks="auto")
+
+            # Add bathymetry data to profiles before mask averaging
+            model_profile.dataset['bathymetry'] = bathy_src.dataset.bathymetry
 
         # get stats per mask
         mask_stats = analysis.mask_stats(model_profile, mask_indices)
 
-    
         # load stats for speed
         print ("loading mask stats")
         with ProgressBar():
@@ -172,16 +185,20 @@ class masking(object):
             region_merged, stats = self.partition_profiles_by_region(
                                                  season=season)
 
+            # add season coordinate
+            region_merged = region_merged.assign_coords(
+            {"season":("id_dim", np.full(region_merged.id_dim.shape, season))})
+
             # expand dims to include season
-            region_merged = region_merged.expand_dims(season=[season])
             stats = stats.expand_dims(season=[season])
 
+            # add to list for conatenation
             model_profile_seasons.append(region_merged)
             mask_stats_seasons.append(stats)
 
         # combine by season
         model_profile_merged = xr.concat(model_profile_seasons, dim='id_dim')
-        mask_stats_merged = xr.concat(mask_stats_seasons, dim='id_dim')
+        mask_stats_merged = xr.concat(mask_stats_seasons, dim='season')
 
         ## flatten
         #model_profile_flat = self.flatten_depth(model_profile_merged)
@@ -235,8 +252,9 @@ class masking(object):
 
 if __name__ == "__main__":
     ma = masking()
+    ma.partition_by_region("bias")
+#    ma.create_masked_stats()
+
     ma.partition_by_region("profiles")
 #    ma.create_masked_stats()
     
-    ma.partition_by_region("bias")
-#    ma.create_masked_stats()

@@ -105,15 +105,15 @@ class seasonal_profiles(object):
         #%% SCRIPT: READ AND PLOT DATA
         
         # Read all datasets into list
-        self.ds_list_DJF = [xr.open_dataset(dd) for dd in self.fn_list_DJF]
-        self.ds_list_JJA = [xr.open_dataset(dd) for dd in self.fn_list_JJA]
-        ds_list = self.ds_list_DJF
+        self.ds_list = [xr.load_dataset(dd) for dd in self.fn_list]
+        ds_list = self.ds_list[0].sel(season="DJF")
         self.n_reg = len(self.region_ind)
         
         print(f"Check region names specified are consistent with mask file")
         for i in range(self.n_reg):
+            print (i)
             print(f"""Panel label:({self.region_names[i]}) matches data label:
-                 ({ds_list[0].region_names.values[self.region_ind[i]]})""")
+                 ({ds_list.region_names.values[self.region_ind[i]-1]})""")
         
         # Loop over variable to plot
         for scalar in ["Temperature", "Salinity"]:
@@ -158,19 +158,22 @@ class seasonal_profiles(object):
                     continue
     
                 # Get the index of this region
-                index = self.region_ind[ii]
+                index = self.region_ind[ii] - 1
                 
                 # Loop over datasets and plot their variable
                 p = []
                 for pp in range(self.n_ds):
     
                     print(f"season:{season}")
-                    if season == "DJF":
-                      ds = self.ds_list_DJF[pp]
-                    elif season == "JJA":
-                      ds = self.ds_list_JJA[pp]
+                    if season in self.ds_list[0].season:
+                      ds = self.ds_list[pp].sel(season=season)
                     else:
                       print(f"Not expecting that season: {season}")
+
+                    print (row)
+                    print (ii)
+                    print (var_name)
+                    print (index)
                     p.append(axs[row,ii].plot(ds[var_name][index][:100], 
                              self.ref_depth[:100])[0] )
     
@@ -192,8 +195,8 @@ class seasonal_profiles(object):
                 if self.plot_mean_depth:
                     axs[row,ii].plot([axs[row,ii].get_xlim()[0], 
                                       axs[row,ii].get_xlim()[1]], 
-                                     [ds['bathymetry'][index],
-                                      ds['bathymetry'][index]],
+                                     [ds['profile_mean_bathymetry'][index],
+                                      ds['profile_mean_bathymetry'][index]],
                                         color='k', ls='--')
     
                 # Invert y axis
@@ -237,10 +240,6 @@ class seasonal_profiles(object):
         """
     
         # get data
-        #ds_list_DJF = [xr.open_dataset(dd) for dd in self.fn_list_DJF]
-        #ds_list_MAM = [xr.open_dataset(dd) for dd in self.fn_list_MAM]
-        #ds_list_JJA = [xr.open_dataset(dd) for dd in self.fn_list_JJA]
-        #ds_list_SON = [xr.open_dataset(dd) for dd in self.fn_list_SON]
         ds_list = [xr.load_dataset(dd) for dd in self.fn_list]
 
         ref_depth = np.concatenate((np.arange(1,100,2), 
@@ -269,7 +268,7 @@ class seasonal_profiles(object):
             axs.append(fig.add_subplot(gs1[i]))
 
         ## plot
-        def render(da, ax, season="DJF", region=""):
+        def render(da, ax, season="DJF", region="", depth_lim=100):
             """
             render scalar on specified axis
             """
@@ -280,9 +279,12 @@ class seasonal_profiles(object):
             # select region
             da = da.sel(region_names=region)
 
-            da_cut = da.isel(z_dim=slice(None,100))
-            p, = ax.plot(da_cut["profile_mean_abs_diff_" + scalar],
-                        ref_depth[:100])
+            # crude depth limit
+            da_cut = da.isel(z_dim=slice(None,depth_lim))
+
+            # render
+            p, = ax.plot(da_cut["profile_mean_abs_diff_" + scalar].T,
+                        ref_depth[:depth_lim])
             return p
 
         p_list = []
@@ -290,9 +292,6 @@ class seasonal_profiles(object):
             ds = ds_list[i]
             region_names = [r1_dict["region_id"],
                             r2_dict["region_id"]]
-            print (region_names)
-            print (ds.region_names)
-            print (ejfh)
             for j, region in enumerate(region_names):
                 print (region)
                 render(ds, axs[0+4*(j-1)], "DJF", region)
@@ -344,11 +343,12 @@ if __name__ == "__main__":
 
     # plot
     sp = seasonal_profiles()
-    sp.plot_two_region_all_season(s_north_sea,
-                                  irish_sea,
-                                  scalar="temperature")
-    sp.plot_two_region_all_season(s_north_sea,
-                                  irish_sea,
-                                  scalar="salinity",
-                                  xlabel=r"$\overline{|\Delta S|}$ ($10^{-3}$)",
-                                  xmax=4.0)
+    #sp.plot_two_region_all_season(s_north_sea,
+    #                              irish_sea,
+    #                              scalar="temperature")
+    #sp.plot_two_region_all_season(s_north_sea,
+    #                              irish_sea,
+    #                              scalar="salinity",
+    #                              xlabel=r"$\overline{|\Delta S|}$ ($10^{-3}$)",
+    #                              xmax=4.0)
+    sp.plot_all_djf_jja()
