@@ -87,6 +87,8 @@ class masking(object):
         # make regions selectable
         self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
 
+        return self.mask_xr
+
     def partition_profiles_by_region(self, season=None):
         """ partition processed profiles by region """
 
@@ -109,7 +111,6 @@ class masking(object):
         analysis = coast.ProfileAnalysis()
         mask_indices = analysis.determine_mask_indices(model_profile,
                                                             self.mask_xr)
-
 
         # make region names a coordinate dim
         self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})

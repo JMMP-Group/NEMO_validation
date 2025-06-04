@@ -33,14 +33,6 @@ class seasonal_profiles(object):
         co7_path = config.comp_case["proc_data"] + '/profiles/'
         self.fn_list = [config.dn_out+"profiles/" + fn,
                         config.comp_case["proc_data"] + "/profiles/"+ fn]
-        #self.fn_list_DJF = [config.dn_out+"profiles/DJF" + fn,
-        #                    comp_path+ "DJF" + fn]
-        #self.fn_list_MAM = [config.dn_out+"profiles/MAM" + fn,
-        #                    comp_path+ "MAM" + fn]
-        #self.fn_list_JJA = [config.dn_out+"profiles/JJA" + fn,
-        #                    comp_path+ "JJA" + fn]
-        #self.fn_list_SON = [config.dn_out+ "profiles/SON" + fn,
-        #                    comp_path+ "SON" + fn]
 
         self.legend_str = ["CO9p2","CO7"]
         self.n_ds = len(self.fn_list)
@@ -170,10 +162,6 @@ class seasonal_profiles(object):
                     else:
                       print(f"Not expecting that season: {season}")
 
-                    print (row)
-                    print (ii)
-                    print (var_name)
-                    print (index)
                     p.append(axs[row,ii].plot(ds[var_name][index][:100], 
                              self.ref_depth[:100])[0] )
     
