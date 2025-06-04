@@ -13,6 +13,3 @@ for season in DJF MAM JJA SON;
    echo "sbatch -J "${MOD}${season} ${MACHINE,,}"_extract_season.sbatch $season"
    sbatch -J ${MOD}${season} ${MACHINE,,}_extract_season.sbatch $season
  done
-
-# create regional masking
-sbatch -J ${MOD}_regional_mask ${MACHINE,,}_regional_masking.slurm 
