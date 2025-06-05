@@ -48,8 +48,8 @@ fi
 
 
 
-
-export FN_HARM_OBS="/home/users/jelt/data/obs/for_DA_dense/obs_M2.nc"
+#export FN_HARM_OBS="/home/users/jelt/data/obs/for_DA_dense/obs_M2.nc"  # Original obs data from GTM work
+export FN_HARM_OBS="/gws/nopw/j04/class_vol2/senemo/jelt/data/obs/for_validation_sparse/obs_M2.nc  # Generated with scr_process_obs.py
 
 export FN_NEMO_CFG="/home/users/jelt/GitHub/COAsT/config/example_nemo_grid_t.json"
 
