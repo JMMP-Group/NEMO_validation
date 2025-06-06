@@ -1,6 +1,6 @@
 from EN4_postprocessing.plot_regional_profiles_by_season import seasonal_profiles
 from EN4_postprocessing.plot_regional_mask import masking
-from EN4_postprocessing.plot_regional_depth_integrals_by_season import seasonal_depth_integrals
+from EN4_postprocessing.plot_regional_depth_integrals_by_season import seasonal_depth_integral
 
 """
 Plot seasonal profiles consistent with Byrne et al. (2023) + extra
