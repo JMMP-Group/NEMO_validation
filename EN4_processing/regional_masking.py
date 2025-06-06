@@ -204,6 +204,9 @@ class masking(object):
         ## flatten
         #model_profile_flat = self.flatten_depth(model_profile_merged)
 
+        # get quantiles - not in COAsT mask_stats
+        quant = self.get_quantiles_by_region_and_season(model_profile_merged)
+
         # save
         with ProgressBar():
             print ("saving regional profiles")
@@ -216,46 +219,36 @@ class masking(object):
             path = self.cfg.dn_out + self.fn_save + "_stats.nc"
             mask_stats_merged.to_netcdf(path)
 
-#    def create_masked_stats(self):
-#        """
-#        Use partitioned data to create masked statistics
-#
-#        None partition_by_region() should be run first
-#        """
-#
-#     
-#        # rename for COAsT
-#        self.mask_indices = self.mask_indices.swap_dims(
-#                                                    {"region_names":"dim_mask"})
-#        self.model_profile_merged = self.model_profile_merged.swap_dims(
-#                                                    {"region_names":"dim_mask"})
-#
-#        # Formatting for COAsT profile_analysis
-#        # COAsT does not handle datetime for stats
-#        # + error handleing does not catch > 1d arrays
-#        time_type_list = ["datetime64[ns]","timedelta64[ns]"]
-#        for var in self.model_profile_merged.data_vars:
-#            if self.model_profile_merged[var].dtype in time_type_list:
-#                self.model_profile_merged = self.model_profile_merged.drop_vars(
-#                                                                       [var])
-#
-#        # masked stats requires COAsT objects
-#        analysis = coast.ProfileAnalysis()
-#        profile_object = coast.Profile(config=self.cfg.fn_cfg_prof)
-#        profile_object.dataset = self.model_profile_merged
-#
-#
-#        print (stats)
-#
-#        # save
-#        with ProgressBar():
+            print ("saving regional quantiles")
+            # regional quantiles
+            path = self.cfg.dn_out + self.fn_save + "_quants.nc"
+            quant.to_netcdf(path)
 
+    def get_quantiles_by_region_and_season(self, profiles):
+        """ 
+        Take masked and season partitioned profiles and calculate quantiles
+        """
+
+        # define quantiles
+        quantiles = [0.02,0.05,0.25,0.5,0.75,0.95,0.98]
+
+        quant_prof = profiles.groupby("season").quantile(quantiles, "id_dim")
+        quant_full = profiles.groupby("season").quantile(quantiles,
+                                                        ["id_dim","z_dim"])
+
+        # rename variables
+        for var in quant_prof.data_vars:
+            print (var)
+            quant_prof = quant_prof.rename({var: var + "_quant_prof"})
+            quant_full = quant_full.rename({var: var + "_quant_full"})
+
+        # merge profile stat with depth aggregated
+        quant = xr.merge([quant_prof,quant_full])
+
+        return quant
 
 if __name__ == "__main__":
     ma = masking()
     ma.partition_by_region("bias")
-#    ma.create_masked_stats()
-
     ma.partition_by_region("profiles")
-#    ma.create_masked_stats()
     
