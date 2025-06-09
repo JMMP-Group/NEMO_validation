@@ -7,8 +7,13 @@ Multi stage process requiring NEMO domain configuration, FES2014 data dir
 
 env: gtm_obs_env
 
-micromamba create -n gtm_obs_env python=3.10 numpy cmocean netCDF4 scipy cartopy matplotlib
+micromamba create -n gtm_obs_env python=3.10 numpy cmocean netCDF4 scipy cartopy matplotlib pandas
 micromamba activate gtm_obs_env
+
+Trying:
+conda create --name coast_cmo_dev --clone /home/users/jelt/miniconda3/envs/coast_dev
+micromamba activate coast_cmo_dev
+micromamba install cmocean pandas
 
 jelt 2025-06-04
 
