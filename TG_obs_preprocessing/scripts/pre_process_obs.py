@@ -24,6 +24,15 @@ Changelog:
 2025-06-04: Ported to NEMO_validation, to be used for model assessment, with minor edits. (jelt)
 '''
 
+from config import config
+import sys
+
+config = config() # initialise variables in python
+
+# IF USING A DEVELOPMENT BRANCH OF COAST, ADD THE REPOSITORY TO PATH:
+sys.path.append(config.coast_repo)
+
+
 import numpy as np
 import GTM_assimilation as ass
 import dbp_read as dbr
