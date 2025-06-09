@@ -73,14 +73,14 @@ for ii in range(0,n_const):
     # Define temporary constituent variable.
     cc = const[ii]
     print(cc)
-    tmp = ass.read_obs([cc], dir='/Users/jelt/GitHub/NEMO_validation/TG_obs_preprocessing/data/obs/')
+    tmp = ass.read_obs([cc], dir=config.dn_obs) #'/Users/jelt/GitHub/NEMO_validation/TG_obs_preprocessing/data/obs/')
     y_lon = tmp[0]; y_lat = tmp[1]; y_z1 = tmp[2]; y_z2 = tmp[3];
     y_a = tmp[4]; y_g = tmp[5]; obs_id = tmp[6] 
     
     print(obs_id[100])
 
     # Read FES
-    tmp = dbr.read_fes_2D_harm(dn_fes, [cc], istride=2, jstride=2)
+    tmp = dbr.read_fes_2D_harm(config.dn_fes, [cc], istride=2, jstride=2)
     fes_lon = tmp[2]; fes_lat = tmp[3]; 
     fes_mask = tmp[4]; fes_z1 = tmp[5]; fes_z2 = tmp[6]
     fes_z1 = np.squeeze(fes_z1); fes_z2 = np.squeeze(fes_z2)
@@ -88,7 +88,7 @@ for ii in range(0,n_const):
     del tmp
     if ii == 0:
         # Read NEMO grid and mask data
-        tmp = dbr.read_nemo_2D_harm(fn_nemo_data, [cc], fn_nemo_domain,
+        tmp = dbr.read_nemo_2D_harm(config.fn_nemo_data, [cc], config.fn_nemo_domain,
                                         istride = nemo_stride, jstride= nemo_stride,
                                         var='z')
         nemo_lon = tmp[2]; nemo_lat = tmp[3]; nemo_mask = tmp[4]; 
@@ -108,7 +108,7 @@ for ii in range(0,n_const):
                                          sobs_rad = 200, y_ii = y_ii, y_jj = y_jj,
                                          fes_ii = fes_ii, fes_jj = fes_jj)
     
-    fn_out = fn_out_dir + cc + '.nc'
+    fn_out = config.fn_out_dir + cc + '.nc'
     gtm.GTM_file_create_obs(fn_out, len(y_lonP1), cc)
     gtm.GTM_file_append_obs(fn_out, y_lonP1, 'longitude', 'deg')
     gtm.GTM_file_append_obs(fn_out, y_latP1, 'latitude', 'deg')
