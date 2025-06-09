@@ -2,7 +2,11 @@
 This script has been developed using local data on my macbook.
 The idea would be to port it to JASMIN, or somewhere once all the debugging is done.
 
-Note: this is a tidied version of process_harm_gs1p1_gs1p7_obs_fes.py
+Note: this is a tidied version, and planned replacement, of process_harm_gs1p1_gs1p7_obs_fes.py
+
+Next steps:
+- abstract machine dependencies in paths
+- port to JASMIN / remove process_harm_gs1p1_gs1p7_obs_fes.py version
 
 Useage:
 python process_harm.py
@@ -956,7 +960,7 @@ def plot_cloud():
         )
         # Add data to axes
         tt.ax.scatter(rms_amp[2:n_length] * R[2:n_length], rms_amp[2:n_length] * np.sqrt(1 - R[2:n_length] ** 2), s=10, c='k')
-        tt.ax.scatter(rms_amp_obs[2:n_length], -np.ones_like(rms_amp_obs)[2:n_length]*0.02, s=10, c='b')
+        tt.ax.scatter(rms_amp_obs[2:n_length], +np.ones_like(rms_amp_obs)[2:n_length]*0.02, s=10, c='b')
         tt.ax.scatter(rms_amp[0] * R[0], rms_amp[0] * np.sqrt(1 - R[0] ** 2), s=20, c='b')  # obs ave
         tt.ax.scatter(rms_amp[1] * R[1], rms_amp[1] * np.sqrt(1 - R[1] ** 2), s=20, c='r')  # model ave
         #tt.ax.scatter(rms_amp[2] * R[2], rms_amp[2] * np.sqrt(1 - R[2] ** 2), s=20, c='m')
