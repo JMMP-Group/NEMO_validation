@@ -72,8 +72,9 @@ def load_and_save_fes2014():
         #fes     = coast.Gridded(config.fn_fes_amp, config.fn_nemo_domain, config=config.fn_nemo_cfg)
         #fes_pha = coast.Gridded(config.fn_fes_pha, config.fn_nemo_domain, config=config.fn_nemo_cfg)
         # Rename coords + dims. Convert to 2d lat/lon for COAsT interpolation to work
-        try:
-            ds = xr.open_dataset(config.dn_fes+constit+"_z.nc")
+        #try:
+        if(1):
+            ds = xr.open_dataset(config.dn_fes+constit+"_z.nc", engine="netcdf4")
             ds = ds.rename_dims({'latitude':'y_dim', 'longitude':'x_dim'})
             #ds_latitude, ds_longitude = np.meshgrid(ds.latitude.values, ds.longitude.values)
             lat, lon = ds.latitude, ds.longitude
@@ -104,7 +105,7 @@ def load_and_save_fes2014():
             fes.dataset[constit+'y'] = xr.zeros_like(ds.amplitude)
             fes.dataset[constit+'x'], fes.dataset[constit+'y'] = re_im_from_amp_pha(ds['amplitude'], ds['phase'])
 
-        except:
+        else:#except:
             print(f"load and save FES2014: Skipped constituent: {constit}")
 
     # Create a landmask array in Gridded
@@ -126,8 +127,10 @@ def load_and_save_fes2014():
 ###############
 for count, constit in enumerate(constit_list):
 
-    try:
+    print(f"load constituent: {constit}")
+    if(1): #try:
         ds = coast.Tidegauge(dataset=xr.open_dataset(config.fn_harm_obs.replace("M2",constit)))
+        print(f"loaded constituent: {constit}")
         ds.dataset = ds.dataset.rename_dims({"locs":"id_dim"})  # coast tidegauge object expects dims {id_dim, t_dim}
         ds.dataset = ds.dataset.rename_vars({"z1":constit+"x", "z2":constit+"y"})
 
@@ -141,7 +144,7 @@ for count, constit in enumerate(constit_list):
         if (count == 0) and (constit == "M2"):
             obs = ds
         obs.dataset = xr.merge((obs.dataset,ds.dataset), compat="override")
-    except:
+    else: #except:
         print(f"load and save obs: Skipped constituent: {constit}")
     print(f"obs constit {constit} processed")
     obs.dataset.attrs['title'] = "Observations used for GTM DA. (Reprocessed using https://github.com/JMMP-Group/NEMO_validation)"
