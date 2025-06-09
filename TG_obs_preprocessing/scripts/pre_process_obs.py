@@ -49,17 +49,17 @@ const = ['Q1','O1','P1','S1','K1','J1',
 
 # File directory for ensemble arrays, nemo arrays.
 if(0): # GTM processing
-    fn_nemo_harm      = '/projectsa/NOCglobaltide/NEMO/output/GO8_R12_v1.0_final.nc'
-    fn_nemo_dom       = '/projectsa/NOCglobaltide/NEMO/INPUTS/domains/domcfg_eORCA12_10levels_23m.nc'
-    file_fes_dir = '/Users/jelt/DATA/FES2014/ocean_tide_extrapolated/'
+    fn_nemo_data     = '/projectsa/NOCglobaltide/NEMO/output/GO8_R12_v1.0_final.nc'
+    fn_nemo_domain       = '/projectsa/NOCglobaltide/NEMO/INPUTS/domains/domcfg_eORCA12_10levels_23m.nc'
+    dn_fes = '/Users/jelt/DATA/FES2014/ocean_tide_extrapolated/'
     #fn_out_dir = '/projectsa/NOCglobaltide/data/obs/for_DA_sparse/obs_'
     fn_out_dir = '/scratch/jelt/GTM_tmp/data/obs/for_DA_sparse/obs_'
 
 
-fn_nemo_harm      = '/Users/jelt/Downloads/SENEMO/TIDE/SENEMO_1y_19810101_19811231_grid_T_2D.nc'
-fn_nemo_dom       = '/Users/jelt/Downloads/SENEMO/TIDE/domain_cfg.nc'
-file_fes_dir = '/Users/jelt/DATA/FES2014/ocean_tide_extrapolated/'
-fn_out_dir = '/Users/jelt/Downloads/SENEMO/data/obs/for_validation_sparse/obs_'
+fn_nemo_data      = '/Users/jelt/Downloads/SENEMO/TIDE/SENEMO_1y_19810101_19811231_grid_T_2D.nc'
+fn_nemo_domain       = '/Users/jelt/Downloads/SENEMO/TIDE/domain_cfg.nc'
+dn_fes = '/Users/jelt/DATA/FES2014/ocean_tide_extrapolated/'
+fn_out_dir = '/Users/jelt/Downloads/SENEMO/data/for_validation_sparse/obs_'
 
 nemo_stride = 1
 
@@ -75,7 +75,7 @@ for ii in range(0,n_const):
     print(obs_id[100])
 
     # Read FES
-    tmp = dbr.read_fes_2D_harm(file_fes_dir, [cc], istride=2, jstride=2)
+    tmp = dbr.read_fes_2D_harm(dn_fes, [cc], istride=2, jstride=2)
     fes_lon = tmp[2]; fes_lat = tmp[3]; 
     fes_mask = tmp[4]; fes_z1 = tmp[5]; fes_z2 = tmp[6]
     fes_z1 = np.squeeze(fes_z1); fes_z2 = np.squeeze(fes_z2)
@@ -83,7 +83,7 @@ for ii in range(0,n_const):
     del tmp
     if ii == 0:
         # Read NEMO grid and mask data
-        tmp = dbr.read_nemo_2D_harm(fn_nemo_harm, [cc], fn_nemo_dom,
+        tmp = dbr.read_nemo_2D_harm(fn_nemo_data, [cc], fn_nemo_domain,
                                         istride = nemo_stride, jstride= nemo_stride,
                                         var='z')
         nemo_lon = tmp[2]; nemo_lat = tmp[3]; nemo_mask = tmp[4]; 
