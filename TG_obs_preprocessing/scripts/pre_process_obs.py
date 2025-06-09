@@ -55,11 +55,11 @@ if(0): # GTM processing
     #fn_out_dir = '/projectsa/NOCglobaltide/data/obs/for_DA_sparse/obs_'
     fn_out_dir = '/scratch/jelt/GTM_tmp/data/obs/for_DA_sparse/obs_'
 
-
-fn_nemo_data      = '/Users/jelt/Downloads/SENEMO/TIDE/SENEMO_1y_19810101_19811231_grid_T_2D.nc'
-fn_nemo_domain       = '/Users/jelt/Downloads/SENEMO/TIDE/domain_cfg.nc'
-dn_fes = '/Users/jelt/DATA/FES2014/ocean_tide_extrapolated/'
-fn_out_dir = '/Users/jelt/Downloads/SENEMO/data/for_validation_sparse/obs_'
+if(0): # livmac
+    fn_nemo_data      = '/Users/jelt/Downloads/SENEMO/TIDE/SENEMO_1y_19810101_19811231_grid_T_2D.nc'
+    fn_nemo_domain       = '/Users/jelt/Downloads/SENEMO/TIDE/domain_cfg.nc'
+    dn_fes = '/Users/jelt/DATA/FES2014/ocean_tide_extrapolated/'
+    fn_out_dir = '/Users/jelt/Downloads/SENEMO/data/for_validation_sparse/obs_'
 
 nemo_stride = 1
 
