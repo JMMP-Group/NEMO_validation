@@ -20,7 +20,6 @@ class config:
         #self.machine = environ.get('MACHINE')
         self.coast_repo = self.get_shell_var('COAST_REPO', True)
         self.dn_fes = self.get_shell_var('DN_FES', True)
-        self.fn_harm_obs = self.get_shell_var('FN_HARM_OBS', True)
         self.dn_obs      = self.get_shell_var('DN_OBS', True)
         self.fn_out_dir      = self.get_shell_var('FN_OUT_DIR', True)
         #self.dn_out = self.get_shell_var('DN_OUT', True)
