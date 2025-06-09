@@ -134,7 +134,10 @@ def read_obs_nc(const, fn_dir=None):
     return lon, lat, z1, z2, a, g, obs_id1, obs_id2
 
 def read_fes_2D_harm(file_dir, const, istride=4, jstride=8):
-    
+    """
+    Reads in 2D harmonic files from a directory of FES2014 files.
+    Save amplitude in metres, phase, longitude and latitude in degrees.
+    """
     #Cast constituents to lower case
     const = [const[ii].lower() for ii in range(0,len(const))]
     
@@ -379,6 +382,8 @@ def read_ticon3(fn_ticon3_data, cc, gauge_type='Coastal'):
     If amplitude/phase are flagged or not present, they will be set to NaN.
     Latitude and longitude will be set to zero for this request.
 
+    Save amplitude in metres, phase, longitude and latitude in degrees.
+
     Data source:
     Hart-Davis, Michael G; Dettmering, Denise; Seitz, Florian (2022): TICON-3: Tidal Constants based on GESLA-3 sea-level records from globally distributed tide gauges including gauge type information (data) [dataset]. PANGAEA, https://doi.org/10.1594/PANGAEA.951610
 
@@ -405,7 +410,7 @@ def read_ticon3(fn_ticon3_data, cc, gauge_type='Coastal'):
         df = df.iloc[indx_type]
         lon = np.array(df[1])  # assign longitude
         lat = np.array(df[0]) # assign latitude
-        amp = np.array(df[3]); amp = amp.reshape(1, len(amp)) # assign amplitude
+        amp = np.array(df[3])/100.; amp = amp.reshape(1, len(amp)) # assign amplitude
         pha = np.array(df[4]); pha = pha.reshape(1, len(pha)) # assign phase
         #con = np.array(df[2]); con = con.reshape(1, len(con) # assign consituent name
         # Also change interval phase lies in from 0 -> 360 to -180 -> 180.
@@ -423,6 +428,8 @@ def read_gloup_bpr_harm(fn_harm, fn_head, const):
     # If amplitude/phase are flagged or not present, they will be set to NaN.
     # Latitude and longitude will still be saved for this point however.
     #
+    # Saves amplitude in metres and phase, longitude and latitude in degrees.
+
     # Author: dbyrne | Version 1.0 (21/11/2019)
     '''
     
