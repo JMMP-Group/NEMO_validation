@@ -10,5 +10,7 @@
 module add jaspy
 source activate $CONDA_ENV
 
+source config.sh  # sets paths for config
+
 python ./pre_process_obs.py > LOGS/OUT_pre_process_obs.log
 
