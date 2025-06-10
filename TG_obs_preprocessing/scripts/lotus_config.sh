@@ -1,4 +1,4 @@
-#export MACHINE="LOTUS"  # resource on JASMIN. Already set
+export MACHINE="LOTUS"  # resource on JASMIN. Already set
 
 export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
 #export CONDA_ENV="/home/users/jelt/.conda/envs/coast_cmo_dev"
