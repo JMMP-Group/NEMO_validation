@@ -22,6 +22,11 @@ dataset: Application of NEMO and an offline objective analysis scheme, Journal o
 Oceanography, https://doi.org/10.1080/1755876X.2021.2000249
 Code repository: https://github.com/NOC-MSM/global_tide
 
+Useage:
+1. Need to define SHELL variables for config.py
+2. Need to activate python environment
+3. Execute script: python pre_process_obs.py
+These steps can be done manually or with: ./submit_pre_process_obs.sh
 
 Changelog:
 2020-XX-XX: Initial version  Byrne et al. (2021) 
