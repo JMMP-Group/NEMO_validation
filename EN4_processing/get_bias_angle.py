@@ -5,10 +5,12 @@ import xarray as xr
 import numpy as np
 from dask.diagnostics import ProgressBar
 
-class bias_angle(object):
+class bias_bootstrapping(object):
     """
     method for pointwise surface temperature and salinity histograms comparing
     bias across models referenced to EN4
+
+    
     """
 
     def __init__(self, var):
@@ -23,7 +25,7 @@ class bias_angle(object):
 
     def get_bias_climatology(self):
 
-        fn="profiles_by_region_and_season.nc"
+        fn="profile_bias_by_region_and_season.nc"
         
         # get data
         path = self.fn_path + fn
@@ -90,7 +92,7 @@ class bias_angle(object):
                 print (i, j)
                 if bootstrapped:
                     bootstrapped_hist = \
-                                  self.get_bootstrapped_bias_angle_hist(subset,
+                                  self.get_bootstrapped_bias_hist(subset,
                                                                     sample_size)
                     hist_set.append(bootstrapped_hist)
 
@@ -104,50 +106,87 @@ class bias_angle(object):
         with ProgressBar():
             hist_set_ds.to_netcdf(fn)
 
-    def get_bootstrapped_bias_angle_hist(self, ds, sample_size=1000):
+    def get_bias_hist(self, path, ds, bootstrapped=True):
         """
-        Single instance bootstrap sample the bias angle and create histogram
+        calculate bias histogram for each model instance separately
         """
 
-        ds = ds.load()
+        sample_size=1000
+
+        hist_set = []
+        for j, (region, region_da) in enumerate(ds.groupby("region_names")):
+            for i, (season, subset) in enumerate(region_da.groupby("season")):
+                print (i, j)
+                if bootstrapped:
+                    bootstrapped_hist = \
+                                  self.get_bootstrapped_bias_hist(subset,
+                                                                    season,
+                                                                    region,
+                                                                    sample_size)
+                    hist_set.append(bootstrapped_hist)
+
+        hist_set_ds = xr.merge(hist_set)
+
+        # set attrs
+        hist_set_ds = hist_set_ds.assign_attrs(
+                      {"bootstrap_sample_size":sample_size})
+
+        fn = path + f"bootstrapped_{self.type}_bias_with_EN4_one_model_{sample_size}.nc"
+        with ProgressBar():
+            hist_set_ds.to_netcdf(fn)
+
+    def get_bias_hist_set(self):
+        """
+        get bias hist for case and comparision case
+        """
+
+        self.get_bias_hist(self.fn_path, self.da_0)
+        self.get_bias_hist(self.fn_comp_path, self.da_1)
+
+    def get_bootstrapped_bias_hist(self, da, season, region, sample_size=1000):
+        """
+        Single instance bootstrap sample the bias and create histogram
+        """
+
+        da = da.load()
 
         bootstrap_set = []
         for i in range(sample_size):
 
             # remove nans introduced during season-region broadcasting
-            ds = ds.dropna("id_dim", how="all")
+            da = da.dropna("id_dim", how="all")
 
             # randomised sampling
-            obs_num = ds.sizes["id_dim"]
+            obs_num = da.sizes["id_dim"]
             random_sample = np.random.randint(obs_num, size=obs_num)
-            ds_randomised = ds.isel(id_dim=random_sample)
+            da_randomised = da.isel(id_dim=random_sample)
 
             # get histogram
-            hist, bin_edges = np.histogram(ds_randomised, bins=100,
+            hist, bin_edges = np.histogram(da_randomised, bins=100,
                                            range=[-np.pi/2,np.pi/2])
             bin_centres = (bin_edges[1:] + bin_edges[:-1]) / 2
             hist = np.expand_dims(hist, axis=[1,2])
 
-            quant = ds_randomised.quantile(0.5, ["id_dim","z_dim"])
-            quant.name = f"{self.type}_angle_quant"
+            quant = da_randomised.quantile(0.5, ["id_dim","z_dim"])
+            quant.name = da.name + "_quant"
             quant = quant.rename({"quantile":"sample_quant"})
-            mean = ds_randomised.mean(["id_dim","z_dim"])
-            mean.name = f"{self.type}_angle_mean"
+            mean = da_randomised.mean(["id_dim","z_dim"])
+            mean.name = da.name + "_mean"
 
             # merge seasons
             agg_stats = xr.merge([mean,quant])
-  
+
             # assign to dataset
             bootstrapped_hist = xr.Dataset(
                           {
-                           f"{self.type}_frequency":(
-                           ["bias_angle","region_names","season"],
+                           da.name + "_frequency":(
+                           ["bins","region_names","season"],
                            hist)
                            },
-                          {"bias_angle":bin_centres,
-                           "bias_angle_bin_edges": bin_edges,
-                           "season":ds.season,
-                           "region_names":ds.region_names})
+                          {"bins": bin_centres,
+                           "bin_edges": bin_edges,
+                           "season":  [season],
+                           "region_names": [region]})
 
             # merge stats with hist
             bootstrapped_vars = xr.merge([bootstrapped_hist, agg_stats])
@@ -156,31 +195,33 @@ class bias_angle(object):
             bootstrap_set.append(bootstrapped_vars)
 
         # join boostrap hists as single dataset
-        bootstrap_set_ds = xr.concat(bootstrap_set, dim="sample").load()
+        bootstrap_set_da = xr.concat(bootstrap_set, dim="sample").load()
 
         # alias var name
-        var_str = f"{self.type}_frequency"
+        var_str = da.name + "_frequency"
 
         # get mean
-        mean = bootstrap_set_ds.mean("sample")
-        mean = mean.rename({var_str:var_str + "_mean",
-           f"{self.type}_angle_mean":f"{self.type}_angle_mean_mean",
-           f"{self.type}_angle_quant":f"{self.type}_angle_quant_mean"})
+        mean = bootstrap_set_da.mean("sample")
+        mean = mean.rename({var_str: var_str + "_mean",
+           da.name + "_mean": da.name + "_mean_mean",
+           da.name + "_quant": da.name + "_quant_mean"})
 
         # get percentiles
         quantiles = [0.02,0.05,0.25,0.5,0.75,0.95,0.98]
-        quant = bootstrap_set_ds.quantile(quantiles,"sample")
+        quant = bootstrap_set_da.quantile(quantiles,"sample")
         quant = quant.rename({var_str:var_str + "_quant",
-           f"{self.type}_angle_mean":f"{self.type}_angle_mean_quant",
-           f"{self.type}_angle_quant":f"{self.type}_angle_quant_quant"})
+           da.name + "_mean": da.name + "_mean_quant",
+           da.name + "_quant": da.name + "_quant_quant"})
         
         # merge statistics
         bootstrap_statistics = xr.merge([mean, quant])
 
+        print (bootstrap_statistics)
+
         return bootstrap_statistics
 
 if __name__ == "__main__":
-    ba = bias_angle("temperature")
+    ba = bias_bootstrapping("temperature")
     ba.get_bias_climatology()
     #ba.get_bias_angle_ds()
-    ba.get_bias_angle_hist()
+    ba.get_bias_hist_set()

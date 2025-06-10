@@ -27,14 +27,13 @@ class seasonal_profiles(object):
 
     def __init__(self):
         
-        # Get two configurations: co7 and config.py defined model.
-        # HARD WIRING co7. NOT IDEAL
-        fn = "profile_bias_by_region_and_season_stats.nc"
+        # Get two configurations
+        fn = "profile_bias_by_region_and_season_{}.nc"
         co7_path = config.comp_case["proc_data"] + '/profiles/'
         self.fn_list = [config.dn_out+"profiles/" + fn,
                         config.comp_case["proc_data"] + "/profiles/"+ fn]
 
-        self.legend_str = ["CO9p2","CO7"]
+        self.legend_str = [config.case,config.comp_case["case"]]
         self.n_ds = len(self.fn_list)
     
     def plot_all_djf_jja(self):
@@ -97,8 +96,12 @@ class seasonal_profiles(object):
         #%% SCRIPT: READ AND PLOT DATA
         
         # Read all datasets into list
-        self.ds_list = [xr.load_dataset(dd) for dd in self.fn_list]
-        ds_list = self.ds_list[0].sel(season="DJF")
+        self.ds_list_stats = [xr.load_dataset(dd.format("stats")) 
+                        for dd in self.fn_list]
+        self.ds_list_quant = [xr.load_dataset(dd.format("quants")) 
+                        for dd in self.fn_list]
+
+        ds_list = self.ds_list_stats[0].sel(season="DJF")
         self.n_reg = len(self.region_ind)
         
         print(f"Check region names specified are consistent with mask file")
@@ -133,10 +136,13 @@ class seasonal_profiles(object):
         if stat_type == "BIAS":
             tmp_str = "mean_diff"
     
-        var_name = "profile_{0}_{1}".format(tmp_str, scalar.lower())
+        # TODO: variable naming needs to be consistent
+        var_name_mean = "profile_{0}_{1}".format(tmp_str, scalar.lower())
+        var_name_quant = "{0}_{1}_quant_prof".format(tmp_str[5:], scalar.lower())
+
     
         # Filename for the output
-        fn_out = "FIGS/regional_{0}_{1}.pdf".format(var_name, self.run_name)
+        fn_out = "FIGS/regional_{0}_{1}.pdf".format(var_name_mean, self.run_name)
     
         # Create plot and flatten axis array
         f, axs = plt.subplots(self.n_r, self.n_c, figsize=self.figsize,
@@ -157,13 +163,27 @@ class seasonal_profiles(object):
                 for pp in range(self.n_ds):
     
                     print(f"season:{season}")
-                    if season in self.ds_list[0].season:
-                      ds = self.ds_list[pp].sel(season=season)
+                    if season in self.ds_list_stats[0].season:
+                      ds_stats = self.ds_list_stats[pp].sel(season=season)
+                      ds_quant = self.ds_list_quant[pp].sel(season=season)
                     else:
                       print(f"Not expecting that season: {season}")
 
-                    p.append(axs[row,ii].plot(ds[var_name][index][:100], 
+                    # render mean profile
+                    p.append(axs[row,ii].plot(
+                             ds_stats[var_name_mean][index][:100], 
                              self.ref_depth[:100])[0] )
+
+
+                    # get region
+                    var = ds_quant[var_name_quant].isel(region_names=index)[:100]
+
+                    # restrict depth
+                    var = var.isel(z_dim=slice(None,100))
+
+                    # render interquantile range
+                    upper_bound = var.sel(quantile=0.95)
+                    axs[row,ii].plot(upper_bound, upper_bound.depth, lw=0.8)
     
                 # Do some plot things
                 axs[row,ii].set_title(f"{self.region_names[ii]}:\n{season}",
@@ -183,8 +203,8 @@ class seasonal_profiles(object):
                 if self.plot_mean_depth:
                     axs[row,ii].plot([axs[row,ii].get_xlim()[0], 
                                       axs[row,ii].get_xlim()[1]], 
-                                     [ds['profile_mean_bathymetry'][index],
-                                      ds['profile_mean_bathymetry'][index]],
+                                     [ds_stats['profile_mean_bathymetry'][index],
+                                      ds_stats['profile_mean_bathymetry'][index]],
                                         color='k', ls='--')
     
                 # Invert y axis
@@ -281,7 +301,6 @@ class seasonal_profiles(object):
             region_names = [r1_dict["region_id"],
                             r2_dict["region_id"]]
             for j, region in enumerate(region_names):
-                print (region)
                 render(ds, axs[0+4*(j-1)], "DJF", region)
                 render(ds, axs[1+4*(j-1)], "MAM", region)
                 render(ds, axs[2+4*(j-1)], "JJA", region)
