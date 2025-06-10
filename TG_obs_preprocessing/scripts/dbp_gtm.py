@@ -5,7 +5,7 @@ import numpy as np
 from netCDF4 import Dataset as ds
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import cmocean.cm as cmo
+#import cmocean.cm as cmo
 import scipy.ndimage.filters as spf
 import cartopy.crs as ccrs
 import cartopy as cartopy
@@ -521,8 +521,8 @@ OUT # None
     levels = np.linspace(0,ampmax,n_levels)
     norm = colors.BoundaryNorm(levels, ncolors=256)
     
-    mesh = ax.pcolormesh(lons, lats, amp, cmap='cmo.amp',norm=norm, 
-                         transform=ccrs.PlateCarree())
+    mesh = ax.pcolormesh(lons, lats, amp, norm=norm, 
+                         transform=ccrs.PlateCarree()) # cmap='cmo.amp'
     plt.colorbar(mesh,orientation='vertical', shrink=0.8, extend='max')
     mesh = ax.contour(lons[2:-2,:-2], lats[2:-2,:-2], phase[2:-2,:-2],
                       transform=ccrs.PlateCarree(), colors='k', 
@@ -633,8 +633,8 @@ OUT # None
     levels = np.linspace(0,ampmax,n_levels)
     norm = colors.BoundaryNorm(levels, ncolors=256)
     
-    mesh = ax.pcolormesh(lons, lats, amp, cmap='cmo.amp', norm=norm, 
-                         transform=ccrs.PlateCarree())
+    mesh = ax.pcolormesh(lons, lats, amp, norm=norm, 
+                         transform=ccrs.PlateCarree()) # cmap='cmo.amp'
     plt.colorbar(mesh, orientation='vertical', shrink=0.8, extend='max')
 
     if gridlines:
