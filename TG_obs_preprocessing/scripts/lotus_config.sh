@@ -1,7 +1,7 @@
 #export MACHINE="LOTUS"  # resource on JASMIN. Already set
 
-#export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
-export CONDA_ENV="/home/users/jelt/.conda/envs/coast_cmo_dev"
+export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
+#export CONDA_ENV="/home/users/jelt/.conda/envs/coast_cmo_dev"
 # location of COAsT repo, if using a particular branch
 export COAST_REPO="/home/users/jelt/GitHub/COAsT"
 

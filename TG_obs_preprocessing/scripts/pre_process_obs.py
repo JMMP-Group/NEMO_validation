@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 '''
 For processing/writing obs for model assessment.
 Uses process_obs routine (to be checked for details)
@@ -67,6 +66,18 @@ if(0): # livmac
     fn_out_dir = '/Users/jelt/Downloads/SENEMO/data/for_validation_sparse/obs_'
 
 nemo_stride = 1
+
+import os
+print("Directory exists:", os.path.exists('/gws/nopw/j04/class_vol2/senemo/jelt/data/obs/psmsl_bpr/tides/'))
+print(config.dn_obs, ": Directory exists:", os.path.exists(config.dn_obs))
+
+try:
+    print(os.listdir('/gws/nopw/j04/class_vol2/senemo/jelt/data/obs/psmsl_bpr/tides'))
+except PermissionError:
+    print("Permission denied.")
+except FileNotFoundError:
+    print("Directory not found.")
+
 
 n_const = len(const)
 for ii in range(0,n_const):
