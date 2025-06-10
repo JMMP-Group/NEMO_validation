@@ -151,13 +151,7 @@ def read_fes_2D_harm(file_dir, const, istride=4, jstride=8):
     for cc in const:
         cc_ii = cc_ii + 1
         #Define filename and load
-        for variant in (cc.lower(), cc.upper()):
-            try:
-                ncid = ds(file_dir + variant + '.nc')
-                break
-            except FileNotFoundError:
-                continue
-
+        ncid = ds(file_dir + cc + '.nc')
         #Read in fill value from file
         fill = ncid.variables['amplitude']._FillValue
         #Read and process the relevant slice of nc file
