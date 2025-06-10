@@ -14,7 +14,7 @@ export COAST_REPO="/home/users/jelt/GitHub/COAsT"
 
 export FN_NEMO_DATA="/gws/nopw/j04/class_vol2/senemo/jdha/GS1p7_TRIADS/output/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
 export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/jdha/GS1p7_TRIADS/config/domain_cfg.nc"
-export DN_FES="/gws/nopw/j04/class_vol2/senemo/shared/FES2014/"
+export DN_FES="/gws/nopw/j04/jmmp/FES2014/ocean_tide_extrapolated/" 
 export FN_OUT_DIR="/gws/nopw/j04/class_vol2/senemo/jelt/data/for_validation_sparse/obs_"
 export DN_OBS="/gws/nopw/j04/class_vol2/senemo/jelt/data/obs/"
 
