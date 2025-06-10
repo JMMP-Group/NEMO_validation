@@ -32,7 +32,7 @@ def read_obs(cc, dir='/projectsa/NOCglobaltide/data/obs/'):
     #fn_mdp_data       = dir + 'TG/Coastal_Points_ALL.txt'
     fn_gloup_head     = dir + 'GLOUP/gloup_headers.dat'
     fn_gloup_harm     = dir + 'GLOUP/gloup_const_all.dat'
-    fn_ticon3_data    = dir + 'TICON/TICON_3.txt'
+    fn_ticon3_data    = dir + 'TICON_3/TICON_3.txt'
     mdp_data_types=[3]
     
     # # # # # READ PSMSL HARMONICS # # # # #
