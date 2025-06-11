@@ -9,8 +9,6 @@ class bias_bootstrapping(object):
     """
     method for pointwise surface temperature and salinity histograms comparing
     bias across models referenced to EN4
-
-    
     """
 
     def __init__(self, var):
@@ -102,7 +100,9 @@ class bias_bootstrapping(object):
         hist_set_ds = hist_set_ds.assign_attrs(
                       {"bootstrap_sample_size":sample_size})
 
-        fn = cfg.dn_out + f"bootstrapped_{self.type}_bias_with_EN4_{sample_size}.nc"
+        fn = cfg.dn_out + \
+             f"bootstrapped_{self.type}_bias_with_EN4_{sample_size}.nc"
+
         with ProgressBar():
             hist_set_ds.to_netcdf(fn)
 
@@ -116,6 +116,11 @@ class bias_bootstrapping(object):
         hist_set = []
         for j, (region, region_da) in enumerate(ds.groupby("region_names")):
             for i, (season, subset) in enumerate(region_da.groupby("season")):
+
+                # set season as coodinated dimension
+                subset = subset.drop_vars("season")
+                subset = subset.expand_dims(season=[season])
+
                 print (i, j)
                 if bootstrapped:
                     bootstrapped_hist = \
@@ -131,7 +136,10 @@ class bias_bootstrapping(object):
         hist_set_ds = hist_set_ds.assign_attrs(
                       {"bootstrap_sample_size":sample_size})
 
-        fn = path + f"bootstrapped_{self.type}_bias_with_EN4_one_model_{sample_size}.nc"
+        # save path
+        fn = path + \
+           f"bootstrapped_{self.type}_bias_with_EN4_one_model_{sample_size}.nc"
+
         with ProgressBar():
             hist_set_ds.to_netcdf(fn)
 
@@ -216,12 +224,10 @@ class bias_bootstrapping(object):
         # merge statistics
         bootstrap_statistics = xr.merge([mean, quant])
 
-        print (bootstrap_statistics)
-
         return bootstrap_statistics
 
 if __name__ == "__main__":
-    ba = bias_bootstrapping("temperature")
+    ba = bias_bootstrapping("salinity")
     ba.get_bias_climatology()
     #ba.get_bias_angle_ds()
     ba.get_bias_hist_set()
