@@ -54,7 +54,7 @@ import harmonic_obs_preprocess_utils as utils
 const = ['Q1','O1','P1','S1','K1','J1',
          'N2','M2','S2','K2',
         ]
-const=['M2']
+#const=['M2']
 
 # File directory for ensemble arrays, nemo arrays.
 if(0): # GTM processing
@@ -64,7 +64,7 @@ if(0): # GTM processing
     #fn_out_dir = '/projectsa/NOCglobaltide/data/obs/for_DA_sparse/obs_'
     fn_out_dir = '/scratch/jelt/GTM_tmp/data/obs/for_DA_sparse/obs_'
 
-nemo_stride = 1
+nemo_stride = 1  # # Stride for NEMO grid, to reduce size of data read in.
 
 
 n_const = len(const)
