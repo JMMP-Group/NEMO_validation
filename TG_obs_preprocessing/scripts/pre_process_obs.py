@@ -112,7 +112,7 @@ for ii in range(0,n_const):
                                          fes_ii = fes_ii, fes_jj = fes_jj)
     
     fn_out = config.fn_out_dir + cc + '.nc'
-    utils.obs_harmonic_file_create(fn_out, len(y_lonP1), cc)
+    utils.obs_harmonic_file_create(fn_out, config, len(y_lonP1), cc)
     utils.obs_harmonic_file_append(fn_out, y_lonP1, 'longitude', 'deg')
     utils.obs_harmonic_file_append(fn_out, y_latP1, 'latitude', 'deg')
     utils.obs_harmonic_file_append(fn_out, yP1, 'z1')
