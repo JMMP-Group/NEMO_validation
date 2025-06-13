@@ -557,7 +557,7 @@ def read_psmsl_bpr_harm(file_tide_dir, file_locs_dir, const):
 ###*****WRITING METHODS*****###
 ###
 
-def obs_harmonic_file_create(fn, n_obs, c):
+def obs_harmonic_file_create(fn, config, n_obs, c):
     '''
     # Creates a new obs harmonic file, overwriting an old one if it exists. The base 
     # file contains just the locations dimension loc. 
@@ -575,8 +575,10 @@ def obs_harmonic_file_create(fn, n_obs, c):
     # Get data size and create dimensions
     dim_obs = ncid.createDimension('locs', n_obs)
     
-    ncid.title = 'Observations used for GTM DA for ' + c + ' constituent.' 
-    
+    ncid.title = 'Observations used for NEMO validation. ' + c + ' constituent.' 
+    ncid.note1 = 'Land observations are excluded beyond ' + str(config.grid_obs_rad) + 'km (grid obs rad) from wetpoints in ' + config.fn_nemo_domain
+    ncid.note2 = 'Obervations are thinned by a ' + str(config.thin_obs_rad) + 'km thinning radius.'
+    ncid.source = 'https://github.com/JMMP-Group/NEMO_validation'
     ncid.history = 'Created ' + time.ctime(time.time())
     ncid.close()
     
