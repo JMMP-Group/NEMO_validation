@@ -5,6 +5,8 @@ export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
 # location of COAsT repo, if using a particular branch
 export COAST_REPO="/home/users/jelt/GitHub/COAsT"
 
+export GRID_OBS_RAD=30 # limit of acceptable distance between wet point (grid) and observation (km)
+export THIN_OBS_RAD=200 # radius for thinning the observations (km)
 
 #export FN_NEMO_DATA="/Users/jelt/Downloads/SENEMO/TIDE/SENEMO_1y_19810101_19811231_grid_T_2D.nc"
 #export FN_NEMO_DOMAIN="/Users/jelt/Downloads/SENEMO/TIDE/domain_cfg.nc"
@@ -17,9 +19,6 @@ export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/jdha/GS1p7_TRIADS/config/
 export DN_FES="/gws/nopw/j04/jmmp/FES2014/ocean_tide_extrapolated/" 
 export FN_OUT_DIR="/gws/nopw/j04/class_vol2/senemo/jelt/data/for_validation_sparse/obs_"
 export DN_OBS="/gws/nopw/j04/class_vol2/senemo/jelt/data/obs/"
-
-export GRID_OBS_RAD=30 # limit of acceptable distance between wet point (grid) and observation (km)
-export THIN_OBS_RAD=200 # radius for thinning the observations (km)
 
 
 #export FN_OUT_DIR="/home/users/jelt/data/obs/for_DA_dense/obs_M2.nc"  # Original obs data from GTM work
