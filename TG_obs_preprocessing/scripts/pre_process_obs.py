@@ -44,10 +44,8 @@ sys.path.append(config.coast_repo)
 
 
 import numpy as np
-import GTM_assimilation as ass
-import dbp_read as dbr
-import dbp_gtm as gtm
-import dbp_general as dbg
+import harmonic_obs_preprocess_utils as utils
+
 
 #const=['M2']
 #const = ['SA','SSA','MF','MM','MSF','Q1','O1','P1','S1','K1','J1','2N2','MU2',
@@ -56,6 +54,7 @@ import dbp_general as dbg
 const = ['Q1','O1','P1','S1','K1','J1',
          'N2','M2','S2','K2',
         ]
+const=['M2']
 
 # File directory for ensemble arrays, nemo arrays.
 if(0): # GTM processing
@@ -73,14 +72,14 @@ for ii in range(0,n_const):
     # Define temporary constituent variable.
     cc = const[ii]
     print(cc)
-    tmp = ass.read_obs([cc], dir=config.dn_obs) #'/Users/jelt/GitHub/NEMO_validation/TG_obs_preprocessing/data/obs/')
+    tmp = utils.read_obs([cc], dir=config.dn_obs) #'/Users/jelt/GitHub/NEMO_validation/TG_obs_preprocessing/data/obs/')
     y_lon = tmp[0]; y_lat = tmp[1]; y_z1 = tmp[2]; y_z2 = tmp[3];
     y_a = tmp[4]; y_g = tmp[5]; obs_id = tmp[6] 
     
     print(obs_id[100])
 
     # Read FES
-    tmp = dbr.read_fes_2D_harm(config.dn_fes, [cc], istride=2, jstride=2)
+    tmp = utils.read_fes_2D_harm(config.dn_fes, [cc], istride=2, jstride=2)
     fes_lon = tmp[2]; fes_lat = tmp[3]; 
     fes_mask = tmp[4]; fes_z1 = tmp[5]; fes_z2 = tmp[6]
     fes_z1 = np.squeeze(fes_z1); fes_z2 = np.squeeze(fes_z2)
@@ -88,31 +87,35 @@ for ii in range(0,n_const):
     del tmp
     if ii == 0:
         # Read NEMO grid and mask data
-        tmp = dbr.read_nemo_2D_harm(config.fn_nemo_data, [cc], config.fn_nemo_domain,
-                                        istride = nemo_stride, jstride= nemo_stride,
-                                        var='z')
-        nemo_lon = tmp[2]; nemo_lat = tmp[3]; nemo_mask = tmp[4]; 
-        y_ii, y_jj = dbg.geo_nn_indices(nemo_lon, nemo_lat, y_lon, y_lat, 
+        tmp = utils.read_nemo_2D_harm(config.fn_nemo_data, [cc], config.fn_nemo_domain,
+                                         istride = nemo_stride, jstride= nemo_stride,
+                                         var='z')
+        nemo_lon = tmp[2]; nemo_lat = tmp[3]; nemo_mask = tmp[4];
+        # The following would be more efficient but debugging is not complete
+        #tmp = utils.read_nemo_2D_grid(config.fn_nemo_domain, fix_lons=True,
+        #                                istride = nemo_stride, jstride= nemo_stride)
+        #nemo_lon = tmp[0]; nemo_lat = tmp[1]; nemo_mask = tmp[2]; 
+        y_ii, y_jj = utils.geo_nn_indices(nemo_lon, nemo_lat, y_lon, y_lat, 
                                         mask = nemo_mask)
-        fes_ii, fes_jj = dbg.geo_nn_indices(fes_lon, fes_lat, y_lon, y_lat, 
+        fes_ii, fes_jj = utils.geo_nn_indices(fes_lon, fes_lat, y_lon, y_lat, 
                                     mask = fes_mask)
     
-    y_lonP1, y_latP1, yP1, yid1 = ass.process_obs(y_lon, y_lat, y_z1, obs_id, 
+    y_lonP1, y_latP1, yP1, yid1 = utils.process_obs(y_lon, y_lat, y_z1, obs_id, 
                                          nemo_lon, nemo_lat, nemo_mask, 
                                          fes_lon, fes_lat, fes_z1, fes_mask, 
                                          sobs_rad = 200, y_ii = y_ii, y_jj = y_jj,
                                          fes_ii = fes_ii, fes_jj = fes_jj)
-    y_lonP2, y_latP2, yP2, yid2 = ass.process_obs(y_lon, y_lat, y_z2, obs_id, 
+    y_lonP2, y_latP2, yP2, yid2 = utils.process_obs(y_lon, y_lat, y_z2, obs_id, 
                                          nemo_lon, nemo_lat, nemo_mask, 
                                          fes_lon, fes_lat, fes_z2, fes_mask, 
                                          sobs_rad = 200, y_ii = y_ii, y_jj = y_jj,
                                          fes_ii = fes_ii, fes_jj = fes_jj)
     
     fn_out = config.fn_out_dir + cc + '.nc'
-    gtm.GTM_file_create_obs(fn_out, len(y_lonP1), cc)
-    gtm.GTM_file_append_obs(fn_out, y_lonP1, 'longitude', 'deg')
-    gtm.GTM_file_append_obs(fn_out, y_latP1, 'latitude', 'deg')
-    gtm.GTM_file_append_obs(fn_out, yP1, 'z1')
-    gtm.GTM_file_append_obs(fn_out, yP2, 'z2')
-    gtm.GTM_file_append_obs(fn_out, yid1, 'obs_id1')
-    gtm.GTM_file_append_obs(fn_out, yid2, 'obs_id2')
+    utils.obs_harmonic_file_create(fn_out, len(y_lonP1), cc)
+    utils.obs_harmonic_file_append(fn_out, y_lonP1, 'longitude', 'deg')
+    utils.obs_harmonic_file_append(fn_out, y_latP1, 'latitude', 'deg')
+    utils.obs_harmonic_file_append(fn_out, yP1, 'z1')
+    utils.obs_harmonic_file_append(fn_out, yP2, 'z2')
+    utils.obs_harmonic_file_append(fn_out, yid1, 'obs_id1')
+    utils.obs_harmonic_file_append(fn_out, yid2, 'obs_id2')
