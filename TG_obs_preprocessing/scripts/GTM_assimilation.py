@@ -588,6 +588,60 @@ def gen_A():
     return None
 
 def superobs(lon, lat, obs, crit_dist = 50, method = 'interp', obs_id=None):
+    """
+    Thin the observations by comparing distances between all pairs and sequentially removing points 
+    until all distances are above crit_dist. The point, from the pair, that is removed is the one closest to any other point.
+    
+    If method is 'interp', the points (lat,lon,obs) are averaged without recalculating distances
+    If 'delete' the point is simply removed.
+    
+    2021 dbyrne
+    13/06/2025 jelt - updated for speed: remove the need to recalculate distances each loop. Actively select point for removal based on distance to other points.
+    """
+    
+    if obs_id is None:
+        obs_id = np.zeros(lon.shape)
+    
+    D = dbg.dist_matrix_haversine(lon,lat,lon,lat)
+    np.fill_diagonal(D,10000)
+    crit = np.nanmin(D)
+    
+    lon_sup = np.array(lon)
+    lat_sup = np.array(lat)
+    obs_sup = np.array(obs)
+    
+    while crit < crit_dist:
+        minii = np.unravel_index(np.argmin(D), D.shape)
+        ii = minii[0]
+        jj = minii[1]
+        if np.min(np.delete(D[ii, :], jj)) <= np.min(np.delete(D[:, jj], ii)): # delete the point that is closest to any other
+            kk = ii; notkk = jj
+        else:
+            kk = jj; notkk = ii
+
+        if method == 'interp':
+            print('method interp needs to be updated')
+            lon_sup[notkk] = np.nanmean([lon_sup[kk], lon_sup[notkk]])
+            lat_sup[notkk] = np.nanmean([lat_sup[kk], lat_sup[notkk]])
+            obs_sup[notkk] = np.nanmean([obs_sup[kk], obs_sup[notkk]])
+            lon_sup = np.delete(lon_sup, kk)
+            lat_sup = np.delete(lat_sup, kk)
+            obs_sup = np.delete(obs_sup, kk)
+        elif method == 'delete':
+            lon_sup = np.delete(lon_sup, kk)
+            lat_sup = np.delete(lat_sup, kk)
+            obs_sup = np.delete(obs_sup, kk)
+            obs_id = np.delete(obs_id, kk)
+        
+        # Instead of recalculating D, just drop row and column kk:
+        D = np.delete(D, kk, axis=0)
+        D = np.delete(D, kk, axis=1)     
+        np.fill_diagonal(D,10000)
+        crit = np.min(D)
+    
+    return lon_sup, lat_sup, obs_sup, obs_id
+
+def superobs_old(lon, lat, obs, crit_dist = 50, method = 'interp', obs_id=None):
     
     if obs_id is None:
         obs_id = np.zeros(lon.shape)
