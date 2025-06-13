@@ -2,6 +2,14 @@
 Pre-process NEMO and FES2014 harmonic data for comparison with observations:
 Extracts the complex harmonics at the observation locations.
 Saves all the constituents in a single netcdf file.
+
+Useage:
+1. Need to define SHELL variables for config.py
+    source harmonic_compare/livmac_config.sh (on e.g. livmac)
+2. Need to activate python environment
+3. Execute script: python pre_process_harm.py
+These steps can be done manually or with: ./iter_preprocess_harm.sh
+
 """
 from config import config
 import sys
