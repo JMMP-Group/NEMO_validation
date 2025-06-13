@@ -27,9 +27,13 @@ class config:
         self.fn_nemo_domain  = self.get_shell_var('FN_NEMO_DOMAIN', True)
         #self.fn_analysis_out      = self.get_shell_var('FN_ANALYSIS_OUT', True)
 
-    def get_shell_var(self, var:str, debug=False):
+        self.grid_obs_rad  = self.get_shell_var('GRID_OBS_RAD', True, int)
+        self.thin_obs_rad  = self.get_shell_var('THIN_OBS_RAD', True, int)
+
+    def get_shell_var(self, var:str, debug=False, as_type=str):
         try:
-            if debug: print(f"{var}: {environ.get(var.upper())}")
-            return environ.get(var.upper())
+            val = environ.get(var.upper())
+            if debug: print(f"{var}: {val}")
+            return as_type(val)
         except:
             print(f"Problem with getting shell variable: {var}")
