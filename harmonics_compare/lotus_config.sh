@@ -46,16 +46,19 @@ elif [ "$RUN_NAME" = "GS1p7_triads" ]; then
   export FN_NEMO_DOMAIN="/gws/nopw/j04/class_vol2/senemo/jdha/GS1p7_TRIADS/config/domain_cfg.nc"
 fi
 
-
+export GRID_OBS_RAD=30 # limit of acceptable distance between wet point (grid) and observation (km)
+export THIN_OBS_RAD=200 # radius for thinning the observations (km)
 
 #export FN_HARM_OBS="/home/users/jelt/data/obs/for_DA_dense/obs_M2.nc"  # Original obs data from GTM work
-export FN_HARM_OBS="/gws/nopw/j04/class_vol2/senemo/jelt/data/obs/for_validation_sparse/obs_M2.nc"  # Generated with scr_process_obs.py
+#export FN_HARM_OBS="/gws/nopw/j04/class_vol2/senemo/jelt/data/obs/for_validation_sparse/obs_M2.nc"  # Generated with submit_pre_process_obs.sh
+export FN_HARM_OBS="/gws/nopw/j04/class_vol2/senemo/jelt/data/obs/for_validation_"$GRID_OBS_RAD"_"$THIN_OBS_RAD"/obs_M2.nc"  # Generated with submit_pre_process_obs.sh
+
 
 export FN_NEMO_CFG="/home/users/jelt/GitHub/COAsT/config/example_nemo_grid_t.json"
 
 export DN_OUT="/gws/nopw/j04/class_vol2/senemo/jelt/"
 
-export FN_ANALYSIS_OUT=$DN_OUT"PROCESSED/"$RUN_NAME"_extracted.nc"
+export FN_ANALYSIS_OUT=$DN_OUT"PROCESSED_"$GRID_OBS_RAD"_"$THIN_OBS_RAD"/"$RUN_NAME"_extracted.nc"
 
 
 
