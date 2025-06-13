@@ -102,13 +102,13 @@ for ii in range(0,n_const):
     
     y_lonP1, y_latP1, yP1, yid1 = utils.process_obs(y_lon, y_lat, y_z1, obs_id, 
                                          nemo_lon, nemo_lat, nemo_mask, 
-                                         fes_lon, fes_lat, fes_z1, fes_mask, 
-                                         sobs_rad = 200, y_ii = y_ii, y_jj = y_jj,
+                                         fes_lon, fes_lat, fes_z1, fes_mask, grid_obs_rad = config.grid_obs_rad,
+                                         thin_obs_rad = config.thin_obs_rad, y_ii = y_ii, y_jj = y_jj,
                                          fes_ii = fes_ii, fes_jj = fes_jj)
     y_lonP2, y_latP2, yP2, yid2 = utils.process_obs(y_lon, y_lat, y_z2, obs_id, 
                                          nemo_lon, nemo_lat, nemo_mask, 
-                                         fes_lon, fes_lat, fes_z2, fes_mask, 
-                                         sobs_rad = 200, y_ii = y_ii, y_jj = y_jj,
+                                         fes_lon, fes_lat, fes_z2, fes_mask, grid_obs_rad = config.grid_obs_rad,
+                                         thin_obs_rad = config.thin_obs_rad, y_ii = y_ii, y_jj = y_jj,
                                          fes_ii = fes_ii, fes_jj = fes_jj)
     
     fn_out = config.fn_out_dir + cc + '.nc'
