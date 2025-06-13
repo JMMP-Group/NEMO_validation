@@ -1,3 +1,8 @@
+"""
+Pre-process NEMO and FES2014 harmonic data for comparison with observations:
+Extracts the complex harmonics at the observation locations.
+Saves all the constituents in a single netcdf file.
+"""
 from config import config
 import sys
 
