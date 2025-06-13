@@ -602,7 +602,7 @@ def obs_harmonic_file_append(fn, var, varname, varunits = ''):
 ###
 
 def process_obs(y_lon, y_lat, y, obs_id, nemo_lon, nemo_lat, nemo_mask,
-                fes_lon, fes_lat, fes_z, fes_mask, sobs_rad = 50,
+                fes_lon, fes_lat, fes_z, fes_mask, grid_obs_rad = 30, thin_obs_rad = 50,
                 y_ii = None, y_jj = None, fes_ii = None, fes_jj = None,):
     '''
     Processes obs for assimilation. Multiple stages:
@@ -623,7 +623,7 @@ def process_obs(y_lon, y_lat, y, obs_id, nemo_lon, nemo_lat, nemo_mask,
                                         mask = nemo_mask)
     nlon = nemo_lon[y_ii, y_jj]; nlat = nemo_lat[y_ii, y_jj]
     dist = dist_haversine(nlon, nlat, y_lon, y_lat)
-    nanii = dist>30
+    nanii = dist>grid_obs_rad
     y[nanii] = np.nan
     print('Points with bad model grid correspondence: ' + str(sum(nanii)))
     
@@ -640,7 +640,7 @@ def process_obs(y_lon, y_lat, y, obs_id, nemo_lon, nemo_lat, nemo_mask,
     print('Comparison to FES data made: ' + str( sum(nanii )) + ' removed.')
     
     # Superobs
-    y_lon, y_lat, y, obs_id = superobs(y_lon, y_lat, y, crit_dist= sobs_rad, 
+    y_lon, y_lat, y, obs_id = superobs(y_lon, y_lat, y, crit_dist= thin_obs_rad, 
                                method='delete', obs_id = obs_id)
     print('Superobs processed.')
     
