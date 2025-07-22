@@ -51,10 +51,23 @@ class seasonal_profiles(object):
 
         # Region indices (in analysis) to plot
         self.region_ind = [ 1, 7, 3, 2, 9, 5, 4, 6, 8]
-        self.region_names = ['N. North\nSea','S. North\nSea',
-                        'Eng.\nChannel','Outer\nShelf',
-                        'Irish\nSea', 'Kattegat',
-                        'Nor.\nTrench', 'FSC', 'Off-shelf']
+        self.region_names = ['N. North\nSea',
+                             'S. North\nSea',
+                             'Eng.\nChannel',
+                             'Outer\nShelf',
+                             'Irish\nSea',
+                             'Kattegat',
+                             'Nor.\nTrench']
+                             #'FSC',
+                             #'Off-shelf']
+
+        self.region_id = ['northern_north_sea',
+                   'southern_north_sea',
+                   'eng_channel',
+                   'outer_shelf',
+                   'irish_sea',
+                   'kattegat',
+                   'nor_trench']
         
         self.plot_zero_line  = True      # Plot a black vertical line at x = 0
         # Plot the mean bathymetric depth. 
@@ -71,7 +84,7 @@ class seasonal_profiles(object):
         
         # Subplot axes settings
         self.n_r = 2              # Number of subplot rows
-        self.n_c = 9              # Number of subplot columns
+        self.n_c = 7              # Number of subplot columns
         self.figsize = (6.5,5)      # Figure size
         self.sharey = True        # Align y axes
         self.sharex = False       # Align x axes
@@ -104,11 +117,11 @@ class seasonal_profiles(object):
         ds_list = self.ds_list_stats[0].sel(season="DJF")
         self.n_reg = len(self.region_ind)
         
-        print(f"Check region names specified are consistent with mask file")
-        for i in range(self.n_reg):
-            print (i)
-            print(f"""Panel label:({self.region_names[i]}) matches data label:
-                 ({ds_list.region_names.values[self.region_ind[i]-1]})""")
+        #print(f"Check region names specified are consistent with mask file")
+        #for i in range(self.n_reg):
+        #    print (i)
+        #    print(f"""Panel label:({self.region_names[i]}) matches data label:
+        #         ({ds_list.region_names.values[self.region_ind[i]-1]})""")
         
         # Loop over variable to plot
         for scalar in ["Temperature", "Salinity"]:
@@ -121,7 +134,7 @@ class seasonal_profiles(object):
         """
 
         if scalar == "Temperature": units = "($^{\circ}$C)"
-        if scalar == "Salinity": units = "(-)"
+        if scalar == "Salinity": units = "($10^3$)"
     
         # Labels and Titles
         xlabel = "{0} (units)".format(stat_type)  # Xlabel string
@@ -148,15 +161,17 @@ class seasonal_profiles(object):
         f, axs = plt.subplots(self.n_r, self.n_c, figsize=self.figsize,
                               sharex=self.sharex, sharey=self.sharey)
     
+        clist = [plt.cm.tab10.colors[i] for i in [0,1,3,2,5,6,9]]
+
         # Loop over regions
-        for ii in range(self.n_reg):
+        for ii, region in enumerate(self.region_id):
             for row, season in enumerate(["DJF", "JJA"]):
                 if ii >= self.n_reg:
                     axs[row,ii].axis('off')
                     continue
     
                 # Get the index of this region
-                index = self.region_ind[ii] - 1
+                #index = self.region_ind[ii] - 1
                 
                 # Loop over datasets and plot their variable
                 p = []
@@ -170,20 +185,35 @@ class seasonal_profiles(object):
                       print(f"Not expecting that season: {season}")
 
                     # render mean profile
-                    p.append(axs[row,ii].plot(
-                             ds_stats[var_name_mean][index][:100], 
-                             self.ref_depth[:100])[0] )
+                    #p.append(axs[row,ii].plot(
+                    #         ds_stats[var_name_mean][index][:100], 
+                    #         self.ref_depth[:100])[0] )
 
 
                     # get region
-                    var = ds_quant[var_name_quant].isel(region_names=index)[:100]
+                    var = ds_quant[var_name_quant].sel(region_names=region)
 
                     # restrict depth
-                    var = var.isel(z_dim=slice(None,100))
+                    region_bathy = ds_stats.profile_mean_bathymetry.sel(
+                             region_names=region)
+                    #var = var.isel(z_dim=slice(None,100))
+                    var = var.where(var.depth < region_bathy)
 
                     # render interquantile range
-                    upper_bound = var.sel(quantile=0.95)
-                    axs[row,ii].plot(upper_bound, upper_bound.depth, lw=0.8)
+                    if pp%2 == 0:
+                        alpha = 1 
+                    else:
+                        alpha= 0.4
+                    upper_bound = var.sel(quantile=0.75)
+                    axs[row,ii].plot(upper_bound, upper_bound.depth, lw=0.8,
+                                      c=clist[ii], alpha=alpha)
+                    median = var.sel(quantile=0.5)
+                    axs[row,ii].plot(median, median.depth, lw=1.3,
+                                     c=clist[ii], alpha=alpha)
+
+                    #upper_bound = var.sel(quantile=0.75)
+                    #axs[row,ii].fill_betweenx(upper_bound.depth, 0, upper_bound,
+                    #                         color=clist[ii], alpha=0.2)
     
                 # Do some plot things
                 axs[row,ii].set_title(f"{self.region_names[ii]}:\n{season}",
@@ -193,7 +223,7 @@ class seasonal_profiles(object):
     
                 # set x lims
                 if scalar == 'Salinity':
-                    axs[row,ii].set_xlim(-0.1, 3.5)
+                    axs[row,ii].set_xlim(-0.1, 4.0)
                 if scalar == 'Temperature':
                     axs[row,ii].set_xlim(-0.1, 4.0)
                 # Plot fixed lines at 0 and mean depth
@@ -203,8 +233,8 @@ class seasonal_profiles(object):
                 if self.plot_mean_depth:
                     axs[row,ii].plot([axs[row,ii].get_xlim()[0], 
                                       axs[row,ii].get_xlim()[1]], 
-                                     [ds_stats['profile_mean_bathymetry'][index],
-                                      ds_stats['profile_mean_bathymetry'][index]],
+         [ds_stats['profile_mean_bathymetry'].sel(region_names=region),
+          ds_stats['profile_mean_bathymetry'].sel(region_names=region)],
                                         color='k', ls='--')
     
                 # Invert y axis
@@ -255,7 +285,6 @@ class seasonal_profiles(object):
                                     np.arange(300, 1000, 50),
                                     np.arange(1000,4000,100)))
         
-
         # initialise figure
         fig = plt.figure(figsize=(6.5,5.5))
 
@@ -339,7 +368,126 @@ class seasonal_profiles(object):
                     r1_dict["region_id"], r2_dict["region_id"]) \
                     + scalar + ".pdf"
         plt.savefig(save_path)
+
+    def plot_all_region_all_season(self, stat_type, scalar):
+        """
+        plot profiles all regions and seasons
         
+        2 rows and 4 columns with columns splitting seasons
+         - row 1: difference between reference model and obs
+         - row 2: difference between reference model and comparitor
+        """
+
+        # select regions
+        self.region_id = ['northern_north_sea',
+                          'southern_north_sea',
+                          'eng_channel',
+                          'outer_shelf',
+                          'irish_sea',
+                          'kattegat',
+                          'nor_trench']
+
+        self.region_names = ['N. North\nSea',
+                             'S. North\nSea',
+                             'Eng.\nChannel',
+                             'Outer\nShelf',
+                             'Irish\nSea',
+                             'Kattegat',
+                             'Nor.\nTrench']
+
+        # initialise figure
+        fig = plt.figure(figsize=(6.5,5.5))
+
+        # initialise gridspec
+        gs0 = gridspec.GridSpec(ncols=7, nrows=1)
+        gs1 = gridspec.GridSpec(ncols=7, nrows=1)
+    
+        ## set frame bounds
+        gs0.update(top=0.9, bottom=0.6, left=0.1, wspace=0.1, hspace=0.12,
+                   right=0.85)
+        gs1.update(top=0.4, bottom=0.1, left=0.1, wspace=0.1,right=0.85)
+
+        # assign axes to lists
+        row0, row1 = [], []
+        for i in range(7):
+            row0.append(fig.add_subplot(gs0[i]))
+        for i in range(7):
+            row1.append(fig.add_subplot(gs1[i]))
+
+        axs = np.stack([np.array(row0), np.array(row1)])
+
+        fig, axs = plt.subplots(4,7, figsize=(6.5,5.5))
+        plt.subplots_adjust(hspace=0.15, wspace=0.15)
+
+        # get data
+        self.ds_list_quant = [xr.load_dataset(dd.format("quants")) 
+                        for dd in self.fn_list]
+        self.ds_list_stats = [xr.load_dataset(dd.format("stats")) 
+                        for dd in self.fn_list]
+
+        clist = [plt.cm.tab10.colors[i] for i in [0,1,3,2,5,6,9]]
+
+        if stat_type == "MAE":
+            tmp_str = "mean_abs_diff"
+        if stat_type == "STD":
+            tmp_str = "std_diff"
+        if stat_type == "BIAS":
+            tmp_str = "mean_diff"
+
+        var_name_quant = "{0}_{1}_quant_prof".format(tmp_str[5:], scalar.lower())
+
+        ls=['-','--']
+        lw=1.0
+        for i, season in enumerate(["DJF","MAM","JJA","SON"]):
+        #for i, season in enumerate(["DJF","JJA"]):
+            for col, region in enumerate(self.region_id):
+                axs[0,col].set_title(f"{self.region_names[col]}",
+                                         fontsize=8)
+                for mod in [0,1]:
+                    # plot MAE
+                    ds_quant = self.ds_list_quant[mod].sel(season=season)
+                    ds_stats = self.ds_list_stats[mod].sel(season=season)
+
+                    # get region
+                    var = ds_quant[var_name_quant].sel(region_names=region)
+
+                    # restrict depth
+                    region_bathy = ds_stats.profile_mean_bathymetry.sel(
+                                   region_names=region)
+                    var = var.where(var.depth < region_bathy)
+
+                    lower_bound = var.sel(quantile=0.25)
+                    mid_bound = var.sel(quantile=0.5)
+                    upper_bound = var.sel(quantile=0.75)
+
+                    if mod==0:
+                        axs[i,col].fill_betweenx(upper_bound.depth,
+                                lower_bound, upper_bound,
+                                        fc=clist[col], alpha=0.4)
+                        axs[i,col].plot(mid_bound, upper_bound.depth, lw=lw,
+                                        c=clist[col], ls=ls[mod])
+                    else:
+                        axs[i,col].plot(upper_bound, upper_bound.depth, lw=lw,
+                                        c='k', ls=ls[mod])
+                        axs[i,col].plot(mid_bound, upper_bound.depth, lw=lw,
+                                        c='k', ls='-')
+                        axs[i,col].plot(lower_bound, upper_bound.depth, lw=lw,
+                                        c='k', ls=ls[mod])
+        for ax in axs.flatten():
+            ax.axvline(0, lw=1.0, c='grey')
+            ax.set_ylim(0,100)
+            ax.set_xlim(-2.2,2.2)
+            ax.invert_yaxis()
+        for ax in axs[:,1:].flatten():
+            ax.set_yticklabels([])
+        for ax in axs[:-1].flatten():
+            ax.set_xticklabels([])
+        for ax in axs[:,0]:
+            ax.set_ylabel("Depth (m)") 
+
+        plt.show()
+
+
 if __name__ == "__main__":
 
     # set regions
@@ -358,4 +506,5 @@ if __name__ == "__main__":
     #                              scalar="salinity",
     #                              xlabel=r"$\overline{|\Delta S|}$ ($10^{-3}$)",
     #                              xmax=4.0)
-    sp.plot_all_djf_jja()
+    #sp.plot_all_djf_jja()
+    sp.plot_all_region_all_season(stat_type="BIAS", scalar="Temperature")
