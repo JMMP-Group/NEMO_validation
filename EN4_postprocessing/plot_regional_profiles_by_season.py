@@ -369,55 +369,38 @@ class seasonal_profiles(object):
                     + scalar + ".pdf"
         plt.savefig(save_path)
 
-    def plot_all_region_all_season(self, stat_type, scalar):
+    def plot_all_region_all_season(self, stat_type, scalar, stats_lim=True,
+                                   save_plot=True):
         """
         plot profiles all regions and seasons
         
         2 rows and 4 columns with columns splitting seasons
          - row 1: difference between reference model and obs
-         - row 2: difference between reference model and comparitor
+         - row 2: difference between reference model and comparator
         """
 
         # select regions
         self.region_id = ['northern_north_sea',
-                          'southern_north_sea',
-                          'eng_channel',
                           'outer_shelf',
-                          'irish_sea',
+                          'eng_channel',
+                          'nor_trench',
                           'kattegat',
-                          'nor_trench']
+                          'southern_north_sea',
+                          'irish_sea']
 
+        # set region names
         self.region_names = ['N. North\nSea',
-                             'S. North\nSea',
-                             'Eng.\nChannel',
                              'Outer\nShelf',
-                             'Irish\nSea',
+                             'Eng.\nChannel',
+                             'Nor.\nTrench',
                              'Kattegat',
-                             'Nor.\nTrench']
+                             'S. North\nSea',
+                             'Irish\nSea']
 
         # initialise figure
-        fig = plt.figure(figsize=(6.5,5.5))
-
-        # initialise gridspec
-        gs0 = gridspec.GridSpec(ncols=7, nrows=1)
-        gs1 = gridspec.GridSpec(ncols=7, nrows=1)
-    
-        ## set frame bounds
-        gs0.update(top=0.9, bottom=0.6, left=0.1, wspace=0.1, hspace=0.12,
-                   right=0.85)
-        gs1.update(top=0.4, bottom=0.1, left=0.1, wspace=0.1,right=0.85)
-
-        # assign axes to lists
-        row0, row1 = [], []
-        for i in range(7):
-            row0.append(fig.add_subplot(gs0[i]))
-        for i in range(7):
-            row1.append(fig.add_subplot(gs1[i]))
-
-        axs = np.stack([np.array(row0), np.array(row1)])
-
         fig, axs = plt.subplots(4,7, figsize=(6.5,5.5))
-        plt.subplots_adjust(hspace=0.15, wspace=0.15)
+        plt.subplots_adjust(left=0.1, right=0.98, top=0.93,
+                            hspace=0.15, wspace=0.15)
 
         # get data
         self.ds_list_quant = [xr.load_dataset(dd.format("quants")) 
@@ -425,8 +408,10 @@ class seasonal_profiles(object):
         self.ds_list_stats = [xr.load_dataset(dd.format("stats")) 
                         for dd in self.fn_list]
 
+        # set line colours
         clist = [plt.cm.tab10.colors[i] for i in [0,1,3,2,5,6,9]]
 
+        # choose metric
         if stat_type == "MAE":
             tmp_str = "mean_abs_diff"
         if stat_type == "STD":
@@ -434,12 +419,22 @@ class seasonal_profiles(object):
         if stat_type == "BIAS":
             tmp_str = "mean_diff"
 
-        var_name_quant = "{0}_{1}_quant_prof".format(tmp_str[5:], scalar.lower())
+        # set units
+        if scalar == "Temperature": units = "($^{\circ}$C)"
+        if scalar == "Salinity": units = "($10^3$)"
+
+        # choose variable
+        var_name_quant = "{0}_{1}_quant_prof".format(tmp_str[5:],
+                                                     scalar.lower())
+
+        # Filename for the output
+        fn_out = "FIGS/regional_{0}_{1}.pdf".format(var_name_quant,
+                                                    config.case)
 
         ls=['-','--']
-        lw=1.0
+        lw=0.8
+        neg_lims, pos_lims = [], []
         for i, season in enumerate(["DJF","MAM","JJA","SON"]):
-        #for i, season in enumerate(["DJF","JJA"]):
             for col, region in enumerate(self.region_id):
                 axs[0,col].set_title(f"{self.region_names[col]}",
                                          fontsize=8)
@@ -459,6 +454,10 @@ class seasonal_profiles(object):
                     lower_bound = var.sel(quantile=0.25)
                     mid_bound = var.sel(quantile=0.5)
                     upper_bound = var.sel(quantile=0.75)
+                    
+                    # get lims 
+                    neg_lims.append(lower_bound.min())
+                    pos_lims.append(upper_bound.max())
 
                     if mod==0:
                         axs[i,col].fill_betweenx(upper_bound.depth,
@@ -473,19 +472,44 @@ class seasonal_profiles(object):
                                         c='k', ls='-')
                         axs[i,col].plot(lower_bound, upper_bound.depth, lw=lw,
                                         c='k', ls=ls[mod])
+
+        # get value lims
+        if stats_lim:
+            glob_min = abs(np.quantile(np.array(neg_lims), 0.05))
+            glob_max = abs(np.quantile(np.array(pos_lims), 0.95))
+        else:
+            glob_min = abs(min(neg_lims))
+            glob_max = abs(max(pos_lims))
+        bound = max(glob_min, glob_max) * 1.05
+
+        # general axes formatting
         for ax in axs.flatten():
-            ax.axvline(0, lw=1.0, c='grey')
+            ax.axvline(0, lw=lw, c='grey')
             ax.set_ylim(0,100)
-            ax.set_xlim(-2.2,2.2)
+            ax.set_xlim(-bound,bound)
             ax.invert_yaxis()
+
+        # blank out axes labels
         for ax in axs[:,1:].flatten():
             ax.set_yticklabels([])
         for ax in axs[:-1].flatten():
             ax.set_xticklabels([])
+
+        # set axes labels
         for ax in axs[:,0]:
             ax.set_ylabel("Depth (m)") 
+        for ax in axs[-1]:
+            ax.set_xlabel(scalar + "\n" + units)
 
-        plt.show()
+        # add season labels
+        for i, season in enumerate(["DJF","MAM","JJA","SON"]):
+            for ax in axs[i,:]:
+                ax.text(0.95, 0.02, season, va="bottom", ha="right",
+                        fontsize=8, transform=ax.transAxes)
+
+        # Save plot maybe
+        if save_plot: 
+            plt.savefig(fn_out)
 
 
 if __name__ == "__main__":
@@ -508,3 +532,4 @@ if __name__ == "__main__":
     #                              xmax=4.0)
     #sp.plot_all_djf_jja()
     sp.plot_all_region_all_season(stat_type="BIAS", scalar="Temperature")
+    sp.plot_all_region_all_season(stat_type="BIAS", scalar="Salinity")
