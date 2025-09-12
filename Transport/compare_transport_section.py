@@ -97,7 +97,13 @@ class Ellet(object):
 
         ds = self.Ellet_profiles.dataset
         dims = ["id_dim","z_dim"]
-        ds["volume_transport"] = (ds.ladcp_velocity * ds.dx * ds.dz).sum(dims)
+        ds["volume_transport"] = (ds.relative_velocity * ds.dx * 1000 * ds.dz).sum(dims)
+        print (ds.longitude)
+        ds_e = ds.where(ds.longitude > -11)
+        ds_w = ds.where(ds.longitude < -11)
+
+        ds["volume_transport_e"] = (ds_e.relative_velocity * ds_e.dx * 1000 * ds_e.dz).sum(dims)
+        ds["volume_transport_w"] = (ds_w.relative_velocity * ds_w.dx * 1000 * ds_w.dz).sum(dims)
 
     def get_dates(self):
 

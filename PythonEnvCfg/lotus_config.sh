@@ -11,7 +11,7 @@ export ENDYEAR=2014 #1980    # 2014
 export MOD="P2.0"  # Model reference name
 export COMP_MOD="co7"
 
-export MASS_DIR="xu-ct872"
+export MASS_DIR="xu-dq404"
 
 # Use to activate conda environment in $MACHINE_pre_process_en4_monthly.sh
 #export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
@@ -22,7 +22,10 @@ export COAST_REPO="/home/users/ryapat30/NOC/COAsT"
 # COAsT configuration files
 export DN_CFG="/home/users/ryapat30/NOC/COAsT/config/"
 export FN_CFG_PROF=$DN_CFG"example_en4_profiles.json"
-export FN_CFG_NEMO=$DN_CFG"example_nemo_grid_t.json"
+export FN_CFG_NEMO_T=$DN_CFG"example_nemo_grid_t.json"
+export FN_CFG_NEMO_U=$DN_CFG"example_nemo_grid_u.json"
+export FN_CFG_NEMO_V=$DN_CFG"example_nemo_grid_v.json"
+export FN_CFG_NEMO_F=$DN_CFG"example_nemo_grid_f.json"
 
 # location of raw EN4 data
 #export DIN_EN4="/home/users/jelt/EN4/"
@@ -39,10 +42,10 @@ export DN_DOM="/gws/nopw/j04/jmmp/jmmp_collab/AMM15/DOMAIN_CFG/"
 # directory for NEMO data files
 #export DN_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/p0/daily/"  # Dave 25h data
 if [[ $MOD = "co7" ]]; then
- export DN_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/co7/daily/"  # co7 24h ave
+ export DN_DAT="/gws/nopw/j04/jmmp/MASS/rosie_mi-ao113_2004/25hourm/"  # co7 24h ave
 export GRID="/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
 else
- export DN_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/daily/"  # MOD 24h ave
+ export DN_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/25hourm/"  # MOD 24h ave
  if [[ $MOD = "P2.0" ]]; then
    export GRID="/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc"
  else
@@ -54,10 +57,11 @@ fi
 
 # temporary fix for adding comparison model
 if [[ $COMP_MOD = "co7" ]]; then
- export COMP_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/co7/daily/"  # co7 24h ave
+ #export COMP_DAT="/gws/nopw/j04/jmmp/CO9_AMM15/outputs/co7/daily/"  # co7 24h ave
+ export COMP_DAT="/gws/nopw/j04/jmmp/MASS/rosie_mi-ao113_2004/25hourm/"  # co7 24h ave
 export COMP_GRID="/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/CO7_EXACT_CFG_FILE.nc"  # contains the grid information for NEMO
 else
- export COMP_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/daily/"  # MOD 24h ave
+ export COMP_DAT="/gws/nopw/j04/jmmp/MASS/"$MASS_DIR"/25hourm/"  # MOD 24h ave
  if [[ $COM_MOD = "P2.0" ]]; then
    export COMP_GRID="/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc"
  else

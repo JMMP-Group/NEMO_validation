@@ -27,7 +27,7 @@ class transport(object):
             os.makedirs(out_path_cross, exist_ok=True)
             os.makedirs(out_path_cut, exist_ok=True)
 
-    def _get_ellet_line_positions(self):
+    def _get_ellet_line_positions(self, sec=None):
         """
         retrieve ellet line lat lon positions
         """
@@ -35,6 +35,11 @@ class transport(object):
         path = cfg.dn_out + "transport/obs_for_ellet_line.nc"
         ds = xr.open_dataset(path)
         ds = ds.where(ds.time==2005, drop=True)
+
+        if sec == 'west':
+            ds = ds.where(ds.longitude < -11)
+        if sec == 'east':
+            ds = ds.where(ds.longitude > -11)
     
         return ds.longitude, ds.latitude
     
@@ -80,6 +85,7 @@ class transport(object):
             dates = np.arange(start_date, end_date, dtype='datetime64[M]')
             ds_series = []
             for date in dates:
+                print (date)
                 #try:
                 date_str = str(date).replace("-","")
                 fn=path_in + date_str + f"*_25hourm_grid_{vec}.nc"
@@ -88,10 +94,11 @@ class transport(object):
                 chunks="auto"
                 #ds = xr.open_dataset(fn, chunks=chunks, decode_cf=True,
                 #                    decode_times=False)#.mean("time_counter")
+                #ds = xr.open_dataset(fn, chunks=chunks, decode_cf=True,
+                #                    decode_times=False)#.mean("time_counter")
                 nemo = coast.Gridded(fn, cfg.comp_case["grid"], multiple=True,
                                      config=cfg.fn_cfg_nemo)
                 ds = nemo.dataset
-                print (nemo.dataset)
 
                 #ds = ds.drop("deptht_bounds")
     
@@ -135,11 +142,16 @@ class transport(object):
                 save_path = path_out + "transport/Ellet_cutout/" + fn
                 full_series.to_netcdf(save_path)
     
+        #start_date = "2006-01"
+        #end_date = "2007-01"
     
-        start_date = "2012-01"
-        end_date = "2013-01"
-    
-        mean(start_date, end_date, vec="U")
+        for year in range(2006,2007):
+            start_date = f"{year}-01"
+            end_date = f"{year+1}-01"
+            print (start_date)
+            print (end_date)
+            mean(start_date, end_date, vec="U")
+            mean(start_date, end_date, vec="V")
     
     def _get_transport_all(self):
         """
@@ -151,9 +163,9 @@ class transport(object):
             self._get_transport(model=cfg.comp_case["case"], 
                             path=cfg.comp_case["proc_data"])
     
-    def _get_transport(self, model, path, y0=2006, y1=2007):
+    def _get_transport(self, model, path, y0=2006, y1=2007, sec="all"):
     
-        lon, lat = self._get_ellet_line_positions()
+        lon, lat = self._get_ellet_line_positions(sec=sec)
         product = 'volume'
         strait='Ellet' 
         save_path = path + "transport/CrossSection/"
@@ -188,7 +200,7 @@ class transport(object):
                                       saving=False)
     
             # get transport statistics
-            transport = transport.CO9
+            transport = transport[model]
             mean = transport.resample(time="1MS").mean()
             mean.name = "mean"
             quant = transport.resample(time="1MS").quantile([0.25,0.5,0.75])
@@ -202,7 +214,7 @@ class transport(object):
             # save
             with ProgressBar():
                 path = cfg.dn_out + "transport/" + str(i) + \
-                        "_Ellet_transport_stats.nc"
+                        f"_Ellet_transport_stats_{sec}.nc"
                 transport_stats.to_netcdf(path)
     
     
@@ -250,63 +262,112 @@ class transport(object):
             #    uv.to_netcdf(path)#, encoding={"time": {"dtype": "i4"}})
     
     #_get_cross_section()
-    
+
+    def _get_transport_coast_format(self):
+        """
+        calculate transport wiht COAsT Methods
+        """
+
+        path_in=cfg.comp_case["raw_data"]
+        lons, lats = self._get_ellet_line_positions()
+        pts = list(zip(lats.values,lons.values))
+
+        start_date = "2006-01"
+        end_date = "2007-01"
+        dates = np.arange(start_date, end_date, dtype='datetime64[M]')
+        ds_series = []
+
+        #n = 1064
+        #s = 837
+        #e = 620
+        #w = 197
+
+        nemo_f = coast.Gridded(fn_domain=cfg.comp_case["grid"],
+                               config=cfg.fn_cfg_nemo_f)
+        #nemo_f.dataset = nemo_f.dataset.isel({"x_dim":slice(w,e),
+        #              "y_dim":slice(s,n)})
+        for date in dates:
+            print (date)
+            date_str = str(date).replace("-","")
+            chunks="auto"
+            fn=path_in + date_str + f"*_25hourm_grid_U.nc"
+            nemo_u = coast.Gridded(fn, cfg.comp_case["grid"], multiple=True,
+                                   config=cfg.fn_cfg_nemo_u)
+            fn=path_in + date_str + f"*_25hourm_grid_V.nc"
+            nemo_v = coast.Gridded(fn, cfg.comp_case["grid"], multiple=True,
+                                   config=cfg.fn_cfg_nemo_v)
+
+
+            #nemo_u.dataset = nemo_u.dataset.isel({"x_dim":slice(w,e),
+            #              "y_dim":slice(s,n)})
+            #nemo_v.dataset = nemo_v.dataset.isel({"x_dim":slice(w,e),
+            #              "y_dim":slice(s,n)})
+
+            with ProgressBar():
+                nemo_u.dataset = nemo_u.dataset.mean("t_dim").load()
+                nemo_v.dataset = nemo_v.dataset.mean("t_dim").load()
+            
+            # save
+            for i in range(len(pts) - 1):
+                tran_f = coast.TransectF(nemo_f, pts[i], pts[i+1])
+                tran_f.calc_flow_across_transect(nemo_u, nemo_v)
+                vol = tran_f.data_cross_tran_flow.normal_transports.sum("r_dim")
+                vol = vol.expand_dims("pts")
+                # RDP note to self needs to be mean of pts i and pts i+1
+                vol = vol.assign_coords(longitude=("pts",lons.data),
+                                        latitude=("pts", lats.data))
+                print (vol)
+                print (sdfkj)
+
     def plot_ellet_transport(self, rolling=None):
         """
         plot time series of ellet transport
         """
     
         # initialise plots
-        fig, ax1 = plt.subplots(1)
-    
-        ax2 = ax1.twinx()
+        cm = 1/2.54  # centimeters in inches
+        fig, ax = plt.subplots(1, figsize=(12*cm,6*cm))
+        plt.subplots_adjust(bottom=0.2, top=0.95, right=0.95, left=0.15)
     
         # access data
-        print (cfg.dn_out + "transport/ModelTransportStats/*")
-        mod = xr.open_mfdataset(cfg.dn_out + "transport/ModelTransportStats/*transport*")
+        mod = xr.open_mfdataset(cfg.dn_out + 
+                            "transport/ModelTransportStats/*transport*")
     
         mod_start = mod.time.min()
         mod_end = mod.time.max()
-        NAO = get_climate_variables()
-        NAO = NAO.sel(time=slice("2006-02-01",mod_end))
-        mod = mod.sel(time=slice("2006-02-01",mod_end))
-        NAO = NAO.sel(time=slice(mod_start,mod_end))
     
         mod = mod.resample(time="1MS").asfreq()/1e6
     
-        if rolling:
-            NAO = NAO.rolling(time=rolling).mean()
-            mod = mod.rolling(time=rolling).mean()
-        #mod = mod/abs(mod).max("time")
-        #NAO = NAO/abs(NAO).max("time")
-        print (NAO.max())
-        print (mod.max())
-        print (NAO.min())
-        print (mod.min("time"))
-        cov = np.ma.correlate(np.ma.masked_invalid(NAO), np.ma.masked_invalid(mod["mean"]), mode="same")
-        print (NAO)
-        print (mod["mean"])
-        print (cov)
-        #print (skjdfh)
-        ax1.fill_between(mod.time, mod.quant.sel(quantile=0.25),
+        ax.fill_between(mod.time, mod.quant.sel(quantile=0.25),
                                   mod.quant.sel(quantile=0.75))
-        ax1.plot(mod.time, mod["mean"], c='red')
+        ax.plot(mod.time, mod["mean"], c='red')
     
-        #ax2.plot(NAO.time, NAO, c="orange")
     
         # observations
         path = cfg.dn_out + "transport/obs_for_ellet_line.nc"
         obs = xr.open_dataset(path)
         date = []
         for year, year_ds in obs.groupby("time"):
-            print (year)
-            print (year_ds)
             date.append(datetime.datetime(year, int(year_ds.Month), 1))
-        vol = obs.volume_transport / 1e4
-        print (date)
-        plt.scatter(date, vol, c='g')
+        vol = obs.volume_transport / 1e6
+        
+        v_mean = vol.mean()
+        v_lower = vol.mean() - vol.std()
+        v_upper = vol.mean() + vol.std()
+        pos = mod_end - np.timedelta64(12, "W")
+        vl = ax.vlines(pos, v_lower, v_upper,
+                             color='k', transform=ax.transData,
+                             lw=2)
+        vl.set(capstyle="round")
+        ax.scatter(pos, vol.mean(), c='g')
+
+        ax.set_xlim(mod_start,mod_end)
+
+        ax.set_ylabel("Volume Transport (Sv)")
+        ax.set_xlabel("Date")
     
-        plt.savefig("ellet_transport_timeseries.png")
+        plt.show()
+        plt.savefig("Figs/ellet_transport_timeseries.png")
     
     def plot_ellet_model_transport_cross_section(self):
         """
@@ -340,13 +401,12 @@ class transport(object):
         print (mod)
         
         axs[0].pcolor(obs.Refdist, -obs.depth, obs.ladcp_velocity.T,
-                            vmin=vmin, vmax=vmax, shading="auto", cmap=plt.cm.RdBu)
+                      vmin=vmin, vmax=vmax, shading="auto", cmap=plt.cm.RdBu)
     
     
         #axs[1].pcolor(mod.x/1000, -mod.depth, mod.uv,
         #                    vmin=vmin, vmax=vmax, cmap=plt.cm.RdBu)
         plt.savefig("ellet_cross_200610.png")
-        plt.show()
     
     #plot_ellet_model_transport_cross_section()
     
@@ -386,10 +446,19 @@ class transport(object):
         obs = xr.open_dataset("")
         
         # render time series of vels
+
         
 if __name__ == "__main__":
     trans = transport()
-    trans._get_monthly_mean(path_in=cfg.comp_case["raw_data"],
-                            path_out=cfg.comp_case["proc_data"])
-    #trans._get_transport(model=cfg.comp_case["case"], 
-    #               path=cfg.comp_case["proc_data"], y0=2012,y1=2013)
+    #trans._get_monthly_mean(path_in=cfg.comp_case["raw_data"],
+    #                        path_out=cfg.comp_case["proc_data"])
+    #trans._get_monthly_mean(path_in=cfg.dn_dat,
+    #                        path_out=cfg.dn_out)
+    trans._get_transport_coast_format()
+    #for year in [2005,2006,2007,2008,2009,2010,2011,2012,2013]:
+    #    print ("year: ", year)
+    #    trans._get_transport(model=cfg.case, 
+    #               path=cfg.dn_out, y0=year,y1=year + 1, sec="east")
+    #    trans._get_transport(model=cfg.case, 
+    #               path=cfg.dn_out, y0=year,y1=year + 1, sec="west")
+    #trans.plot_ellet_transport()
