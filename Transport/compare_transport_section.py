@@ -85,11 +85,11 @@ class Ellet(object):
         """
 
         dx = self.ds.Refdist.data[1:] - self.ds.Refdist.data[:-1]
-        dx_0 = [dx[0]]
-        dx_end = [dx[-1]]
-        dx = dx[1:]/2 + dx[:-1]/2
+        dx_0 = [dx[0]] 
+        dx_end = [dx[-1]] 
+        dx = dx[1:] + dx[:-1]
         self.ds['dx'] = xr.DataArray(np.concatenate((dx_0, dx, dx_end)),
-                                     dims=("Refdist"))
+                                     dims=("Refdist")) / 2
     def get_volume_transport(self):
         """
         get volume transport

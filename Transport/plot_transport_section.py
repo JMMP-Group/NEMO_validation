@@ -263,12 +263,11 @@ class transport(object):
     
     #_get_cross_section()
 
-    def _get_transport_coast_format(self):
+    def _get_transport_coast_format(self, path_in, path_out):
         """
         calculate transport wiht COAsT Methods
         """
 
-        path_in=cfg.comp_case["raw_data"]
         lons, lats = self._get_ellet_line_positions()
         pts = list(zip(lats.values,lons.values))
 
@@ -286,6 +285,8 @@ class transport(object):
                                config=cfg.fn_cfg_nemo_f)
         #nemo_f.dataset = nemo_f.dataset.isel({"x_dim":slice(w,e),
         #              "y_dim":slice(s,n)})
+
+        vol_ds_list = []
         for date in dates:
             print (date)
             date_str = str(date).replace("-","")
@@ -297,7 +298,6 @@ class transport(object):
             nemo_v = coast.Gridded(fn, cfg.comp_case["grid"], multiple=True,
                                    config=cfg.fn_cfg_nemo_v)
 
-
             #nemo_u.dataset = nemo_u.dataset.isel({"x_dim":slice(w,e),
             #              "y_dim":slice(s,n)})
             #nemo_v.dataset = nemo_v.dataset.isel({"x_dim":slice(w,e),
@@ -307,17 +307,39 @@ class transport(object):
                 nemo_u.dataset = nemo_u.dataset.mean("t_dim").load()
                 nemo_v.dataset = nemo_v.dataset.mean("t_dim").load()
             
+            lons_mid = (lons.data[1:] + lons.data[:-1]) / 2
+            lats_mid = (lats.data[1:] + lats.data[:-1]) / 2
+
             # save
+            vols = np.empty(0)
             for i in range(len(pts) - 1):
                 tran_f = coast.TransectF(nemo_f, pts[i], pts[i+1])
                 tran_f.calc_flow_across_transect(nemo_u, nemo_v)
                 vol = tran_f.data_cross_tran_flow.normal_transports.sum("r_dim")
-                vol = vol.expand_dims("pts")
-                # RDP note to self needs to be mean of pts i and pts i+1
-                vol = vol.assign_coords(longitude=("pts",lons.data),
-                                        latitude=("pts", lats.data))
-                print (vol)
-                print (sdfkj)
+                #vol = vol.expand_dims("pts")
+                vols = np.append(vols, vol.data)
+
+            # shift onto Observation Locations
+            vols_0 = [vols[0]]
+            vols_end = [vols[-1]]
+            vols = vols[1:] + vols[:-1]
+
+            vols_ds = xr.DataArray(np.concatenate((vols_0, vols, vols_end)),
+                                         dims=("pts")) / 2
+
+            vols_ds = vols_ds.expand_dims(time=[date])
+
+            vol_ds_list.append(vols_ds)
+
+        vol_ds_timeseries = xr.concat(vol_ds_list, "time")
+        vol_ds_timeseries = vol_ds_timeseries.assign_coords(
+                                                longitude=("pts",lons.data),
+                                                latitude=("pts", lats.data))
+
+        # save
+        fn = f"Rockall_transport_coast_derived_{start_date}_{end_date}.nc"
+        save_path = path_out + "transport/" + fn
+        vol_ds_timeseries.to_netcdf(save_path)
 
     def plot_ellet_transport(self, rolling=None):
         """
@@ -454,7 +476,8 @@ if __name__ == "__main__":
     #                        path_out=cfg.comp_case["proc_data"])
     #trans._get_monthly_mean(path_in=cfg.dn_dat,
     #                        path_out=cfg.dn_out)
-    trans._get_transport_coast_format()
+    trans._get_transport_coast_format(path_in=cfg.dn_dat,
+                                      path_out=cfg.dn_out)
     #for year in [2005,2006,2007,2008,2009,2010,2011,2012,2013]:
     #    print ("year: ", year)
     #    trans._get_transport(model=cfg.case, 
