@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import numpy as np
 print (np.__version__)
 from StraitFlux import masterscript_line as master
@@ -263,7 +264,8 @@ class transport(object):
     
     #_get_cross_section()
 
-    def _get_transport_coast_format(self, path_in, path_out):
+    def _get_transport_coast_format(self, path_in, path_out,
+                          start_date="", end_date=""):
         """
         calculate transport wiht COAsT Methods
         """
@@ -271,8 +273,6 @@ class transport(object):
         lons, lats = self._get_ellet_line_positions()
         pts = list(zip(lats.values,lons.values))
 
-        start_date = "2006-01"
-        end_date = "2007-01"
         dates = np.arange(start_date, end_date, dtype='datetime64[M]')
         ds_series = []
 
@@ -335,11 +335,14 @@ class transport(object):
         vol_ds_timeseries = vol_ds_timeseries.assign_coords(
                                                 longitude=("pts",lons.data),
                                                 latitude=("pts", lats.data))
+        vol_ds_timeseries.name = "transport"
+        #vol_ds_timeseries["time"] = vol_ds_timeseries.time.astype("datetime64[ns]")
+        
 
         # save
         fn = f"Rockall_transport_coast_derived_{start_date}_{end_date}.nc"
         save_path = path_out + "transport/" + fn
-        vol_ds_timeseries.to_netcdf(save_path)
+        vol_ds_timeseries.to_netcdf(save_path, unlimited_dims="time")
 
     def plot_ellet_transport(self, rolling=None):
         """
@@ -469,16 +472,172 @@ class transport(object):
         
         # render time series of vels
 
+    def plot_ellet_hovmoller_transport(self):
+        """
+        plot transport for 2 models and obs as hovmoller
+        """
+
+        # initialise plot
+        fig, axs = plt.subplots(3, figsize=(6.5,4))
+        plt.subplots_adjust()
+        
+        # access data
+        m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
+        m1 = xr.open_mfdataset(cfg.comp_case["proc_data"] +
+                               "transport/Rockall_transport*.nc")
+        obs = xr.open_dataset(cfg.dn_out + "transport/obs_for_ellet_line.nc")
+        print (m0)
+        print (m1)
+        print (obs)
+        print (kljdhfk)
+
+        vmin, vmax = -5, 5
+        axs[0].pcolor(m0.time, obs.Refdist, m0.transport.T,
+                      vmin=vmin, vmax=vmax,
+                      shading="nearest", cmap=plt.cm.RdBu_r)
+        axs[1].pcolor(m1.time, obs.Refdist, m1.transport.T,
+                      vmin=vmin, vmax=vmax,
+                      shading="nearest", cmap=plt.cm.RdBu_r)
+        plt.show()
+
+    def plot_ellet_hist_by_section(self):
+
+        # initialise plot
+        fig, axs = plt.subplots(3, figsize=(6.5,4))
+        plt.subplots_adjust()
+        
+        # access data
+        m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
+        m1 = xr.open_mfdataset(cfg.comp_case["proc_data"] +
+                               "transport/Rockall_transport*.nc")
+        obs = xr.open_dataset(cfg.dn_out + "transport/obs_for_ellet_line.nc")
+
+        def render_split(axs, ds):
+            ww = ds.where((ds.longitude > -13.0) & (ds.longitude < -12.5))
+            ew = ds.where((ds.longitude > -9.6) & (ds.longitude < -9.2))
+            mw = ds.where((ds.longitude > -12.5) & (ds.longitude < -9.6))
+
+            #axs[0].plot(ww.time, ww.transport.sum("pts"))
+            #axs[1].plot(mw.time, mw.transport.sum("pts"))
+            #axs[2].plot(ew.time, ew.transport.sum("pts"))
+
+            axs[0].hist(ww.transport.sum("pts"), density=True, alpha=0.4)
+            axs[1].hist(mw.transport.sum("pts"), density=True, alpha=0.4)
+            axs[2].hist(ew.transport.sum("pts"), density=True, alpha=0.4)
+
+        render_split(axs, m0)
+        render_split(axs, m1)
+
+        ww = obs.where((obs.longitude > -13.0) & (obs.longitude < -12.5))
+        ew = obs.where((obs.longitude > -9.6) & (obs.longitude < -9.2))
+        mw = obs.where((obs.longitude > -12.5) & (obs.longitude < -9.6))
+
+        #time = []
+        #for key, values in obs.groupby("time"):
+        #    
+        #    t = np.datetime64(str(values.time.data[0]) + '-' +  str(values.Month.data[0]).zfill(2))
+        #    time.append(t)
+        axs[0].axvline(ww.volume_transport.sum("id_dim").mean() / 1e6, c="k")
+        axs[1].axvline(mw.volume_transport.sum("id_dim").mean() / 1e6, c="k")
+        axs[2].axvline(ew.volume_transport.sum("id_dim").mean() / 1e6, c="k")
+
+        for ax in axs:
+            ax.set_xlim(-11,11)
+        plt.show()
+
+    def plot_ellet_climatology_by_section(self):
+
+        # initialise plot
+        fig, axs = plt.subplots(3, figsize=(6.5,4))
+        plt.subplots_adjust()
+        
+        # access data
+        m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
+        m1 = xr.open_mfdataset(cfg.comp_case["proc_data"] +
+                               "transport/Rockall_transport*.nc")
+        obs = xr.open_dataset(cfg.dn_out + "transport/obs_for_ellet_line.nc")
+
+        def render_split(axs, ds, lon0=-13.0, lon1=-12.5):
+
+            transport = []
+            for year, ds_year in ds.groupby("time.year"):
+                ds_cut = ds_year.where((ds_year.longitude > lon0) & 
+                                   (ds_year.longitude < lon1))
+                ds_cut = ds_cut.drop_vars("time")
+
+                transport.append(
+                           ds_cut.transport.sum("pts").expand_dims(year=[year]))
+            transect_vol = xr.concat(transport, "year")
+
+            mean = transect_vol.mean("year")
+            quant = transect_vol.quantile([0.25,0.5,0.75], "year")
+
+            return mean, quant
+        
+        ww_lons = [-13.0, -12.5]
+        mw_lons = [-12.5, -9.6]
+        ew_lons = [-9.6, -9.2]
+        lon_set = [ww_lons, mw_lons, ew_lons]
+                
+        for i, lons in enumerate(lon_set):
+            mean, quant = render_split(axs, m0, lon0=lons[0], lon1=lons[1])
+            c = "tab:blue"
+            axs[i].fill_between(range(1,13), quant.sel(quantile=0.25),
+                            quant.sel(quantile=0.75), color=c, alpha=0.4)
+            axs[i].plot(range(1,13), quant.sel(quantile=0.5), c=c)
+
+            c = "tab:orange"
+            mean, quant = render_split(axs, m1, lon0=lons[0], lon1=lons[1])
+            axs[i].plot(range(1,13), quant.sel(quantile=0.25), ls="--", c=c)
+            axs[i].plot(range(1,13), quant.sel(quantile=0.5), c=c)
+            axs[i].plot(range(1,13), quant.sel(quantile=0.75), ls="--", c=c)
+
+
+
+        ww = obs.where((obs.longitude > -13.0) & (obs.longitude < -12.5))
+        ew = obs.where((obs.longitude > -9.6) & (obs.longitude < -9.2))
+        mw = obs.where((obs.longitude > -12.5) & (obs.longitude < -9.6))
+
+        #time = []
+        #for key, values in obs.groupby("time"):
+        #    
+        #    t = np.datetime64(str(values.time.data[0]) + '-' +  str(values.Month.data[0]).zfill(2))
+        #    time.append(t)
+        month = obs.Month
+        axs[0].scatter(month, ww.volume_transport.sum("id_dim") / 1e6, c="k")
+        axs[1].scatter(month, mw.volume_transport.sum("id_dim") / 1e6, c="k")
+        axs[2].scatter(month, ew.volume_transport.sum("id_dim") / 1e6, c="k")
+
+        for ax in axs[:2]:
+            ax.set_xticklabels([])
+        for ax in axs:
+            ax.set_xlim(1,12)
+        
+        # set axs titles
+        axs[0].set_ylabel("Western Wedge\nTransport (Sv)", multialignment="center")
+        axs[1].set_ylabel("Mid-Basin\nTransport (Sv)", multialignment="center")
+        axs[2].set_ylabel("Eastern Wedge\nTransport (Sv)", multialignment="center")
+        fig.align_ylabels()
+        axs[2].set_xlabel("Month")
+
+        plt.show()
         
 if __name__ == "__main__":
     trans = transport()
+    trans.plot_ellet_climatology_by_section()
     #trans._get_monthly_mean(path_in=cfg.comp_case["raw_data"],
     #                        path_out=cfg.comp_case["proc_data"])
     #trans._get_monthly_mean(path_in=cfg.dn_dat,
     #                        path_out=cfg.dn_out)
-    trans._get_transport_coast_format(path_in=cfg.dn_dat,
-                                      path_out=cfg.dn_out)
-    #for year in [2005,2006,2007,2008,2009,2010,2011,2012,2013]:
+    #for year in [2004,2005,2010,2011,2012,2013]:
+    #    trans._get_transport_coast_format(path_in=cfg.dn_dat,
+    #                                      path_out=cfg.dn_out, 
+    #                                      start_date=str(year) + "-01",
+    #                                      end_date=str(year+1) + "-01")
+        #trans._get_transport_coast_format(path_in=cfg.comp_case["raw_data"],
+        #                                  path_out=cfg.comp_case["proc_data"], 
+        #                                  start_date=str(year) + "-01",
+        #                                  end_date=str(year+1) + "-01")
     #    print ("year: ", year)
     #    trans._get_transport(model=cfg.case, 
     #               path=cfg.dn_out, y0=year,y1=year + 1, sec="east")

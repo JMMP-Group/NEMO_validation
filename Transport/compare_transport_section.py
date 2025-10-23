@@ -90,7 +90,7 @@ class Ellet(object):
         dx = dx[1:] + dx[:-1]
         self.ds['dx'] = xr.DataArray(np.concatenate((dx_0, dx, dx_end)),
                                      dims=("Refdist")) / 2
-    def get_volume_transport(self):
+    def get_volume_transport_split(self):
         """
         get volume transport
         """
@@ -104,6 +104,15 @@ class Ellet(object):
 
         ds["volume_transport_e"] = (ds_e.relative_velocity * ds_e.dx * 1000 * ds_e.dz).sum(dims)
         ds["volume_transport_w"] = (ds_w.relative_velocity * ds_w.dx * 1000 * ds_w.dz).sum(dims)
+
+    def get_volume_transport(self):
+        """
+        get volume transport
+        """
+
+        ds = self.Ellet_profiles.dataset
+        dims = ["z_dim"]
+        ds["volume_transport"] = (ds.relative_velocity * ds.dx * 1000 * ds.dz).sum(dims)
 
     def get_dates(self):
 
