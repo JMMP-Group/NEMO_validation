@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib
 import numpy as np
 print (np.__version__)
 from StraitFlux import masterscript_line as master
@@ -13,6 +14,8 @@ from dask.diagnostics import ProgressBar
 import datetime
 import os
 import coast
+
+matplotlib.rcParams.update({'font.size': 8})
 
 class transport(object):
 
@@ -504,7 +507,7 @@ class transport(object):
 
         # initialise plot
         fig, axs = plt.subplots(3, figsize=(6.5,4))
-        plt.subplots_adjust()
+        plt.subplots_adjust(top=0.98, right=0.88)
         
         # access data
         m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
@@ -517,39 +520,54 @@ class transport(object):
             ew = ds.where((ds.longitude > -9.6) & (ds.longitude < -9.2))
             mw = ds.where((ds.longitude > -12.5) & (ds.longitude < -9.6))
 
-            #axs[0].plot(ww.time, ww.transport.sum("pts"))
-            #axs[1].plot(mw.time, mw.transport.sum("pts"))
-            #axs[2].plot(ew.time, ew.transport.sum("pts"))
-
             axs[0].hist(ww.transport.sum("pts"), density=True, alpha=0.4)
             axs[1].hist(mw.transport.sum("pts"), density=True, alpha=0.4)
-            axs[2].hist(ew.transport.sum("pts"), density=True, alpha=0.4)
+            l = axs[2].hist(ew.transport.sum("pts"), density=True, alpha=0.4)
 
-        render_split(axs, m0)
-        render_split(axs, m1)
+            return l[-1]
+
+        l1 = render_split(axs, m0)
+        l2 = render_split(axs, m1)
 
         ww = obs.where((obs.longitude > -13.0) & (obs.longitude < -12.5))
         ew = obs.where((obs.longitude > -9.6) & (obs.longitude < -9.2))
         mw = obs.where((obs.longitude > -12.5) & (obs.longitude < -9.6))
 
-        #time = []
-        #for key, values in obs.groupby("time"):
-        #    
-        #    t = np.datetime64(str(values.time.data[0]) + '-' +  str(values.Month.data[0]).zfill(2))
-        #    time.append(t)
         axs[0].axvline(ww.volume_transport.sum("id_dim").mean() / 1e6, c="k")
         axs[1].axvline(mw.volume_transport.sum("id_dim").mean() / 1e6, c="k")
-        axs[2].axvline(ew.volume_transport.sum("id_dim").mean() / 1e6, c="k")
+        l0 = axs[2].axvline(ew.volume_transport.sum("id_dim").mean() / 1e6,
+                      c="k")
 
+        # legend
+        fig.legend([l0,l1,l2], ["Obs.", cfg.case, cfg.comp_case["case"]],
+                    loc='upper left', bbox_to_anchor=(0.90,0.98),
+                            fontsize=6, borderaxespad=0)
+
+        # format axes
+        for ax in axs[:2]:
+            ax.set_xticklabels([])
         for ax in axs:
             ax.set_xlim(-11,11)
-        plt.show()
+        axs[2].set_xlabel("Volume Transport (Sv)")
+
+        # set axes titles
+        axs[0].set_ylabel("Western Wedge\nPDF",
+                          multialignment="center")
+        axs[1].set_ylabel("Mid-Basin\nPDF",
+                          multialignment="center")
+        axs[2].set_ylabel("Eastern Wedge\nPDF",
+                          multialignment="center")
+
+        # save figure
+        fn = cfg.case + "_" + cfg.comp_case["case"] + \
+                    "_Rockall_transport_hist.png"
+        plt.savefig("Figs/" + fn, dpi=600)
 
     def plot_ellet_climatology_by_section(self):
 
         # initialise plot
         fig, axs = plt.subplots(3, figsize=(6.5,4))
-        plt.subplots_adjust()
+        plt.subplots_adjust(right=0.88, top=0.98)
         
         # access data
         m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
@@ -574,56 +592,72 @@ class transport(object):
 
             return mean, quant
         
+        # set segment bounds
         ww_lons = [-13.0, -12.5]
         mw_lons = [-12.5, -9.6]
         ew_lons = [-9.6, -9.2]
         lon_set = [ww_lons, mw_lons, ew_lons]
                 
         for i, lons in enumerate(lon_set):
+
+            # model 0 render
             mean, quant = render_split(axs, m0, lon0=lons[0], lon1=lons[1])
             c = "tab:blue"
             axs[i].fill_between(range(1,13), quant.sel(quantile=0.25),
                             quant.sel(quantile=0.75), color=c, alpha=0.4)
-            axs[i].plot(range(1,13), quant.sel(quantile=0.5), c=c)
+            l1, = axs[i].plot(range(1,13), quant.sel(quantile=0.5), c=c)
 
+            # model 1 render
             c = "tab:orange"
             mean, quant = render_split(axs, m1, lon0=lons[0], lon1=lons[1])
             axs[i].plot(range(1,13), quant.sel(quantile=0.25), ls="--", c=c)
-            axs[i].plot(range(1,13), quant.sel(quantile=0.5), c=c)
+            l2, = axs[i].plot(range(1,13), quant.sel(quantile=0.5), c=c)
             axs[i].plot(range(1,13), quant.sel(quantile=0.75), ls="--", c=c)
 
+        # segment obs
+        ww = obs.where((obs.longitude > ww_lons[0]) &
+                       (obs.longitude < ww_lons[1]))
+        ew = obs.where((obs.longitude > ew_lons[0]) &
+                       (obs.longitude < ew_lons[1]))
+        mw = obs.where((obs.longitude > mw_lons[0]) & 
+                       (obs.longitude < mw_lons[1]))
 
-
-        ww = obs.where((obs.longitude > -13.0) & (obs.longitude < -12.5))
-        ew = obs.where((obs.longitude > -9.6) & (obs.longitude < -9.2))
-        mw = obs.where((obs.longitude > -12.5) & (obs.longitude < -9.6))
-
-        #time = []
-        #for key, values in obs.groupby("time"):
-        #    
-        #    t = np.datetime64(str(values.time.data[0]) + '-' +  str(values.Month.data[0]).zfill(2))
-        #    time.append(t)
+        # render obs
         month = obs.Month
-        axs[0].scatter(month, ww.volume_transport.sum("id_dim") / 1e6, c="k")
+        l0 = axs[0].scatter(month, ww.volume_transport.sum("id_dim") / 1e6,
+                c="k", label="obs")
         axs[1].scatter(month, mw.volume_transport.sum("id_dim") / 1e6, c="k")
         axs[2].scatter(month, ew.volume_transport.sum("id_dim") / 1e6, c="k")
 
+        # legend
+        fig.legend([l0,l1,l2], ["Obs.", cfg.case, cfg.comp_case["case"]],
+                    loc='upper left', bbox_to_anchor=(0.90,0.98),
+                            fontsize=6, borderaxespad=0)
+
+        # format axes
         for ax in axs[:2]:
             ax.set_xticklabels([])
         for ax in axs:
             ax.set_xlim(1,12)
         
-        # set axs titles
-        axs[0].set_ylabel("Western Wedge\nTransport (Sv)", multialignment="center")
-        axs[1].set_ylabel("Mid-Basin\nTransport (Sv)", multialignment="center")
-        axs[2].set_ylabel("Eastern Wedge\nTransport (Sv)", multialignment="center")
+        # set axes titles
+        axs[0].set_ylabel("Western Wedge\nTransport (Sv)",
+                          multialignment="center")
+        axs[1].set_ylabel("Mid-Basin\nTransport (Sv)",
+                          multialignment="center")
+        axs[2].set_ylabel("Eastern Wedge\nTransport (Sv)",
+                          multialignment="center")
         fig.align_ylabels()
         axs[2].set_xlabel("Month")
 
-        plt.show()
+        # save figure
+        fn = cfg.case + "_" + cfg.comp_case["case"] + \
+                    "_Rockall_transport_climatology.png"
+        plt.savefig("Figs/" + fn, dpi=600)
         
 if __name__ == "__main__":
     trans = transport()
+    #trans.plot_ellet_hist_by_section()
     trans.plot_ellet_climatology_by_section()
     #trans._get_monthly_mean(path_in=cfg.comp_case["raw_data"],
     #                        path_out=cfg.comp_case["proc_data"])
