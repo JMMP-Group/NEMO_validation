@@ -125,7 +125,6 @@ class satellite(object):
                                      "time": self.ds.time},
                              name="adt")#.to_dataset()
 
-
     def quick_compare(self):
         """ quick plot """
 
@@ -145,7 +144,7 @@ class model_surface(object):
 
     def __init__(self, fn_path):
 
-        self.ds = xr.open_mfdataset(fn_path + "*.nc.ppc3", chunks=-1).zos
+        self.ds = xr.open_mfdataset(fn_path + "*.nc.ppc3", chunks="auto").zos
 
         # rename time
         self.ds = self.ds.rename({"time_counter":"time",
@@ -168,6 +167,8 @@ class model_surface(object):
         # apr = ...
 
         #ssh_ib = - ( apr - pref ) / g_rho 
+
+        xr.open_dataset("{config.era5}/*.nc", chunks="auto")
 
 class satellite_plot(object):
 
@@ -277,16 +278,20 @@ if __name__ == "__main__":
 
     def calculate_co9_eof():
 
-        # get model
+        # get model and remove surface loading 
         fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
-        mod_proc = model_surface(fn).ds
+        mod = model_surface(fn)
+        mod.remove_inverse_barometer()
+
+        # retrieve dataset
+        mod_proc = mod.ds
 
         # remove deep water
         cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
         domcfg = xr.open_dataset(cfg_fn)
         mod_proc = mod_proc.where(domcfg.bathy < 200)
-        
 
+        # get eof of ssh
         get_eof(mod_proc, "CO9")
 
     def plot_eof():
