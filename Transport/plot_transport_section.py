@@ -436,11 +436,18 @@ class transport(object):
         fig, axs = plt.subplots(3, figsize=(6.5,4))
         plt.subplots_adjust(top=0.98, right=0.88)
         
-        # access data
+        # access model data
         m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
         m1 = xr.open_mfdataset(cfg.comp_case["proc_data"] +
                                "transport/Rockall_transport*.nc")
+
+        # access observations
         obs = xr.open_dataset(cfg.dn_out + "transport/obs_for_ellet_line.nc")
+        mooring = xr.open_dataset(cfg.dn_ellet +
+                   "Rockall_Trough_transport_time_series_201407_202407_v1.nc")
+
+        # mooring monthly mean
+        mooring = mooring.resample(TIME="ME").mean()
 
         def render_split(axs, ds):
             ww = ds.where((ds.longitude > -13.0) & (ds.longitude < -12.5))
@@ -465,9 +472,15 @@ class transport(object):
         l0 = axs[2].axvline(ew.volume_transport.sum("id_dim").mean() / 1e6,
                       c="k")
 
+        # plot moorings
+        axs[0].hist(mooring.Q_WW, density=True, alpha=0.4, histtype="step")
+        axs[1].hist(mooring.Q_MB, density=True, alpha=0.4, histtype="step")
+        l3 = axs[2].hist(mooring.Q_EW, density=True, alpha=0.4, histtype="step")
+
         # legend
-        fig.legend([l0,l1,l2], ["Obs.", cfg.case, cfg.comp_case["case"]],
-                    loc='upper left', bbox_to_anchor=(0.90,0.98),
+        fig.legend([l0,l1,l2,l3[-1][0]], 
+                ["CTD", cfg.case, cfg.comp_case["case"], "Moorings"],
+                    loc='upper left', bbox_to_anchor=(0.89,0.98),
                             fontsize=6, borderaxespad=0)
 
         # format axes
@@ -496,11 +509,18 @@ class transport(object):
         fig, axs = plt.subplots(3, figsize=(6.5,4))
         plt.subplots_adjust(right=0.88, top=0.98)
         
-        # access data
+        # access model data
         m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
         m1 = xr.open_mfdataset(cfg.comp_case["proc_data"] +
                                "transport/Rockall_transport*.nc")
+
+        # access observations
         obs = xr.open_dataset(cfg.dn_out + "transport/obs_for_ellet_line.nc")
+        mooring = xr.open_dataset(cfg.dn_ellet +
+                   "Rockall_Trough_transport_time_series_201407_202407_v1.nc")
+
+        # mooring monthly mean
+        mooring = mooring.groupby("TIME.month").quantile([0.25,0.5,0.75])
 
         def render_split(axs, ds, lon0=-13.0, lon1=-12.5):
 
@@ -537,9 +557,24 @@ class transport(object):
             # model 1 render
             c = "tab:orange"
             mean, quant = render_split(axs, m1, lon0=lons[0], lon1=lons[1])
-            axs[i].plot(range(1,13), quant.sel(quantile=0.25), ls="--", c=c)
+            axs[i].fill_between(range(1,13), quant.sel(quantile=0.25),
+                            quant.sel(quantile=0.75), color=c, alpha=0.4)
+            #axs[i].plot(range(1,13), quant.sel(quantile=0.25), ls="--", c=c)
             l2, = axs[i].plot(range(1,13), quant.sel(quantile=0.5), c=c)
-            axs[i].plot(range(1,13), quant.sel(quantile=0.75), ls="--", c=c)
+            #axs[i].plot(range(1,13), quant.sel(quantile=0.75), ls="--", c=c)
+
+        def render_wedge(ax, wedge):
+            ax.plot(range(1,13), wedge.sel(quantile=0.25), ls="--",
+                        c="tab:green")
+            l, = ax.plot(range(1,13), wedge.sel(quantile=0.5), ls="-",
+                        c="tab:green")
+            ax.plot(range(1,13), wedge.sel(quantile=0.75), ls="--",
+                        c="tab:green")
+            return l
+        # moorings
+        render_wedge(axs[0], mooring.Q_WW)
+        l3 = render_wedge(axs[1], mooring.Q_MB)
+        render_wedge(axs[2], mooring.Q_EW)
 
         # segment obs
         ww = obs.where((obs.longitude > ww_lons[0]) &
@@ -557,8 +592,9 @@ class transport(object):
         axs[2].scatter(month, ew.volume_transport.sum("id_dim") / 1e6, c="k")
 
         # legend
-        fig.legend([l0,l1,l2], ["Obs.", cfg.case, cfg.comp_case["case"]],
-                    loc='upper left', bbox_to_anchor=(0.90,0.98),
+        fig.legend([l0,l1,l2,l3],
+                   ["CTD", cfg.case, cfg.comp_case["case"], "Moorings"],
+                    loc='upper left', bbox_to_anchor=(0.89,0.98),
                             fontsize=6, borderaxespad=0)
 
         # format axes

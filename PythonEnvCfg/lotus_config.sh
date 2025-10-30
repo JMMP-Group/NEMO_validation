@@ -74,3 +74,6 @@ fi
 #export DN_OUT="/home/users/jelt/tmp/"$REGION"/" 
 export DN_OUT="/gws/nopw/j04/jmmp/CO9_AMM15_validation/"$MOD"/"
 export COMP_OUT="/gws/nopw/j04/jmmp/CO9_AMM15_validation/"$COMP_MOD"/"
+
+# ellet line mooring data
+export DN_ELLET="/gws/nopw/j04/jmmp/CO9_AMM15_validation/ElletLine/"

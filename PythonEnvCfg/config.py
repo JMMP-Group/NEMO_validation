@@ -23,6 +23,7 @@ class config:
         self.machine     = self.get_shell_var('MACHINE', True)
         self.coast_repo  = self.get_shell_var('COAST_REPO', True)
         self.din_en4     = self.get_shell_var('DIN_EN4', True)
+        self.dn_ellet   = self.get_shell_var('DN_ELLET', True)
         self.dout_en4    = self.get_shell_var('DOUT_EN4', True)
         self.fn_cfg_prof = self.get_shell_var('FN_CFG_PROF', True)
         self.fn_cfg_nemo_t = self.get_shell_var('FN_CFG_NEMO_T', True)
