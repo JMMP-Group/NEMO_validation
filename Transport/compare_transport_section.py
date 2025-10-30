@@ -51,13 +51,8 @@ class Ellet(object):
         # reduce to decade
         self.ds = self.ds.sel(Year=slice("2003","2014"))
         self.ds = self.ds.swap_dims({"Depth":"z_dim"})
-        #self.ds["Depth"], _ = xr.broadcast(self.ds.Depth, self.ds.CruiseID)
-        #print (self.ds)
-        #print (ksdj)
 
         # reduce to rockall trough - two step to maintain dims
-        #self.ds = self.ds.where((self.ds.LonSta < -9) & (self.ds.LonSta > -14),
-        #                        drop=True)
         # using sel in place of where avoids uncesesary broadcasting of Month
         ind = self.ds.Refdist.where((self.ds.LonSta < -9) & 
                                     (self.ds.LonSta > -14),
@@ -65,8 +60,6 @@ class Ellet(object):
         self.ds = self.ds.sel(Refdist=ind)
         self.get_dz()
         self.get_dx()
-
-        #self.ds = self.ds.stack(id_dim=["Year","Refdist"])
 
     def get_dz(self):
         """
@@ -90,6 +83,16 @@ class Ellet(object):
         dx = dx[1:] + dx[:-1]
         self.ds['dx'] = xr.DataArray(np.concatenate((dx_0, dx, dx_end)),
                                      dims=("Refdist")) / 2
+
+    def get_volume_flux(self, ds):
+        """
+        calcualte flux through section
+        """
+
+        flux = ds.relative_velocity * ds.dx * 1000 * ds.dz
+
+        return flux
+
     def get_volume_transport_split(self):
         """
         get volume transport
@@ -97,13 +100,12 @@ class Ellet(object):
 
         ds = self.Ellet_profiles.dataset
         dims = ["id_dim","z_dim"]
-        ds["volume_transport"] = (ds.relative_velocity * ds.dx * 1000 * ds.dz).sum(dims)
-        print (ds.longitude)
+        ds["volume_transport"] = self.get_volume_flux(ds).sum(dims)
         ds_e = ds.where(ds.longitude > -11)
         ds_w = ds.where(ds.longitude < -11)
 
-        ds["volume_transport_e"] = (ds_e.relative_velocity * ds_e.dx * 1000 * ds_e.dz).sum(dims)
-        ds["volume_transport_w"] = (ds_w.relative_velocity * ds_w.dx * 1000 * ds_w.dz).sum(dims)
+        ds["volume_transport_e"] = self.get_volume_flux(ds_e).sum(dims)
+        ds["volume_transport_w"] = self.get_volume_flux(ds_w).sum(dims)
 
     def get_volume_transport(self):
         """
@@ -112,7 +114,7 @@ class Ellet(object):
 
         ds = self.Ellet_profiles.dataset
         dims = ["z_dim"]
-        ds["volume_transport"] = (ds.relative_velocity * ds.dx * 1000 * ds.dz).sum(dims)
+        ds["volume_transport"] = self.get_volume_flux(ds).sum(dims)
 
     def get_dates(self):
 
@@ -120,7 +122,6 @@ class Ellet(object):
         fn_dates = []
         for year, y_ds in self.ds.groupby("Year"):
             dates.append(str(year) + "-" + str(y_ds.Month.data[0]).zfill(2))
-        print (dates)
         self.ds["time"] =  np.array(dates, dtype="datetime64")
 
         for year, y_ds in self.ds.groupby("Year"):
@@ -140,7 +141,6 @@ class Ellet(object):
     def save_processed_ellet(self):
         """ save processed ellet line data """
 
-        #self.Ellet_profiles.dataset = self.Ellet_profiles.dataset.reset_index("id_dim")
         path = cfg.dn_out + "transport/obs_for_ellet_line.nc"
         self.Ellet_profiles.dataset.to_netcdf(path)
 
@@ -150,29 +150,6 @@ class ModelVels(object):
         self.dates = dates
         paths = [cfg.dn_dat + date + "01T0000Z_daily_grid_U.nc" for date in
                  dates]
-        #paths_V = [cfg.dn_dat + date + "01T0000Z_daily_grid_V.nc" for date in
-        #         dates]
-        #print (paths_U)
-        #nemo = coast.Gridded(paths, cfg.dn_dom + cfg.grid_nc,
-        #                     config=cfg.fn_cfg_nemo, multiple=True)
-        #nemo.dataset = self.restrict_lat_lon(nemo.dataset)
-        #print (nemo.dataset.time)
-        #print (skdjf)
-#
-#        #nemo.dataset = nemo.dataset.resample("time.year_month").mean()
-#        print (nemo.dataset.time)
-#        print (skdjf)
-#        nemo.dataset = nemo.dataset.vozocrtx.groupby("year_month").mean()
-#        print (nemo.dataset)
-#        print (skdjf)
-        #ds = xr.open_mfdataset(paths).vozocrtx.groupby("year_month").mean()
-        #V_mean = xr.open_mfdataset(paths_V).vomecrty.groupby("year_month").mean()
-        #print (U_mean.time_counter.values)
-
-        #self.vels = {"U":xr.open_mfdataset(paths_U).vozocrtx,
-        #             "V":xr.open_mfdataset(paths_V).vomecrty}
-
-        
     
     def interpolate_vec_to_obs(self, obs, vec_str, var):
 
@@ -240,7 +217,6 @@ class ModelVels(object):
         src_lon = src_lon_3d.flatten()
         src_lat = src_lat_3d.flatten()
         src_dep = src_dep_3d.flatten()
-        
 
         data_bool = ~np.isnan(src.values.flatten())
         src_lon = src_lon[data_bool]
@@ -295,7 +271,6 @@ def process_ellet_obs():
     ell.coast_formatting()
     ell.get_volume_transport()
     ell.save_processed_ellet()
-process_ellet_obs()
 
 def get_model_on_ellet_locs():
     ell = Ellet()
@@ -305,5 +280,7 @@ def get_model_on_ellet_locs():
     m = ModelVels(ell.get_dates())
     m.interpolate_vels_to_obs(ell.Ellet_profiles)
 
-#get_model_on_ellet_locs()
+if __name__ == "__main__":
+    process_ellet_obs()
+    #get_model_on_ellet_locs()
 

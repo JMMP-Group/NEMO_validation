@@ -26,8 +26,10 @@ class transport(object):
         os.makedirs(out_path_cross, exist_ok=True)
         os.makedirs(out_path_cut, exist_ok=True)
         if comp:
-            out_path_cross = cfg.comp_case["proc_data"] + "transport/CrossSection/"
-            out_path_cut = cfg.comp_case["proc_data"] + "transport/Ellet_cutout/"
+            out_path_cross = cfg.comp_case["proc_data"] +\
+                    "transport/CrossSection/"
+            out_path_cut = cfg.comp_case["proc_data"] +\
+                    "transport/Ellet_cutout/"
             os.makedirs(out_path_cross, exist_ok=True)
             os.makedirs(out_path_cut, exist_ok=True)
 
@@ -89,27 +91,13 @@ class transport(object):
             dates = np.arange(start_date, end_date, dtype='datetime64[M]')
             ds_series = []
             for date in dates:
-                print (date)
-                #try:
                 date_str = str(date).replace("-","")
                 fn=path_in + date_str + f"*_25hourm_grid_{vec}.nc"
-                #fn=path + date_str + f"01T0000Z_*_grid_{vec}.nc"
                 print (fn)
                 chunks="auto"
-                #ds = xr.open_dataset(fn, chunks=chunks, decode_cf=True,
-                #                    decode_times=False)#.mean("time_counter")
-                #ds = xr.open_dataset(fn, chunks=chunks, decode_cf=True,
-                #                    decode_times=False)#.mean("time_counter")
                 nemo = coast.Gridded(fn, cfg.comp_case["grid"], multiple=True,
                                      config=cfg.fn_cfg_nemo)
                 ds = nemo.dataset
-
-                #ds = ds.drop("deptht_bounds")
-    
-                #find_lat_lon_indicies(ds)
-    
-                #dt = np.datetime64(date, "ns")
-                #ds = ds.expand_dims(time_counter=[dt])
     
                 n = 1064
                 s = 837
@@ -117,27 +105,13 @@ class transport(object):
                 w = 197
     
                 
-                #ds = ds.isel({f"x{grid_var}":slice(w,e),
-                #              f"y{grid_var}":slice(s,n)})
                 ds = ds.isel({"x_dim":slice(w,e),
                               "y_dim":slice(s,n)})
-                # save
-                #with ProgressBar()om:
-                #    fn = f"{date_str}_Ellet_region_grid_{vec}.nc"
-                #    save_path = cfg.dn_out + "transport/Ellet_cutout/" + fn
-                #    ds.to_netcdf(save_path)
-    
     
                 ds_series.append(ds)
     
-                #except Exception as e:
-                #    print ("error: ", e)
     
-            #full_series = xr.concat(ds_series, dim="time_counter")
             full_series = xr.concat(ds_series, dim="t_dim")
-            #full_series.time_counter.encoding["units"] = "seconds since 1900-01-01"
-            #full_series.time_counter.encoding["dtype"] = "float64"
-            #full_series.time_counter.attrs["dtype"] = "datetime64[ns]"
     
             # save
             with ProgressBar():
@@ -146,14 +120,9 @@ class transport(object):
                 save_path = path_out + "transport/Ellet_cutout/" + fn
                 full_series.to_netcdf(save_path)
     
-        #start_date = "2006-01"
-        #end_date = "2007-01"
-    
         for year in range(2006,2007):
             start_date = f"{year}-01"
             end_date = f"{year+1}-01"
-            print (start_date)
-            print (end_date)
             mean(start_date, end_date, vec="U")
             mean(start_date, end_date, vec="V")
     
@@ -225,7 +194,6 @@ class transport(object):
     def _get_cross_section(self):
     
         lon, lat = _get_ellet_line_positions()
-        print (lon)
         model='CO9'
         product = 'volume'
         strait='Ellet' 
@@ -258,15 +226,6 @@ class transport(object):
                                       saving=True,
                                       path_save=out_path)
     
-    
-            # save
-            #with ProgressBar():
-            #    path = cfg.dn_out + "transport/CrossSection/" + str(i) + \
-            #            "_Ellet_velocity_cross_section.nc"
-            #    uv.to_netcdf(path)#, encoding={"time": {"dtype": "i4"}})
-    
-    #_get_cross_section()
-
     def _get_transport_coast_format(self, path_in, path_out,
                           start_date="", end_date=""):
         """
@@ -279,15 +238,8 @@ class transport(object):
         dates = np.arange(start_date, end_date, dtype='datetime64[M]')
         ds_series = []
 
-        #n = 1064
-        #s = 837
-        #e = 620
-        #w = 197
-
         nemo_f = coast.Gridded(fn_domain=cfg.comp_case["grid"],
                                config=cfg.fn_cfg_nemo_f)
-        #nemo_f.dataset = nemo_f.dataset.isel({"x_dim":slice(w,e),
-        #              "y_dim":slice(s,n)})
 
         vol_ds_list = []
         for date in dates:
@@ -300,11 +252,6 @@ class transport(object):
             fn=path_in + date_str + f"*_25hourm_grid_V.nc"
             nemo_v = coast.Gridded(fn, cfg.comp_case["grid"], multiple=True,
                                    config=cfg.fn_cfg_nemo_v)
-
-            #nemo_u.dataset = nemo_u.dataset.isel({"x_dim":slice(w,e),
-            #              "y_dim":slice(s,n)})
-            #nemo_v.dataset = nemo_v.dataset.isel({"x_dim":slice(w,e),
-            #              "y_dim":slice(s,n)})
 
             with ProgressBar():
                 nemo_u.dataset = nemo_u.dataset.mean("t_dim").load()
@@ -339,8 +286,6 @@ class transport(object):
                                                 longitude=("pts",lons.data),
                                                 latitude=("pts", lats.data))
         vol_ds_timeseries.name = "transport"
-        #vol_ds_timeseries["time"] = vol_ds_timeseries.time.astype("datetime64[ns]")
-        
 
         # save
         fn = f"Rockall_transport_coast_derived_{start_date}_{end_date}.nc"
@@ -461,20 +406,6 @@ class transport(object):
     
     #plot_ellet_transport()
     
-    def plot_elet_obs_summary(self):
-        """
-        four panel plot of ladcp and ctd measurements
-        """
-    
-        # intialise plots
-        fig, axs = plt.subplots(2,3, figsize=(6.5,4))
-        plt.subplots_adjust()
-    
-        # access data
-        obs = xr.open_dataset("")
-        
-        # render time series of vels
-
     def plot_ellet_hovmoller_transport(self):
         """
         plot transport for 2 models and obs as hovmoller
@@ -489,10 +420,6 @@ class transport(object):
         m1 = xr.open_mfdataset(cfg.comp_case["proc_data"] +
                                "transport/Rockall_transport*.nc")
         obs = xr.open_dataset(cfg.dn_out + "transport/obs_for_ellet_line.nc")
-        print (m0)
-        print (m1)
-        print (obs)
-        print (kljdhfk)
 
         vmin, vmax = -5, 5
         axs[0].pcolor(m0.time, obs.Refdist, m0.transport.T,
