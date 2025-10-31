@@ -9,14 +9,16 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 import numpy as np
 import xeofs as xe
+import glob
+import time
 
 class extract_surface(object):
     def __init__(self):
 
         # paths
-        self.fn_dom = config.dn_dom + config.grid_nc
-        self.fn_dat = config.dn_out + "profiles/gridded*.nc"
-        self.fn_out = config.dn_out + 'surface_maps/'
+        self.fn_dom = cfg.dn_dom + cfg.grid_nc
+        self.fn_dat = cfg.dn_out + "profiles/gridded*.nc"
+        self.fn_out = cfg.dn_out + 'surface_maps/'
 
     def surface_state_climatology_native_model(self):
         """ 
@@ -144,12 +146,71 @@ class model_surface(object):
 
     def __init__(self, fn_path):
 
-        self.ds = xr.open_mfdataset(fn_path + "*.nc.ppc3", chunks="auto").zos
+        def get_ssh(ds):
+            ds = ds.sossheig
+            return ds
+
+        #drange = np.arange(cfg.y0, cfg.y1, dtype="datetime64[M]")
+        drange = np.arange(f"{cfg.y0}-01", f"{cfg.y1}-01", dtype="datetime64[M]")
+        fn_list = [fn_path + str(d)[:4] + str(d)[5:] +
+                   "01T0000Z_25hourm_grid_T.nc" for d in drange]
+
+        t0 = time.time()
+        print ("pre-done")
+        ds_list = []
+        for fn in fn_list:
+            print (fn)
+            mean_ssh = xr.open_dataset(fn, chunks="auto").sossheig.mean(
+                              "time_counter")
+            ds_list.append(mean_ssh.load())
+        ds = xr.concat(ds_list, "time_counter")
+        t1 = time.time()
+        print ((t1-t0)/60)
+        print (ds)
+        print (fn_path)
+        #self.ds = xr.open_mfdataset(fn_path + "*grid_T.nc", chunks="auto",
+        #        preprocess=get_ssh)
+        #print (self.ds)
+        print ("done")
 
         # rename time
-        self.ds = self.ds.rename({"time_counter":"time",
-                                  "y_grid_T":"y",
-                                  "x_grid_T":"x"})
+        self.ds = ds.rename({"time_counter":"time",
+                              "y_grid_T":"y",
+                               "x_grid_T":"x"})
+
+    def interpolate_sp_to_model(self, cfg_fn, src):
+        """ interpolate lat-lon to horizontal grid """
+
+        domcfg = xr.open_dataset(cfg_fn)
+
+        tgt_lon =  domcfg.nav_lon
+        tgt_lat =  domcfg.nav_lat
+        
+        target = (tgt_lon, tgt_lat)
+
+        src_lon = src.longitude.data
+        src_lat = src.latitude.data
+
+        points = (src_lon.flatten(), src_lat.flatten())
+
+        n_grid = []
+        for time, ds_t in src.groupby("time"):
+            print (time)
+            values = (ds_t.data.flatten())
+            
+            n_grid.append(
+             griddata(points, values, target, method="nearest")[:,:,np.newaxis])
+
+        n_grid_all = np.concatenate(n_grid, axis=2)
+
+        ds = xr.DataArray(
+                             data=n_grid_all,
+                             dims=["y","x","time"],
+                             coords={"longitude": (["y","x"],tgt_lon.values),
+                                     "latitude": (["y","x"],tgt_lat.values),
+                                     "time": src.time},
+                             name="sp")
+        return ds
 
     def remove_inverse_barometer(self):
         """
@@ -160,6 +221,7 @@ class model_surface(object):
         g = 9.80665
         rho = 1026
         g_rho = g * rho
+        pref = 101000
 
         # getting this variable is tricky
         # it requires the raw surface foring being interpolated
@@ -168,7 +230,27 @@ class model_surface(object):
 
         #ssh_ib = - ( apr - pref ) / g_rho 
 
-        xr.open_dataset("{config.era5}/*.nc", chunks="auto")
+        print (cfg.dn_era5)
+        fn_list = [f"{cfg.dn_era5}ERA5_sp_y{y}.nc" for y in
+                   range(int(cfg.y0),int(cfg.y1))]
+        ds_list = []
+        for fn in fn_list:
+            print (fn)
+            sp_year = xr.open_dataarray(fn, chunks="auto")
+            sp_mean = sp_year.resample(time="ME").mean("time")
+            ds_list.append(sp_mean.load())
+        sp = xr.concat(ds_list, "time")
+
+        # interpolate to model grid
+        fn_dom = cfg.dn_dom + cfg.grid_nc
+        print (sp)
+        sp = self.interpolate_sp_to_model(fn_dom, sp)
+
+        ssh_ib = (sp - pref) / g_rho
+        print (self.ds.time)
+        print (ssh_ib.time)
+
+        self.ds = self.ds + ssh_ib
 
 class satellite_plot(object):
 
@@ -280,6 +362,7 @@ if __name__ == "__main__":
 
         # get model and remove surface loading 
         fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
+        fn = f"{cfg.dn_dat}"
         mod = model_surface(fn)
         mod.remove_inverse_barometer()
 
