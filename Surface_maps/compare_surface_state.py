@@ -11,6 +11,7 @@ import numpy as np
 import xeofs as xe
 import glob
 import time
+from dask.diagnostics import ProgressBar
 
 class extract_surface(object):
     def __init__(self):
@@ -144,39 +145,47 @@ class satellite(object):
 
 class model_surface(object):
 
-    def __init__(self, fn_path):
+    def __init__(self, fn_path, src_t_coord="time", src_x_coord="x",
+                                src_y_coord="y"):
+        self.fn_path = fn_path
+        self.src_t_coord = src_t_coord
+        self.src_x_coord = src_x_coord
+        self.src_y_coord = src_y_coord
 
-        def get_ssh(ds):
-            ds = ds.sossheig
-            return ds
+    def map_dimension_coords(self, ds):
+ 
+        """
+        create uniform coordinate variables
 
+        note: might better be handled by coast
+
+        """
+        
+        ds = ds.rename({self.src_t_coord:"time",
+                        self.src_x_coord:"x",
+                        self.src_y_coord:"y"})
+
+        return ds
+
+    def get_mean_ssh(self, freq="1ME"):
         #drange = np.arange(cfg.y0, cfg.y1, dtype="datetime64[M]")
         drange = np.arange(f"{cfg.y0}-01", f"{cfg.y1}-01", dtype="datetime64[M]")
-        fn_list = [fn_path + str(d)[:4] + str(d)[5:] +
-                   "01T0000Z_25hourm_grid_T.nc" for d in drange]
-
         t0 = time.time()
-        print ("pre-done")
         ds_list = []
-        for fn in fn_list:
-            print (fn)
-            mean_ssh = xr.open_dataset(fn, chunks="auto").sossheig.mean(
-                              "time_counter")
-            ds_list.append(mean_ssh.load())
-        ds = xr.concat(ds_list, "time_counter")
+        fn_list = []
+        for d in drange:
+            print (d)
+            paths = glob.glob(self.fn_path + str(d)[:4] + str(d)[5:] +
+                            "*_25hourm_grid_T.nc")
+            fn_list = fn_list + paths
+
+        ds_ssh = xr.open_mfdataset(fn_list, chunks=-1).sossheig
+        ds_ssh = self.map_dimension_coords(ds_ssh)
+        ds_ssh = ds_ssh.resample(time=freq).mean()
+        with ProgressBar():
+            self.ds = ds_ssh.load()
         t1 = time.time()
         print ((t1-t0)/60)
-        print (ds)
-        print (fn_path)
-        #self.ds = xr.open_mfdataset(fn_path + "*grid_T.nc", chunks="auto",
-        #        preprocess=get_ssh)
-        #print (self.ds)
-        print ("done")
-
-        # rename time
-        self.ds = ds.rename({"time_counter":"time",
-                              "y_grid_T":"y",
-                               "x_grid_T":"x"})
 
     def interpolate_sp_to_model(self, cfg_fn, src):
         """ interpolate lat-lon to horizontal grid """
@@ -315,7 +324,7 @@ class satellite_plot(object):
 
         plt.savefig("FIGS/CO9_CMEMS_Satellite_ssh_pca.png", dpi=600)
 
-def get_eof(ds, fn):
+def get_eof(ds, dn_out, fn):
     """ calculate eof of surface data """
 
     # initiate eof model
@@ -327,12 +336,12 @@ def get_eof(ds, fn):
     # save components to netcdf
     components = model.components()
     del components.attrs["solver_kwargs"]  # attr causes error
-    components.to_netcdf(f"{cfg.dn_out}/satellite/{fn}_eof_map_components.nc")
+    components.to_netcdf(f"{dn_out}/satellite/{fn}_eof_map_components.nc")
 
     # save scores to netcdf
     scores = model.scores()
     del scores.attrs["solver_kwargs"]  # attr causes error
-    scores.to_netcdf(f"{cfg.dn_out}/satellite/{fn}_eof_map_scores.nc")
+    scores.to_netcdf("{dn_out}/satellite/{fn}_eof_map_scores.nc")
 
 if __name__ == "__main__":
 
@@ -358,11 +367,10 @@ if __name__ == "__main__":
         get_eof(sat_proc, "CMEMS_L4_satellite")
 
 
-    def calculate_co9_eof():
+    def calculate_primary_model_eof():
 
         # get model and remove surface loading 
-        fn = "/gws/nopw/j04/jmmp/jmmp_collab/AMM15/OUTPUTS/P1.5c/MONTHLY/"
-        fn = f"{cfg.dn_dat}"
+        fn = cfg.dn_dat
         mod = model_surface(fn)
         mod.remove_inverse_barometer()
 
@@ -375,14 +383,34 @@ if __name__ == "__main__":
         mod_proc = mod_proc.where(domcfg.bathy < 200)
 
         # get eof of ssh
-        get_eof(mod_proc, "CO9")
+        get_eof(mod_proc, cfg.dn_out, "CO9")
+
+    def calculate_comparison_model_eof():
+
+        # get model and remove surface loading 
+        fn = cfg.comp_case["raw_data"]
+        mod = model_surface(fn, src_t_coord="time_counter")
+        mod.get_mean_ssh()
+        #mod.remove_inverse_barometer()
+
+        # retrieve dataset
+        mod_proc = mod.ds
+
+        # remove deep water
+        cfg_fn = cfg.comp_case["grid"]
+        domcfg = xr.open_dataset(cfg_fn)
+        mod_proc = mod_proc.where(domcfg.bathy < 200)
+
+        # get eof of ssh
+        get_eof(mod_proc, cfg.comp_case["proc_data"], cfg.comp_case["case"])
 
     def plot_eof():
         splot = satellite_plot()
         splot.plot_eof_validation("CO9", "CMEMS_L4_satellite")
-    plot_eof()
+    #plot_eof()
 
     #calculate_co9_eof()
+    calculate_comparison_model_eof()
     #calculate_satellite_eof()
     #get_co9_gridded_satellite_data()
  
