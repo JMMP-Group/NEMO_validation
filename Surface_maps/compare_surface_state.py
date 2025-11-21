@@ -167,23 +167,41 @@ class model_surface(object):
 
         return ds
 
-    def get_mean_ssh(self, freq="1ME"):
+    def get_domain_cfg(self, rename=None):
+
+        domcfg = xr.open_dataset(self.cfg_fn)
+
+        if rename:
+            domcfg = domcfg.rename({rename:"bathy"})
+
+        return domcfg
+
+    def get_mean_ssh(self, freq="1MS"):
         #drange = np.arange(cfg.y0, cfg.y1, dtype="datetime64[M]")
         drange = np.arange(f"{cfg.y0}-01", f"{cfg.y1}-01", dtype="datetime64[M]")
+        yrange = np.arange(int(cfg.y0), int(cfg.y1))
+        print (drange)
         t0 = time.time()
         ds_list = []
         fn_list = []
-        for d in drange:
-            print (d)
-            paths = glob.glob(self.fn_path + str(d)[:4] + str(d)[5:] +
-                            "*_25hourm_grid_T.nc")
-            fn_list = fn_list + paths
+        print ("a")
+        chunks = {"time_counter":1}
+        path_list = []
+        for y in yrange:
+            paths = glob.glob(self.fn_path + f"{y}*_25hourm_grid_T.nc")
+            path_list += paths
+        print (path_list)
 
-        ds_ssh = xr.open_mfdataset(fn_list, chunks=-1).sossheig
-        ds_ssh = self.map_dimension_coords(ds_ssh)
-        ds_ssh = ds_ssh.resample(time=freq).mean()
+        da_ssh = xr.open_dataset(path_list[0], chunks=chunks).sossheig
+        for path in path_list[1:]:
+            print (path)
+            da = xr.open_dataset(path, chunks=chunks).sossheig
+            da_ssh = xr.concat([da_ssh, da], dim="time_counter")
+
+        da_ssh = self.map_dimension_coords(da_ssh)
+        da_ssh = da_ssh.resample(time=freq).mean()
         with ProgressBar():
-            self.ds = ds_ssh.load()
+            self.ds = da_ssh.load()
         t1 = time.time()
         print ((t1-t0)/60)
 
@@ -200,15 +218,23 @@ class model_surface(object):
         src_lon = src.longitude.data
         src_lat = src.latitude.data
 
+        if len(src_lon.shape) == 1:
+            src_lon, src_lat = np.meshgrid(src_lon, src_lat)
+
+        print ("dim number", len(src_lon.shape))
+
         points = (src_lon.flatten(), src_lat.flatten())
+        print ("src_lat", src_lat.shape)
+        print ("src_lon", src_lon.shape)
+
 
         n_grid = []
         for time, ds_t in src.groupby("time"):
-            print (time)
             values = (ds_t.data.flatten())
+            print ("values", values.shape)
             
             n_grid.append(
-             griddata(points, values, target, method="nearest")[:,:,np.newaxis])
+             griddata(points, values, target, method="cubic")[:,:,np.newaxis])
 
         n_grid_all = np.concatenate(n_grid, axis=2)
 
@@ -221,7 +247,7 @@ class model_surface(object):
                              name="sp")
         return ds
 
-    def remove_inverse_barometer(self):
+    def remove_inverse_barometer(self, src="era5"):
         """
         UNDER CONSTRUCTION
         remove atmospheric loading 
@@ -239,21 +265,35 @@ class model_surface(object):
 
         #ssh_ib = - ( apr - pref ) / g_rho 
 
-        print (cfg.dn_era5)
-        fn_list = [f"{cfg.dn_era5}ERA5_sp_y{y}.nc" for y in
-                   range(int(cfg.y0),int(cfg.y1))]
-        ds_list = []
-        for fn in fn_list:
-            print (fn)
-            sp_year = xr.open_dataarray(fn, chunks="auto")
-            sp_mean = sp_year.resample(time="ME").mean("time")
-            ds_list.append(sp_mean.load())
-        sp = xr.concat(ds_list, "time")
+        if src == "era5":
+            print (cfg.dn_era5)
+            fn_list = [f"{cfg.dn_era5}ERA5_sp_y{y}.nc" for y in
+                       range(int(cfg.y0),int(cfg.y1))]
+            ds_list = []
+            for fn in fn_list:
+                print (fn)
+                sp_year = xr.open_dataarray(fn, chunks="auto")
+                sp_mean = sp_year.resample(time="MS").mean("time")
+                ds_list.append(sp_mean.load())
+            sp = xr.concat(ds_list, "time")
+        if src == "era_interim":
+
+            def preprocess(ds):
+                ds = ds.expand_dims(dict(time=[ds.time.data]))
+                return ds
+            path = cfg.dn_era_interim+ "ei.moda.an.sfc.regn128sc.*100.grib"
+            fn_list = [f"{cfg.dn_era_interim}ei.moda.an.sfc.regn128sc.{y}*.grib"
+                       for y in range(int(cfg.y0),int(cfg.y1))]
+            sp_list = []
+            for fn in fn_list:
+                print (fn)
+                sp_year = xr.open_mfdataset(fn, engine="cfgrib",
+                           preprocess=preprocess).sp
+                sp_list.append(sp_year)
+            sp = xr.concat(sp_list, "time")
 
         # interpolate to model grid
-        fn_dom = cfg.dn_dom + cfg.grid_nc
-        print (sp)
-        sp = self.interpolate_sp_to_model(fn_dom, sp)
+        sp = self.interpolate_sp_to_model(self.cfg_fn, sp)
 
         ssh_ib = (sp - pref) / g_rho
         print (self.ds.time)
@@ -279,34 +319,37 @@ class satellite_plot(object):
         plt.colorbar(p1, ax=axs[1])
         plt.show()
 
-    def plot_eof_validation(self, mod, sat):
+    def plot_eof_validation(self, mod0, mod1, sat):
         """ plot eof breakdown of model versus obs """
 
         # initialise figure
-        fig, axs = plt.subplots(3,2)
+        fig, axs = plt.subplots(4,2)
 
         # get data
         path = f"{cfg.dn_out}/satellite/"
-        mod_scores = xr.open_dataarray(f"{path}{mod}_eof_map_scores.nc")
-        sat_scores = xr.open_dataarray(f"{path}{sat}_eof_map_scores.nc")
-        mod_comp = xr.open_dataarray(f"{path}{mod}_eof_map_components.nc")
-        sat_comp = xr.open_dataarray(f"{path}{sat}_eof_map_components.nc")
-        print (mod_scores)
+        mod0_scores = xr.open_dataarray(f"{path}{mod0}_eof_map_scores.nc")
+        mod0_comp = xr.open_dataarray(f"{path}{mod0}_eof_map_components.nc")
 
-        axs[0,0].plot(mod_scores.time, mod_scores.sel(mode=1), label="CO9")
-        axs[0,0].plot(sat_scores.time, sat_scores.sel(mode=1), label="Obs")
+        sat_scores = xr.open_dataarray(f"{path}{sat}_eof_map_scores.nc")
+        sat_comp = xr.open_dataarray(f"{path}{sat}_eof_map_components.nc")
+
+        path = cfg.comp_case["proc_data"] + "/satellite/"
+        mod1_scores = xr.open_dataarray(f"{path}{mod1}_eof_map_scores.nc")
+        mod1_comp = xr.open_dataarray(f"{path}{mod1}_eof_map_components.nc")
+
+        def render(axs, comp, scores, i, label):
+            axs[0,0].plot(scores.time, scores.sel(mode=1), label=label)
+            axs[0,1].plot(scores.time, scores.sel(mode=2))
+
+            axs[i,0].pcolor(comp.sel(mode=1).squeeze())
+            axs[i,1].pcolor(comp.sel(mode=2).squeeze())
+
+        render(axs, mod0_comp, mod0_scores, 1, "CO9")
+        render(axs, mod1_comp, mod1_scores, 2, "CO7")
+        render(axs, sat_comp, sat_scores, 3, "Obs")
 
         axs[0,0].legend(loc="upper left", bbox_to_anchor=(0,1.02),
                         bbox_transform=fig.transFigure)
-
-        axs[0,1].plot(mod_scores.time, mod_scores.sel(mode=2))
-        axs[0,1].plot(sat_scores.time, sat_scores.sel(mode=2))
-
-        axs[1,0].pcolor(mod_comp.sel(mode=1).squeeze())#, vmin=-1, vmax=1)
-        axs[2,0].pcolor(sat_comp.sel(mode=1).squeeze())#, vmin=-1, vmax=1)
-
-        axs[1,1].pcolor(mod_comp.sel(mode=2).squeeze())#, vmin=-1, vmax=1)
-        axs[2,1].pcolor(sat_comp.sel(mode=2).squeeze())#, vmin=-1, vmax=1)
 
         # set labels
         axs[0,0].set_title("mode 1")
@@ -322,7 +365,7 @@ class satellite_plot(object):
         axs[2,1].text(0.05,0.95, "Obs", ha="left", va="top",
                       transform=axs[2,1].transAxes)
 
-        plt.savefig("FIGS/CO9_CMEMS_Satellite_ssh_pca.png", dpi=600)
+        plt.savefig("FIGS/CO9_CO7_CMEMS_Satellite_ssh_pca.png", dpi=600)
 
 def get_eof(ds, dn_out, fn):
     """ calculate eof of surface data """
@@ -341,7 +384,7 @@ def get_eof(ds, dn_out, fn):
     # save scores to netcdf
     scores = model.scores()
     del scores.attrs["solver_kwargs"]  # attr causes error
-    scores.to_netcdf("{dn_out}/satellite/{fn}_eof_map_scores.nc")
+    scores.to_netcdf(f"{dn_out}/satellite/{fn}_eof_map_scores.nc")
 
 if __name__ == "__main__":
 
@@ -357,6 +400,7 @@ if __name__ == "__main__":
         path = f"{cfg.dn_out}/satellite/"
         fn = f"{path}/CMEMS_L4_satellite_gridded_to_{cfg.case}.nc"
         sat_proc = xr.open_dataset(fn, chunks=-1).adt
+        sat_proc["time"] = sat_proc.time.astype("datetime64[M]")
 
         # remove deep water
         cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
@@ -364,7 +408,7 @@ if __name__ == "__main__":
 
         sat_proc = sat_proc.where(domcfg.bathy < 200)
 
-        get_eof(sat_proc, "CMEMS_L4_satellite")
+        get_eof(sat_proc, cfg.dn_out, "CMEMS_L4_satellite") 
 
 
     def calculate_primary_model_eof():
@@ -385,29 +429,36 @@ if __name__ == "__main__":
         # get eof of ssh
         get_eof(mod_proc, cfg.dn_out, "CO9")
 
+
     def calculate_comparison_model_eof():
 
         # get model and remove surface loading 
         fn = cfg.comp_case["raw_data"]
         mod = model_surface(fn, src_t_coord="time_counter")
+        mod.cfg_fn = cfg.dn_dom + cfg.comp_case["grid"]
         mod.get_mean_ssh()
-        #mod.remove_inverse_barometer()
+        mod.remove_inverse_barometer("era_interim")
 
         # retrieve dataset
         mod_proc = mod.ds
 
+        print (mod_proc.nav_lon.min().data)
         # remove deep water
-        cfg_fn = cfg.comp_case["grid"]
-        domcfg = xr.open_dataset(cfg_fn)
+        domcfg = mod.get_domain_cfg(rename="hbatt")
         mod_proc = mod_proc.where(domcfg.bathy < 200)
+        print ("dom", domcfg.nav_lon.min().data)
+        print ("mod", mod_proc.nav_lon.min().data)
+        print (sdfj)
+        # Note the above output is  -25.4682 for both ...
 
         # get eof of ssh
         get_eof(mod_proc, cfg.comp_case["proc_data"], cfg.comp_case["case"])
 
     def plot_eof():
         splot = satellite_plot()
-        splot.plot_eof_validation("CO9", "CMEMS_L4_satellite")
-    #plot_eof()
+        splot.plot_eof_validation("CO9","co7", "CMEMS_L4_satellite")
+
+    plot_eof()
 
     #calculate_co9_eof()
     calculate_comparison_model_eof()

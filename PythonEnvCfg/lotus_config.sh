@@ -28,6 +28,7 @@ export FN_CFG_NEMO=$DN_CFG"example_nemo_grid_t.json"
 #export DIN_EN4="/home/users/jelt/EN4/"
 export DIN_EN4="/gws/nopw/j04/class_vol2/senemo/shared/EN4/downloads/EN.4.2.2.profiles/"
 export DN_ERA5="/gws/nopw/j04/jmmp/ERA5/"
+export DN_ERA_INTERIM="/gws/nopw/j04/jmmp/ERA_interim/"
 
 # prefix for preprocessed EN4 data (chunked into files by region and time)
 export REGION="AMM15"

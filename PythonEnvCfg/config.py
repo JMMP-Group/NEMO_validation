@@ -25,6 +25,7 @@ class config:
         self.machine     = self.get_shell_var('MACHINE', True)
         self.coast_repo  = self.get_shell_var('COAST_REPO', True)
         self.dn_era5     = self.get_shell_var('DN_ERA5', True)
+        self.dn_era_interim     = self.get_shell_var('DN_ERA_INTERIM', True)
         self.din_en4     = self.get_shell_var('DIN_EN4', True)
         self.dout_en4    = self.get_shell_var('DOUT_EN4', True)
         self.fn_cfg_prof = self.get_shell_var('FN_CFG_PROF', True)
