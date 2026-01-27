@@ -7,4 +7,4 @@
 #SBATCH --account=jmmp
 source activate nemo_validation
 
-python compare_surface_state.py
+python -u compare_surface_state.py

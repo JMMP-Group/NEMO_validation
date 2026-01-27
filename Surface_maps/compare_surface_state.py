@@ -6,6 +6,7 @@ import xarray as xr
 import os
 import copernicusmarine
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from scipy.interpolate import griddata
 import numpy as np
 import xeofs as xe
@@ -14,6 +15,8 @@ import time
 from dask.diagnostics import ProgressBar
 import matplotlib
 import cartopy.crs as ccrs
+from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
+import cartopy.feature as cfeature
 
 matplotlib.rcParams.update({'font.size': 8})
 
@@ -124,10 +127,12 @@ class satellite(object):
         n_grid = []
         for time, ds_t in self.ds.groupby("time"):
             print (time)
-            values = (ds_t.values.flatten())
+            values = ds_t.values.flatten()
+            values_masked = (np.nan_to_num(values))
             
             n_grid.append(
-             griddata(points, values, target, method="cubic")[:,:,np.newaxis])
+             griddata(points, values_masked, target,
+                      method="cubic")[:,:,np.newaxis])
 
         n_grid_all = np.concatenate(n_grid, axis=2)
 
@@ -349,12 +354,32 @@ class satellite_plot(object):
         """ plot eof breakdown of model versus obs """
 
         # initialise figure
+        fig = plt.figure(figsize=(5.5,6.5))
+
+        # initialise gridspec
+        gs0 = gridspec.GridSpec(ncols=2, nrows=1)
+        gs1 = gridspec.GridSpec(ncols=2, nrows=3)
+
+        ## set frame bounds
+        gs0.update(top=0.96, bottom=0.78, left=0.1, wspace=0.1, hspace=0.12,
+                   right=0.85)
+        gs1.update(top=0.7, bottom=0.08, left=0.1, wspace=0.1, hspace=0.08,
+                   right=0.85)
+
+        # set projection
         proj=ccrs.AlbersEqualArea()
         proj=ccrs.PlateCarree()
+
+        # assign axes to lists
+        axs0 = []
+        for i in range(2):
+            axs0.append(fig.add_subplot(gs0[i]))
+        axs1 = []
+        for i in range(6):
+            axs1.append(fig.add_subplot(gs1[i], projection=proj))
+
         plt_proj=ccrs.PlateCarree()
         proj_dict = {"projection": proj}
-        #fig, axs = plt.subplots(4, 2, figsize=(5.5,5.5), subplot_kw=proj_dict)
-        fig, axs = plt.subplots(4, 2, figsize=(5.5,5.5))
 
         # get data
         path = f"{cfg.dn_out}/satellite/"
@@ -373,65 +398,90 @@ class satellite_plot(object):
         mod1_pval = xr.corr(mod1_scores, sat_scores, dim="time")
 
         def render(axs, comp, scores, i, label):
-            axs[0,0].plot(scores.time, scores.sel(mode=1), label=label,
+            axs0[0].plot(scores.time, scores.sel(mode=1), label=label,
                           lw=0.8)
-            axs[0,1].plot(scores.time, scores.sel(mode=2), lw=0.8)
+            axs0[1].plot(scores.time, scores.sel(mode=2), label=label,
+                          lw=0.8)
 
-            axs[i,0].pcolormesh(comp.longitude, comp.latitude,
+            axs1[i*2].pcolormesh(comp.longitude, comp.latitude,
                                 comp.sel(mode=1).squeeze())
-            axs[i,1].pcolormesh(comp.longitude, comp.latitude,
+            axs1[i*2+1].pcolormesh(comp.longitude, comp.latitude,
                                 comp.sel(mode=2).squeeze())
 
             # set extent
-            lon0 = comp.longitude.isel(x=0, y=0).values
+            #lon0 = comp.longitude.isel(x=0, y=0).values
+            lon0 = -15
             lon1 = 9.8
             #axs[i,0].set_extent([lon0, lon1, 46, 62])
             #axs[i,1].set_extent([lon0, lon1, 46, 62])
-            axs[i,0].set_xlim(lon0, lon1)
-            axs[i,1].set_xlim(lon0, lon1)
-            axs[i,0].set_ylim(46, 62)
-            axs[i,1].set_ylim(46, 62)
+            axs1[i].set_xlim(lon0, lon1)
+            axs1[i].set_ylim(46, 62)
+            axs1[i+3].set_xlim(lon0, lon1)
+            axs1[i+3].set_ylim(46, 62)
 
-        render(axs, mod0_comp, mod0_scores, 1, "CO9")
-        render(axs, mod1_comp, mod1_scores, 2, "CO7")
+        render(axs1, mod0_comp, mod0_scores, 0, "CO9")
+        render(axs1, mod1_comp, mod1_scores, 1, "CO7")
         sat_comp = sat_comp.rename({"nav_lon":"longitude",
                                     "nav_lat":"latitude"})
-        render(axs, sat_comp, sat_scores, 3, "Obs")
+        render(axs1, sat_comp, sat_scores, 2, "Obs")
 
-        axs[0,0].legend(loc="upper left", bbox_to_anchor=(0,1.02),
-                        bbox_transform=fig.transFigure)
+        axs0[1].legend(loc="upper left", bbox_to_anchor=(1.02,1),
+                        bbox_transform=axs0[1].transAxes)
+
+        # set timeseries lims
+        for ax in axs0:
+            ax.set_xlim(mod0_scores.time.min(), mod0_scores.time.max())
 
         # add p-vals
         p =  str(np.round(mod0_pval.sel(mode=1).data, 2))
-        axs[0,0].text(0.5, 0.95, "p = " + p,
-                      ha="left", va="top", transform=axs[0,0].transAxes)
+        axs0[0].text(0.5, 0.95, "p = " + p,
+                      ha="left", va="top", transform=axs0[0].transAxes)
         p =  str(np.round(mod1_pval.sel(mode=1).data, 2))
-        axs[0,0].text(0.75, 0.95, "p = " + p,
-                      ha="left", va="top", transform=axs[0,0].transAxes)
+        axs0[0].text(0.75, 0.95, "p = " + p,
+                      ha="left", va="top", transform=axs0[0].transAxes)
         p =  str(np.round(mod0_pval.sel(mode=2).data, 2))
-        axs[0,1].text(0.5, 0.95, "p = " + p,
-                      ha="left", va="top", transform=axs[0,1].transAxes)
+        axs0[1].text(0.5, 0.95, "p = " + p,
+                      ha="left", va="top", transform=axs0[1].transAxes)
         p =  str(np.round(mod1_pval.sel(mode=2).data, 2))
-        axs[0,1].text(0.75, 0.95, "p = " + p,
-                      ha="left", va="top", transform=axs[0,1].transAxes)
+        axs0[1].text(0.75, 0.95, "p = " + p,
+                      ha="left", va="top", transform=axs0[1].transAxes)
 
         # set labels
-        axs[0,0].set_title("mode 1")
-        axs[0,1].set_title("mode 2")
+        axs0[0].set_title("mode 1")
+        axs0[1].set_title("mode 2")
 
-        axs[1,0].text(0.05,0.95, "CO9", ha="left", va="top",
-                      transform=axs[1,0].transAxes)
-        axs[2,0].text(0.05,0.95, "CO7", ha="left", va="top",
-                      transform=axs[2,0].transAxes)
-        axs[3,0].text(0.05,0.95, "Obs", ha="left", va="top",
-                      transform=axs[3,0].transAxes)
+        axs1[0].text(0.05,0.95, "CO9", ha="left", va="top",
+                      transform=axs1[0].transAxes)
+        axs1[2].text(0.05,0.95, "CO7", ha="left", va="top",
+                      transform=axs1[2].transAxes)
+        axs1[4].text(0.05,0.95, "Obs", ha="left", va="top",
+                      transform=axs1[4].transAxes)
 
-        axs[1,1].text(0.05,0.95, "CO9", ha="left", va="top",
-                      transform=axs[1,1].transAxes)
-        axs[2,1].text(0.05,0.95, "CO7", ha="left", va="top",
-                      transform=axs[2,1].transAxes)
-        axs[3,1].text(0.05,0.95, "Obs", ha="left", va="top",
-                      transform=axs[3,1].transAxes)
+        axs1[1].text(0.05,0.95, "CO9", ha="left", va="top",
+                      transform=axs1[1].transAxes)
+        axs1[3].text(0.05,0.95, "CO7", ha="left", va="top",
+                      transform=axs1[3].transAxes)
+        axs1[5].text(0.05,0.95, "Obs", ha="left", va="top",
+                      transform=axs1[5].transAxes)
+
+        for ax in axs1[:4]:
+            ax.set_xticklabels([])
+        for ax in axs1[1::2]:
+            ax.set_yticklabels([])
+        for ax in axs1[::2]:
+            ax.set_ylabel("Latitude")
+        for ax in axs1[4:]:
+            ax.set_xlabel("Longitude")
+        for ax in axs0:
+            ax.set_xlabel("Year")
+
+        for ax in axs1:
+            ax.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
+
+            ax.set_xticks([-15, -10, -5, 0, 5, 10], crs=ccrs.PlateCarree())
+            ax.set_yticks([50, 55, 60], crs=ccrs.PlateCarree())
+            lon_formatter = LongitudeFormatter(zero_direction_label=True)
+            lat_formatter = LatitudeFormatter()
 
         plt.savefig("FIGS/CO9_CO7_CMEMS_Satellite_ssh_pca.png", dpi=600)
 
@@ -441,13 +491,13 @@ def get_eof(ds, dn_out, fn):
     # initiate eof model
     # Note: use_coslat should be used to weight but latitude, but xeof cannot
     # handle 2d latitude variable - it searches for coordinate dimensions
-    print (ds)
-    dsnan = np.isnan(ds)
-    for i in range(120):
-        plt.pcolor(ds.isel(time=i))
-        plt.show()
-    print (dsnan)
-    print (sdhfkj)
+    #print (ds)
+    #dsnan = np.isnan(ds)
+    #for i in range(120):
+    #    plt.pcolor(ds.isel(time=i))
+    #    plt.show()
+    #print (dsnan)
+    #print (sdhfkj)
     model = xe.single.EOF(n_modes=5)
 
     # calculate eof
@@ -566,9 +616,9 @@ if __name__ == "__main__":
         splot = satellite_plot()
         splot.plot_eof_validation("CO9","co7", "CMEMS_L4_satellite")
 
-    #plot_eof()
+    plot_eof()
     #calculate_primary_model_eof()
     #calculate_comparison_model_eof()
     #calculate_satellite_eof()
-    get_co9_gridded_satellite_data()
+    #get_co9_gridded_satellite_data()
  
