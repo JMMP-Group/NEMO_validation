@@ -14,6 +14,10 @@ from dask.diagnostics import ProgressBar
 import datetime
 import os
 import coast
+import cartopy.crs as ccrs
+from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
+import cartopy.feature as cfeature
+import cmocean
 
 matplotlib.rcParams.update({'font.size': 8})
 
@@ -503,6 +507,108 @@ class transport(object):
                     "_Rockall_transport_hist.png"
         plt.savefig("Figs/" + fn, dpi=600)
 
+    def plot_ellet_transect_geog(self):
+        """ plot geographical extent of Rockall Trough transect """
+
+        # initialise plot
+        proj=ccrs.PlateCarree()
+        plt_proj=ccrs.PlateCarree()
+        proj_dict = {"projection": plt_proj}
+        fig, axs = plt.subplots(1, figsize=(6.5,4.0), subplot_kw=proj_dict)
+        plt.subplots_adjust(left=0.10, right=0.86, top=0.95, bottom=0.22)
+
+        #axs.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
+
+        axs.set_xticks([-25, -20, -15, -10, -5, 0, 5, 10],
+                  crs=ccrs.PlateCarree())
+        axs.set_yticks([45, 50, 55, 60], crs=ccrs.PlateCarree())
+        lon_formatter = LongitudeFormatter(zero_direction_label=True)
+        lat_formatter = LatitudeFormatter()
+
+        xlim = (-17, -5)
+        ylim = (53, 60)
+        inset_xlim = (-25,10)
+        inset_ylim = (43,64)
+        lev = np.linspace(-1000,1000,51)
+
+        # gebco
+        url = "http://thredds.aoos.org/thredds/dodsC/GEBCO2014_NORTHERN_HEM.nc"
+        bathy = xr.open_dataarray(url).squeeze()
+        bathy_inset = bathy.sel(lon=slice(inset_xlim[0],inset_xlim[1]),
+                                lat=slice(inset_ylim[0],inset_ylim[1]))
+        bathy = bathy.sel(lon=slice(xlim[0],xlim[1]),
+                          lat=slice(ylim[0],ylim[1]))
+        axs.set_xlim(xlim)
+        axs.set_ylim(ylim)
+
+        p = axs.contourf(bathy.lon, bathy.lat, bathy,
+                   transform=plt_proj, cmap=cmocean.cm.topo, levels=lev,
+                   extend="both")
+        
+        # inset
+        axins = axs.inset_axes([0.8, 0.6, 0.3, 0.3],
+                          xlim=inset_xlim, ylim=inset_ylim,
+                          projection=plt_proj, transform=fig.transFigure)
+        #axins.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
+
+        p = axins.contourf(bathy_inset.lon, bathy_inset.lat, bathy_inset,
+                   transform=plt_proj, cmap=cmocean.cm.topo, levels=lev,
+                   extend="both")
+
+        pos = axs.get_position()
+        cbar_ax = fig.add_axes([0.88, pos.y0, 
+                                0.02, pos.y1 - pos.y0])
+        cbar = fig.colorbar(p, cax=cbar_ax, orientation='vertical')
+        cbar.ax.text(0.10, 0.5, r"Depth (m)", fontsize=8,
+                  rotation=90, transform=cbar.ax.transAxes,
+                     va='center', ha='right')
+
+        obs = xr.open_dataset(cfg.dn_out + "transport/obs_for_ellet_line.nc")
+
+        # segment obs
+        ww_lon_lims = [-13.0, -12.5]
+        mw_lon_lims = [-12.5, -9.6]
+        ew_lon_lims = [-9.6, -9.2]
+        #obs = obs.swap_dims({"id_dim":"longitude"})
+        #ww = obs.sel(longitude=slice(ww_lons[0],ww_lons[1]))
+        #ew = obs.sel(longitude=slice(ew_lons[0],ew_lons[1]))
+        #print (ew.longitude.max())
+        ##mw = obs.sel(longitude=slice(mw_lons[0],mw_lons[1]))
+        #mw = obs.sel(longitude=slice(mw_lons[0],ew.longitude.min().values))
+        ww = obs.where((obs.longitude > ww_lon_lims[0]) &
+                       (obs.longitude <= ww_lon_lims[1]), drop=True)
+        ew = obs.where((obs.longitude >= ew_lon_lims[0]) &
+                       (obs.longitude < ew_lon_lims[1]), drop=True)
+        mw = obs.where((obs.longitude > mw_lon_lims[0]) & 
+                       (obs.longitude < mw_lon_lims[1]), drop=True)
+
+        # extend to midpoint
+        ww_lat_mid = ( ww.isel(id_dim=-1).latitude +
+                       mw.isel(id_dim=0).latitude) / 2 
+        ew_lat_mid = ( mw.isel(id_dim=-1).latitude +
+                       ew.isel(id_dim=0).latitude) / 2 
+
+        ww_lons = list(ww.longitude) + [ww_lon_lims[1]]
+        ww_lats = list(ww.latitude) + [float(ww_lat_mid)]
+
+        mw_lons = [mw_lon_lims[0]] + list(mw.longitude) + [mw_lon_lims[1]] 
+        mw_lats = [float(ww_lat_mid)] + list(ww.latitude.values) +\
+                  [float(ew_lat_mid)]
+
+        ew_lons = [ew_lon_lims[0]] + list(ew.longitude)
+        ew_lats = [float(ew_lat_mid)] + list(ww.latitude)
+
+
+        #axs.plot(ww.longitude, ww.latitude, transform=plt_proj, c="r")
+        #axs.plot(ew.longitude, ew.latitude, transform=plt_proj, c="g")
+        #axs.plot(mw.longitude, mw.latitude, transform=plt_proj, c="purple")
+
+        axs.plot(ww_lons, ww_lats, transform=plt_proj, c="r")
+        axs.plot(mw_lons, mw_lats, transform=plt_proj, c="g")
+        axs.plot(ew_lons, ew_lats, transform=plt_proj, c="purple")
+
+        plt.show()
+
     def plot_ellet_climatology_by_section(self):
 
         # initialise plot
@@ -621,7 +727,7 @@ class transport(object):
 if __name__ == "__main__":
     trans = transport()
     #trans.plot_ellet_hist_by_section()
-    trans.plot_ellet_climatology_by_section()
+    trans.plot_ellet_transect_geog()
     #trans._get_monthly_mean(path_in=cfg.comp_case["raw_data"],
     #                        path_out=cfg.comp_case["proc_data"])
     #trans._get_monthly_mean(path_in=cfg.dn_dat,
