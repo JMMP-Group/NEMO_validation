@@ -76,8 +76,8 @@ class satellite(object):
         }
         
         if var == "sst":
-           data_request["fn"] = "cmems_obs-sst_atl_phy_nrt_l3s_P1D-m",
-           self.var_str = "sea_surface_temperature"
+           data_request["fn"] = "METOFFICE-GLO-SST-L4-REP-OBS-SST"
+           self.var_str = "analysed_sst"
 
         if var == "ssh":
            data_request["fn"] = "cmems_obs-sl_eur_phy-ssh_my_allsat-l4-duacs-0.0625deg_P1D"
@@ -168,6 +168,9 @@ class model_surface(object):
         self.src_x_coord = src_x_coord
         self.src_y_coord = src_y_coord
 
+        eof_norm=False
+        eof_std=True
+
     def map_dimension_coords(self, ds):
  
         """
@@ -200,38 +203,36 @@ class model_surface(object):
 
         return domcfg
 
-    def get_mean_ssh(self, resample=False, freq="1MS"):
-        #drange = np.arange(cfg.y0, cfg.y1, dtype="datetime64[M]")
-        drange = np.arange(f"{cfg.y0}-01", f"{cfg.y1}-01", dtype="datetime64[M]")
+    def get_time_mean_var(self, resample=False, freq="1MS", var_nam="sossheig"):
+        drange = np.arange(f"{cfg.y0}-01", f"{cfg.y1}-01",
+                    dtype="datetime64[M]")
         yrange = np.arange(int(cfg.y0), int(cfg.y1))
-        print (drange)
         t0 = time.time()
-        ds_list = []
-        fn_list = []
-        print ("a")
         chunks = {"time_counter":1}
         path_list = []
         for y in yrange:
             paths = glob.glob(self.fn_path + f"{y}*_25hourm_grid_T.nc")
-            #paths = glob.glob(self.fn_path + f"200401*_25hourm_grid_T.nc")
             path_list += paths
-        #path_list = glob.glob(self.fn_path + f"200401*_25hourm_grid_T.nc")
-        print (len(path_list))
 
-        da_ssh = xr.open_dataset(path_list[0], chunks=chunks).sossheig
-        print (da_ssh)
+        def remove_depth(da):
+
+            return da
+
+        da_var = xr.open_dataset(path_list[0], chunks=chunks)[var_nam]
         for path in path_list[1:]:
-            print (path)
-            da = xr.open_dataset(path, chunks=chunks).sossheig
-            print (da)
-            da_ssh = xr.concat([da_ssh, da], dim="time_counter")
+            da = xr.open_dataset(path, chunks=chunks)[var_nam]
+            da_var = xr.concat([da_var, da], dim="time_counter")
+
+        # check for depth var, flawed if not spatial/time dims present
+        if len(da_var.dims) > 3:
+            da_var = da_var.isel(deptht=0)
 
         if freq:
-            da_ssh = self.map_dimension_coords(da_ssh)
-            da_ssh = da_ssh.resample(time=freq).mean()
+            da_var = self.map_dimension_coords(da_var)
+            da_var = da_var.resample(time=freq).mean()
 
         with ProgressBar():
-            self.ds = da_ssh.load()
+            self.ds = da_var.load()
         t1 = time.time()
         print ((t1-t0)/60)
 
@@ -332,6 +333,32 @@ class model_surface(object):
 
         self.ds = self.ds + ssh_ib
 
+    def get_velT(self,):
+        """ get vels on t-pts """
+
+        domcfg = self.get_domain_cfg()
+
+        self.vT = 
+
+        
+        
+        
+
+    def get_KE(self, uT, vT, t_coord):
+        """ get mean and eddy kinetic energy of surface currents """
+
+        uT_bar = uT.mean(t_coord)
+        vT_bar = vT.mean(t_coord)
+
+        uT_prime = uT_bar - uT
+        vT_prime = vT_bar - vT
+
+        MKE = 0.5 * (uT_bar**2 + vT_bar**2)
+        EKE = 0.5 * ((uT_prime**2).mean(t_coord) + vT_prime**2.mean(t_coord))
+
+        MKE.name = "MKE"
+        EKE.name = "MKE"
+
 class satellite_plot(object):
 
     def plot_model_and_satellite_snapshot_ssh(self, mod_ssh, sat_ssh):
@@ -350,7 +377,7 @@ class satellite_plot(object):
         plt.colorbar(p1, ax=axs[1])
         plt.show()
 
-    def plot_eof_validation(self, mod0, mod1, sat):
+    def plot_eof_validation(self, mod0, mod1, sat, var):
         """ plot eof breakdown of model versus obs """
 
         # initialise figure
@@ -383,15 +410,16 @@ class satellite_plot(object):
 
         # get data
         path = f"{cfg.dn_out}/satellite/"
-        mod0_scores = xr.open_dataarray(f"{path}{mod0}_eof_map_scores.nc")
-        mod0_comp = xr.open_dataarray(f"{path}{mod0}_eof_map_components.nc")
+        eof_type = ""
+        mod0_scores = xr.open_dataarray(f"{path}{mod0}_{var}_eof{eof_type}_scores.nc")
+        mod0_comp = xr.open_dataarray(f"{path}{mod0}_{var}_eof{eof_type}_components.nc")
 
-        sat_scores = xr.open_dataarray(f"{path}{sat}_eof_map_scores.nc")
-        sat_comp = xr.open_dataarray(f"{path}{sat}_eof_map_components.nc")
+        sat_scores = xr.open_dataarray(f"{path}{sat}_{var}_eof{eof_type}_scores.nc")
+        sat_comp = xr.open_dataarray(f"{path}{sat}_{var}_eof{eof_type}_components.nc")
 
-        path = cfg.comp_case["proc_data"] + "/satellite/"
-        mod1_scores = xr.open_dataarray(f"{path}{mod1}_eof_map_scores.nc")
-        mod1_comp = xr.open_dataarray(f"{path}{mod1}_eof_map_components.nc")
+        #path = cfg.comp_case["proc_data"] + "/satellite/"
+        mod1_scores = xr.open_dataarray(f"{path}{mod0}_{var}_eof{eof_type}_scores.nc")
+        mod1_comp = xr.open_dataarray(f"{path}{mod0}_{var}_eof{eof_type}_components.nc")
 
         # get p-value
         mod0_pval = xr.corr(mod0_scores, sat_scores, dim="time")
@@ -405,8 +433,13 @@ class satellite_plot(object):
 
             axs1[i*2].pcolormesh(comp.longitude, comp.latitude,
                                 comp.sel(mode=1).squeeze())
-            axs1[i*2+1].pcolormesh(comp.longitude, comp.latitude,
+            p = axs1[i*2+1].pcolormesh(comp.longitude, comp.latitude,
                                 comp.sel(mode=2).squeeze())
+            #for ax in axs1[i*2:i*2+2]:
+            #    ax.pcolormesh(comp.longitude, comp.latitude,
+            #        xr.where(comp.isel(mode=1).squeeze() == np.nan, 1, np.nan))
+            plt.colorbar(p)
+
 
             # set extent
             #lon0 = comp.longitude.isel(x=0, y=0).values
@@ -421,8 +454,9 @@ class satellite_plot(object):
 
         render(axs1, mod0_comp, mod0_scores, 0, "CO9")
         render(axs1, mod1_comp, mod1_scores, 1, "CO7")
-        sat_comp = sat_comp.rename({"nav_lon":"longitude",
-                                    "nav_lat":"latitude"})
+        print (sat_comp)
+        #sat_comp = sat_comp.rename({"nav_lon":"longitude",
+        #                            "nav_lat":"latitude"})
         render(axs1, sat_comp, sat_scores, 2, "Obs")
 
         axs0[1].legend(loc="upper left", bbox_to_anchor=(1.02,1),
@@ -475,17 +509,30 @@ class satellite_plot(object):
         for ax in axs0:
             ax.set_xlabel("Year")
 
+        #cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
+       # domcfg = xr.open_dataset(cfg_fn).squeeze()
+       # print (domcfg)
+       # msk = xr.where(domcfg.top_level == 0, 0, np.nan)
+       # print (msk)
         for ax in axs1:
-            ax.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
+            #ax.pcolormesh(domcfg.nav_lon, domcfg.nav_lat, msk, cmap="grey")
+            #ax.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
+            land_50m = cfeature.NaturalEarthFeature('physical', 'land', '10m',
+                                        edgecolor='k',
+                                        facecolor='grey')
+            ax.add_feature(land_50m, zorder=100, lw=0.5)
 
             ax.set_xticks([-15, -10, -5, 0, 5, 10], crs=ccrs.PlateCarree())
             ax.set_yticks([50, 55, 60], crs=ccrs.PlateCarree())
             lon_formatter = LongitudeFormatter(zero_direction_label=True)
             lat_formatter = LatitudeFormatter()
 
-        plt.savefig("FIGS/CO9_CO7_CMEMS_Satellite_ssh_pca.png", dpi=600)
+        eof_str = eof_type.lstrip("_")
+        print (eof_str)
+        plt.savefig(f"FIGS/CO9_CO7_CMEMS_Satellite_{var}_{eof_str}_pca.png",
+                     dpi=600)
 
-def get_eof(ds, dn_out, fn):
+def get_eof(ds, dn_out, fn, t_mode=False):
     """ calculate eof of surface data """
 
     # initiate eof model
@@ -495,43 +542,52 @@ def get_eof(ds, dn_out, fn):
     #dsnan = np.isnan(ds)
     #for i in range(120):
     #    plt.pcolor(ds.isel(time=i))
+    #    plt.colorbar()
     #    plt.show()
     #print (dsnan)
     #print (sdhfkj)
-    model = xe.single.EOF(n_modes=5)
+    
+    model = xe.single.EOF(n_modes=5, standardize=False)
 
     # calculate eof
-    model.fit(ds, dim="time")
+    ds = ds.assign_coords({"x":np.arange(ds.sizes["x"]),
+                           "y":np.arange(ds.sizes["y"])})
+
+    if t_mode:
+        model.fit(ds, dim=("x","y"))
+    else:
+        model.fit(ds, dim=("time"))
 
     # save components to netcdf
     components = model.components(normalized=False)
     del components.attrs["solver_kwargs"]  # attr causes error
-    components.to_netcdf(f"{dn_out}/satellite/{fn}_eof_abs_components.nc")
+    components.to_netcdf(f"{dn_out}/satellite/{fn}_eof_components.nc")
 
     # save scores to netcdf
     scores = model.scores(normalized=False)
     del scores.attrs["solver_kwargs"]  # attr causes error
-    scores.to_netcdf(f"{dn_out}/satellite/{fn}_eof_abs_scores.nc")
+    scores.to_netcdf(f"{dn_out}/satellite/{fn}_eof_scores.nc")
 
     # save explained variance to netcdf
     var_exp = model.explained_variance_ratio()
     del var_exp.attrs["solver_kwargs"]  # attr causes error
-    var_exp.to_netcdf(f"{dn_out}/satellite/{fn}_eof_abs_var_explained_ratio.nc")
+    var_exp.to_netcdf(f"{dn_out}/satellite/{fn}_eof_var_explained_ratio.nc")
 
 if __name__ == "__main__":
 
-    def get_co9_gridded_satellite_data():
+    def get_co9_gridded_satellite_data(var="sst"):
         sat = satellite()
-        sat.get_cmems()
+        sat.get_cmems(var=var)
         sat.monthly_mean()
         cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
         sat.interpolate_to_model(cfg_fn)
-        sat.save_ds(f"CMEMS_L4_satellite_gridded_to_{cfg.case}.nc")
+        sat.save_ds(f"CMEMS_L4_satellite_{var}_gridded_to_{cfg.case}.nc")
 
-    def calculate_satellite_eof():
+    def calculate_satellite_eof(var_nam="ssh", fn_nam="ssh"):
+        
         path = f"{cfg.dn_out}/satellite/"
-        fn = f"{path}/CMEMS_L4_satellite_gridded_to_{cfg.case}.nc"
-        sat_proc = xr.open_dataset(fn, chunks=-1).adt
+        fn = f"{path}/CMEMS_L4_satellite_{var}_gridded_to_{cfg.case}.nc"
+        sat_proc = xr.open_dataarray(fn, chunks=-1)
         sat_proc["time"] = sat_proc.time.astype("datetime64[M]")
 
         # remove deep water
@@ -545,10 +601,10 @@ if __name__ == "__main__":
         sat_proc = sat_proc.where((sat_proc.longitude>-4.5) | 
                                   (sat_proc.latitude<60))
 
-        get_eof(sat_proc, cfg.dn_out, "CMEMS_L4_satellite") 
+        get_eof(sat_proc, cfg.dn_out, f"CMEMS_L4_satellite_{fn_nam}") 
 
 
-    def calculate_primary_model_eof():
+    def calculate_primary_model_eof(var_nam="sossheig", fn_nam="ssh"):
 
         # get model and remove surface loading 
         fn = cfg.dn_dat
@@ -556,13 +612,12 @@ if __name__ == "__main__":
                                 src_x_coord="x_grid_T",
                                 src_y_coord="y_grid_T")
         mod.cfg_fn = '/gws/nopw/j04/jmmp/public/AMM15/DOMAIN_CFG/GEG_SF12.nc'
-        mod.get_mean_ssh()
+        mod.get_time_mean_var(var_nam=var_nam)
         mod.map_lat_lon_names("nav_lon_grid_T", "nav_lat_grid_T")
         mod.remove_inverse_barometer()
 
         # retrieve dataset
         mod_proc = mod.ds
-        print (mod_proc)
 
         # remove deep water
         domcfg = mod.get_domain_cfg()
@@ -574,21 +629,18 @@ if __name__ == "__main__":
                                   (mod_proc.latitude<60))
 
         # get eof of ssh
-        get_eof(mod_proc, cfg.dn_out, "CO9")
+        get_eof(mod_proc, cfg.dn_out, f"CO9_{fn_nam}")
 
 
-    def calculate_comparison_model_eof():
+    def calculate_comparison_model_eof(var_nam="sossheig", fn_nam="ssh"):
 
         # get model and remove surface loading 
         fn = cfg.comp_case["raw_data"]
         mod = model_surface(fn, src_t_coord="time_counter")
         mod.cfg_fn = cfg.dn_dom + cfg.comp_case["grid"]
-        print ("A")
-        mod.get_mean_ssh(resample=True)
+        mod.get_time_mean_var(resample=True, var_nam=var_nam)
         mod.map_lat_lon_names("nav_lon", "nav_lat")
-        print ("B")
         mod.remove_inverse_barometer("era_interim")
-        print ("C")
 
         # retrieve dataset
         mod_proc = mod.ds
@@ -610,15 +662,17 @@ if __name__ == "__main__":
         #mod_proc.squeeze().plot()
         
         # get eof of ssh
-        get_eof(mod_proc, cfg.comp_case["proc_data"], cfg.comp_case["case"])
+        get_eof(mod_proc, cfg.comp_case["proc_data"],
+                cfg.comp_case["case"] + "_{var_nam}")
 
     def plot_eof():
         splot = satellite_plot()
-        splot.plot_eof_validation("CO9","co7", "CMEMS_L4_satellite")
+        splot.plot_eof_validation("CO9","co7", "CMEMS_L4_satellite", "sst")
 
-    plot_eof()
-    #calculate_primary_model_eof()
-    #calculate_comparison_model_eof()
+    #plot_eof()
+    #calculate_primary_model_eof("vomecrx")
+    #calculate_comparison_model_eof("votemper")
+    #calculate_comparison_model_eof("vosaline")
     #calculate_satellite_eof()
-    #get_co9_gridded_satellite_data()
+    #get_co9_gridded_satellite_data("sst")
  
