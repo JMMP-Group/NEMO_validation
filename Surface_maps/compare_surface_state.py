@@ -161,12 +161,14 @@ class satellite(object):
 
 class model_surface(object):
 
-    def __init__(self, fn_path, src_t_coord="time", src_x_coord="x",
-                                src_y_coord="y"):
-        self.fn_path = fn_path
+    def __init__(self, fn_raw, fn_proc, src_t_coord="time", src_x_coord="x",
+                                        src_y_coord="y", src_z_coord="z"):
+        self.fn_path = fn_raw
+        self.fn_proc = fn_proc
         self.src_t_coord = src_t_coord
         self.src_x_coord = src_x_coord
         self.src_y_coord = src_y_coord
+        self.src_z_coord = src_z_coord
 
         eof_norm=False
         eof_std=True
@@ -180,9 +182,11 @@ class model_surface(object):
 
         """
         
+        print (ds)
         ds = ds.rename({self.src_t_coord:"time",
                         self.src_x_coord:"x",
-                        self.src_y_coord:"y"})
+                        self.src_y_coord:"y",
+                        self.src_z_coord:"z"})
 
         return ds
 
@@ -203,7 +207,8 @@ class model_surface(object):
 
         return domcfg
 
-    def get_time_mean_var(self, resample=False, freq="1MS", var_nam="sossheig"):
+    def get_time_mean_var(self, freq="1MS", grid="T", var_nam="sossheig",
+                          save=True):
         drange = np.arange(f"{cfg.y0}-01", f"{cfg.y1}-01",
                     dtype="datetime64[M]")
         yrange = np.arange(int(cfg.y0), int(cfg.y1))
@@ -211,30 +216,31 @@ class model_surface(object):
         chunks = {"time_counter":1}
         path_list = []
         for y in yrange:
-            paths = glob.glob(self.fn_path + f"{y}*_25hourm_grid_T.nc")
+            paths = glob.glob(self.fn_path + f"{y}*_25hourm_grid_{grid}.nc")
             path_list += paths
-
-        def remove_depth(da):
-
-            return da
 
         da_var = xr.open_dataset(path_list[0], chunks=chunks)[var_nam]
         for path in path_list[1:]:
             da = xr.open_dataset(path, chunks=chunks)[var_nam]
             da_var = xr.concat([da_var, da], dim="time_counter")
 
+        da_var = self.map_dimension_coords(da_var)
+
         # check for depth var, flawed if not spatial/time dims present
         if len(da_var.dims) > 3:
-            da_var = da_var.isel(deptht=0)
+            da_var = da_var.isel(z=0)
 
         if freq:
-            da_var = self.map_dimension_coords(da_var)
             da_var = da_var.resample(time=freq).mean()
 
         with ProgressBar():
             self.ds = da_var.load()
         t1 = time.time()
         print ((t1-t0)/60)
+
+        if save:
+            self.ds.to_netcdf(self.fn_proc +
+                             f"{cfg.y0}_{cfg.y1}_monthly_{var_nam}.nc")
 
     def interpolate_sp_to_model(self, tgt, src):
         """ interpolate lat-lon to horizontal grid """
@@ -333,31 +339,28 @@ class model_surface(object):
 
         self.ds = self.ds + ssh_ib
 
-    def get_velT(self,):
-        """ get vels on t-pts """
-
-        domcfg = self.get_domain_cfg()
-
-        self.vT = 
-
-        
-        
-        
-
-    def get_KE(self, uT, vT, t_coord):
+    def get_KE(self, u, v):
         """ get mean and eddy kinetic energy of surface currents """
 
-        uT_bar = uT.mean(t_coord)
-        vT_bar = vT.mean(t_coord)
+        uT = 0.5 * (u + u.shift(y=1))
+        vT = 0.5 * (v + v.shift(y=1))
+
+        uT_bar = uT.mean(self.src_t_coord)
+        vT_bar = vT.mean(self.src_t_coord)
 
         uT_prime = uT_bar - uT
         vT_prime = vT_bar - vT
 
         MKE = 0.5 * (uT_bar**2 + vT_bar**2)
-        EKE = 0.5 * ((uT_prime**2).mean(t_coord) + vT_prime**2.mean(t_coord))
+        EKE = 0.5 * ((uT_prime**2).mean(self.src_t_coord) +
+                     (vT_prime**2).mean(self.src_t_coord))
 
         MKE.name = "MKE"
-        EKE.name = "MKE"
+        EKE.name = "EKE"
+
+        KE = xr.merge([MKE,EKE])
+
+        return KE
 
 class satellite_plot(object):
 
@@ -635,10 +638,11 @@ if __name__ == "__main__":
     def calculate_comparison_model_eof(var_nam="sossheig", fn_nam="ssh"):
 
         # get model and remove surface loading 
-        fn = cfg.comp_case["raw_data"]
-        mod = model_surface(fn, src_t_coord="time_counter")
+        fn_raw = cfg.comp_case["raw_data"]
+        fn_proc = cfg.comp_case["proc_data"]
+        mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter")
         mod.cfg_fn = cfg.dn_dom + cfg.comp_case["grid"]
-        mod.get_time_mean_var(resample=True, var_nam=var_nam)
+        mod.get_time_mean_var(var_nam=var_nam)
         mod.map_lat_lon_names("nav_lon", "nav_lat")
         mod.remove_inverse_barometer("era_interim")
 
@@ -669,6 +673,34 @@ if __name__ == "__main__":
         splot = satellite_plot()
         splot.plot_eof_validation("CO9","co7", "CMEMS_L4_satellite", "sst")
 
+    def save_monthly_var_primary_model(var_nam, grid):
+        fn_raw = cfg.dn_dat
+        fn_proc = cfg.dn_out
+        mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
+                                             src_z_coord="depth" + grid.lower())
+        mod.get_time_mean_var(var_nam=var_nam, grid=grid, save=True)
+
+    def save_monthly_var_comparison_model(var_nam, grid):
+        fn_raw = cfg.comp_case["raw_data"]
+        fn_proc = cfg.comp_case["proc_data"]
+        mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
+                            src_z_coord="depth" + grid.lower())
+        mod.get_time_mean_var(var_nam=var_nam, grid=grid, save=True)
+
+    def get_KE(fn_raw, fn_proc):
+        mod = model_surface(fn_raw, fn_proc, src_t_coord="time")
+
+        if monthly:
+        u = xr.open_dataarray(fn_proc + f"{cfg.y0}_{cfg.y1}_monthly_vozocrtx.nc")
+        v = xr.open_dataarray(fn_proc + f"{cfg.y0}_{cfg.y1}_monthly_vomecrty.nc")
+        KE = mod.get_KE(u, v)
+        KE.to_netcdf(fn_proc + f"satellite/{cfg.y0}_{cfg.y1}_KE.nc")
+
+    get_KE(cfg.comp_case["raw_data"], cfg.comp_case["proc_data"])
+    get_KE(cfg.dn_dat, cfg.dn_out)
+    #save_monthly_var_primary_model("vomecrty", "V")
+    #save_monthly_var_primary_model("vozocrtx", "U")
+    
     #plot_eof()
     #calculate_primary_model_eof("vomecrx")
     #calculate_comparison_model_eof("votemper")
