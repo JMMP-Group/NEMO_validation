@@ -102,6 +102,8 @@ class satellite(object):
             variables = data_request["variables"]
         )[self.var_str]
 
+        return self.ds
+
     def monthly_mean(self):
         """ average over month """
 
@@ -158,6 +160,34 @@ class satellite(object):
 
         fn = f"{cfg.dn_out}/satellite/{fn_name}"
         self.ds.to_netcdf(fn)
+
+    def get_KE(self, save=False):
+        """ get mean and eddy kinetic energy of surface currents """
+
+        u = self.get_cmems(var="uvel")
+        v = self.get_cmems(var="vvel")
+
+        u_bar = u.mean("time")
+        v_bar = v.mean("time")
+
+        u_prime = u_bar - u
+        v_prime = v_bar - v
+
+        MKE = 0.5 * (u_bar**2 + v_bar**2)
+        EKE = 0.5 * ((u_prime**2).mean("time") +
+                     (v_prime**2).mean("time"))
+
+        MKE.name = "MKE"
+        EKE.name = "EKE"
+
+        KE = xr.merge([MKE,EKE])
+
+        if save: 
+            # needs reduced hardcoding
+            fn = f"{cfg.dn_out}/satellite/2004_2014_satellite_KE.nc"
+            KE.to_netcdf(fn)
+
+        return KE
 
 class model_surface(object):
 
@@ -239,8 +269,10 @@ class model_surface(object):
         print ((t1-t0)/60)
 
         if save:
+            if freq == None:
+                freq="25hourm"
             self.ds.to_netcdf(self.fn_proc +
-                             f"{cfg.y0}_{cfg.y1}_monthly_{var_nam}.nc")
+                             f"{cfg.y0}_{cfg.y1}_{freq}_{var_nam}.nc")
 
     def interpolate_sp_to_model(self, tgt, src):
         """ interpolate lat-lon to horizontal grid """
@@ -678,26 +710,31 @@ if __name__ == "__main__":
         fn_proc = cfg.dn_out
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
                                              src_z_coord="depth" + grid.lower())
-        mod.get_time_mean_var(var_nam=var_nam, grid=grid, save=True)
+        mod.get_time_mean_var(var_nam=var_nam, freq=None, grid=grid, save=True)
 
     def save_monthly_var_comparison_model(var_nam, grid):
         fn_raw = cfg.comp_case["raw_data"]
         fn_proc = cfg.comp_case["proc_data"]
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
                             src_z_coord="depth" + grid.lower())
-        mod.get_time_mean_var(var_nam=var_nam, grid=grid, save=True)
+        mod.get_time_mean_var(var_nam=var_nam, freq=None, grid=grid, save=True)
 
     def get_KE(fn_raw, fn_proc):
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time")
 
-        if monthly:
         u = xr.open_dataarray(fn_proc + f"{cfg.y0}_{cfg.y1}_monthly_vozocrtx.nc")
         v = xr.open_dataarray(fn_proc + f"{cfg.y0}_{cfg.y1}_monthly_vomecrty.nc")
         KE = mod.get_KE(u, v)
         KE.to_netcdf(fn_proc + f"satellite/{cfg.y0}_{cfg.y1}_KE.nc")
 
-    get_KE(cfg.comp_case["raw_data"], cfg.comp_case["proc_data"])
-    get_KE(cfg.dn_dat, cfg.dn_out)
+    def get_satellite_KE():
+        sat = satellite()
+        sat.get_KE(save=True)
+        
+
+    get_satellite_KE()
+    #get_KE(cfg.comp_case["raw_data"], cfg.comp_case["proc_data"])
+    #get_KE(cfg.dn_dat, cfg.dn_out)
     #save_monthly_var_primary_model("vomecrty", "V")
     #save_monthly_var_primary_model("vozocrtx", "U")
     
