@@ -164,8 +164,11 @@ class satellite(object):
     def get_KE(self, save=False):
         """ get mean and eddy kinetic energy of surface currents """
 
-        u = self.get_cmems(var="uvel")
-        v = self.get_cmems(var="vvel")
+        path = f"{cfg.dn_out}/satellite/"
+        fn = path + "CMEMS_L4_satellite_uvel_gridded_to_P2.0.nc"
+        u = xr.open_dataarray(fn)
+        fn = path + "CMEMS_L4_satellite_vvel_gridded_to_P2.0.nc"
+        v = xr.open_dataarray(fn)
 
         u_bar = u.mean("time")
         v_bar = v.mean("time")
@@ -377,15 +380,17 @@ class model_surface(object):
         uT = 0.5 * (u + u.shift(y=1))
         vT = 0.5 * (v + v.shift(y=1))
 
-        uT_bar = uT.mean(self.src_t_coord)
-        vT_bar = vT.mean(self.src_t_coord)
+        with ProgressBar():
+            uT_bar = uT.mean(self.src_t_coord).load()
+            vT_bar = vT.mean(self.src_t_coord).load()
 
         uT_prime = uT_bar - uT
         vT_prime = vT_bar - vT
 
         MKE = 0.5 * (uT_bar**2 + vT_bar**2)
-        EKE = 0.5 * ((uT_prime**2).mean(self.src_t_coord) +
-                     (vT_prime**2).mean(self.src_t_coord))
+        with ProgressBar():
+            EKE = 0.5 * ((uT_prime**2).mean(self.src_t_coord) +
+                         (vT_prime**2).mean(self.src_t_coord)).load()
 
         MKE.name = "MKE"
         EKE.name = "EKE"
@@ -567,6 +572,16 @@ class satellite_plot(object):
         plt.savefig(f"FIGS/CO9_CO7_CMEMS_Satellite_{var}_{eof_str}_pca.png",
                      dpi=600)
 
+    def plot_KE():
+        """
+        plot KE for satellite data and two models
+        a 2x3 panel plot with:
+           - row 1 : monthly EKE for all cases
+           - row 2 : daily EKE for models
+        """
+        # initialise figure
+        fig = plt.figure(figsize=(5.5,6.5))
+
 def get_eof(ds, dn_out, fn, t_mode=False):
     """ calculate eof of surface data """
 
@@ -705,27 +720,29 @@ if __name__ == "__main__":
         splot = satellite_plot()
         splot.plot_eof_validation("CO9","co7", "CMEMS_L4_satellite", "sst")
 
-    def save_monthly_var_primary_model(var_nam, grid):
+    def save_var_primary_model(var_nam, grid):
         fn_raw = cfg.dn_dat
         fn_proc = cfg.dn_out
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
                                              src_z_coord="depth" + grid.lower())
         mod.get_time_mean_var(var_nam=var_nam, freq=None, grid=grid, save=True)
 
-    def save_monthly_var_comparison_model(var_nam, grid):
+    def save_var_comparison_model(var_nam, grid):
         fn_raw = cfg.comp_case["raw_data"]
         fn_proc = cfg.comp_case["proc_data"]
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
                             src_z_coord="depth" + grid.lower())
         mod.get_time_mean_var(var_nam=var_nam, freq=None, grid=grid, save=True)
 
-    def get_KE(fn_raw, fn_proc):
+    def get_KE(fn_raw, fn_proc, freq="monthly"):
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time")
 
-        u = xr.open_dataarray(fn_proc + f"{cfg.y0}_{cfg.y1}_monthly_vozocrtx.nc")
-        v = xr.open_dataarray(fn_proc + f"{cfg.y0}_{cfg.y1}_monthly_vomecrty.nc")
+        u = xr.open_dataarray(fn_proc + f"{cfg.y0}_{cfg.y1}_{freq}_vozocrtx.nc",
+                chunks="auto")
+        v = xr.open_dataarray(fn_proc + f"{cfg.y0}_{cfg.y1}_{freq}_vomecrty.nc",
+                chunks="auto")
         KE = mod.get_KE(u, v)
-        KE.to_netcdf(fn_proc + f"satellite/{cfg.y0}_{cfg.y1}_KE.nc")
+        KE.to_netcdf(fn_proc + f"satellite/{cfg.y0}_{cfg.y1}_{freq}_KE.nc")
 
     def get_satellite_KE():
         sat = satellite()
@@ -733,15 +750,20 @@ if __name__ == "__main__":
         
 
     get_satellite_KE()
+    #get_KE(cfg.comp_case["raw_data"], cfg.comp_case["proc_data"], freq="25hourm")
+    #get_KE(cfg.dn_dat, cfg.dn_out, freq="25hourm")
     #get_KE(cfg.comp_case["raw_data"], cfg.comp_case["proc_data"])
     #get_KE(cfg.dn_dat, cfg.dn_out)
-    #save_monthly_var_primary_model("vomecrty", "V")
-    #save_monthly_var_primary_model("vozocrtx", "U")
+    #save_var_primary_model("vomecrty", "V")
+    #save_var_primary_model("vozocrtx", "U")
+    #save_var_comparison_model("vomecrty", "V")
+    #save_var_comparison_model("vozocrtx", "U")
     
     #plot_eof()
     #calculate_primary_model_eof("vomecrx")
     #calculate_comparison_model_eof("votemper")
     #calculate_comparison_model_eof("vosaline")
     #calculate_satellite_eof()
-    #get_co9_gridded_satellite_data("sst")
+    #get_co9_gridded_satellite_data("uvel")
+    #get_co9_gridded_satellite_data("vvel")
  
