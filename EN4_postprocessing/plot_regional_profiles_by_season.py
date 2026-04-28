@@ -29,11 +29,13 @@ class seasonal_profiles(object):
         
         # Get two configurations
         fn = "profile_bias_by_region_and_season_{}.nc"
-        co7_path = config.comp_case["proc_data"] + '/profiles/'
-        self.fn_list = [config.dn_out+"profiles/" + fn,
-                        config.comp_case["proc_data"] + "/profiles/"+ fn]
+        #co7_path = config.comp_case["proc_data"] + '/profiles/'
+        #self.fn_list = [config.dn_out+"profiles/" + fn,
+        #                config.comp_case["proc_data"] + "/profiles/"+ fn]
 
-        self.legend_str = [config.case,config.comp_case["case"]]
+        #self.legend_str = [config.case,config.comp_case["case"]]
+        self.fn_list = [config.dn_out+"profiles/" + fn]
+        self.legend_str = [config.case]
         self.n_ds = len(self.fn_list)
     
     def plot_all_djf_jja(self):
@@ -438,7 +440,7 @@ class seasonal_profiles(object):
             for col, region in enumerate(self.region_id):
                 axs[0,col].set_title(f"{self.region_names[col]}",
                                          fontsize=8)
-                for mod in [0,1]:
+                for mod in range(self.n_ds):
                     # plot MAE
                     ds_quant = self.ds_list_quant[mod].sel(season=season)
                     ds_stats = self.ds_list_stats[mod].sel(season=season)

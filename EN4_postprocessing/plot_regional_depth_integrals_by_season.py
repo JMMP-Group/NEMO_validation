@@ -19,10 +19,16 @@ class seasonal_depth_integral(object):
     Plotting collapsed measures of temperature and salinity biases per region.
     '''
 
-    def __init__(self):
+    def __init__(self, case_num=1):
+
+        self.case_num = case_num
         
         self.case_paths = [config.dn_out, config.comp_case["proc_data"]]
         self.models = [config.case, config.comp_case["case"]]
+
+        # one or two model cases - trim
+        self.case_paths = self.case_paths[:case_num]
+        self.models = self.models[:case_num]
 
         self.ds_list = []
         for path in self.case_paths:
@@ -64,7 +70,7 @@ class seasonal_depth_integral(object):
             y_max = 1.2
         if scalar == "salinity": 
             x_label = "Salinity Bias ($10^{-3}$)"
-            y_max = 0.72
+            y_max = 1.22
     
         # initialise plot
         fig, axs = plt.subplots(1, figsize=(5.5,3.5))
@@ -112,7 +118,7 @@ class seasonal_depth_integral(object):
             y_max = 1.4
         if scalar == "salinity": 
             x_label = "Salinity Bias ($10^{-3}$)"
-            y_max = 1
+            y_max = 2.5
     
         # initialise plot
         fig, axs = plt.subplots(1, figsize=(5.5,3.5))
@@ -124,6 +130,7 @@ class seasonal_depth_integral(object):
 
         path_list = [config.dn_out+"profiles/" + fn,
                         config.comp_case["proc_data"] + "/profiles/"+ fn]
+        path_list = path_list[:self.case_num]
         ds_list = [xr.load_dataset(dd) for dd in path_list]
 
         # select mean abs error for temperature or salinity  
@@ -157,15 +164,22 @@ class seasonal_depth_integral(object):
         """ get index of maximum value between each model provided """
 
         # expand dims to have model id in order to merge
-        da_0 = da_list[0].expand_dims(da_id=[0])
-        da_1 = da_list[1].expand_dims(da_id=[1])
+        da_list_n = []
+        for i, da in enumerate(da_list):
+            da_list_n.append(da.expand_dims(da_id=[i]))
 
-        # merge into dataset
-        da = xr.merge([da_0, da_1])
+        if len(da_list) > 1:
+            # merge into dataset
+            da = xr.merge(da_list_n)
 
-        # find which model has max for the first region per season
-        max_da = da.argmax("da_id").sel(quantile=0.98,
-                 region_names=self.regions[0]).to_dataarray().values[0]
+            # get argmax
+            da = da.argmax("da_id")
+
+            # find which model has max for the first region per season
+            max_da = da.sel(quantile=0.98,
+                     region_names=self.regions[0]).to_dataarray().values[0]
+        else:
+            max_da = [0,0,0,0]
     
         return max_da
 
@@ -193,7 +207,11 @@ class seasonal_depth_integral(object):
         seasons = ["DJF","MAM","JJA","SON"]
 
         # get index of max bars between models
+        #if len(da_list) > 1:
         bar_max = self.get_bar_max_by_season(da_list)
+        #else:
+        #    bar_max = da.sel(quantile=0.98,
+        #         region_names=self.regions[0]).values[0]
 
         # RDP - Too many loops, not readable...
         for k, da in enumerate(da_list):
@@ -221,8 +239,8 @@ class seasonal_depth_integral(object):
                                   align="edge")
                     
                     # render 96% confidence interval
-                    lq = bias_r.sel(quantile=0.02).data
-                    uq = bias_r.sel(quantile=0.98).data
+                    lq = bias_r.sel(quantile=0.25).data
+                    uq = bias_r.sel(quantile=0.75).data
                     vl = ax.vlines(x[i] + (width/2) + offset, lq, uq,
                              color=clist[i], transform=ax.transData,
                              lw=1)
@@ -240,7 +258,7 @@ class seasonal_depth_integral(object):
                         y_pos = vertex[1]
 
                         # set offset for season label
-                        margin = ax.get_ylim()[1] * 0.05
+                        margin = ax.get_ylim()[1] * 0.05 * len(da_list)
                         
                         ax.text(x_pos, y_pos + margin, season, ha="center",
                                 rotation=90, transform=ax.transData)
@@ -253,7 +271,7 @@ class seasonal_depth_integral(object):
                         "Kattegat",
                         "S. North\nSea",
                         "Irish\nSea"]
-        ax.set_xticks(x + (3*width*1.2*len(self.models) + width*k)/2,
+        ax.set_xticks(x + (4*width*1.2*len(self.models) + width*k)/2,
                       region_names)
 
     def add_obs_std(self, ax, season, region, x0, width):
@@ -444,6 +462,6 @@ class seasonal_depth_integral(object):
         plt.savefig(png_name, dpi=600)
 
 if __name__ == "__main__":
-    sp = seasonal_depth_integral()
+    sp = seasonal_depth_integral(case_num=1)
     sp.plot_regional_depth_integrals_bootstrapped(scalar="temperature")
     sp.plot_regional_depth_integrals_bootstrapped(scalar="salinity")
