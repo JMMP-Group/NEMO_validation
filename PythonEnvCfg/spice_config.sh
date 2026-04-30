@@ -8,7 +8,7 @@ export STARTYEAR=2013 #1980  # 2004
 export ENDYEAR=2013 #1980    # 2014
 
 ## Process monthly data. Required in iter_sub_METEST.sh
-export MOD="P1.5c"  # Model reference name
+export MOD="P2"  # Model reference name
 export GRID="domain_cfg_sf12.nc"  # contains the grid information for NEMO
 # options?: "domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
 # options?: "GEG_SF12.nc" CO7_EXACT_CFG_FILE.nc
@@ -42,3 +42,10 @@ export DN_DOM="/data/users/o.lambertbrown/Datasets/models/CO9/u-cu674/"
 #fn_dat = "/scratch/fred/COMPARE_VN36_VN_4.0_TIDE_SSH/%s/DAILY/%s%02d*T.nc*"%(exper,startyear,month)
 export DN_DAT="/data/users/o.lambertbrown/Datasets/models/CO9/u-cu674/"
 export DN_OUT="/data/users/o.lambertbrown/Datasets/models/CO9/u-cu674/analysis/"
+
+# Directories for comparison with another model/experiment. These are used when plotting/postprocessing.
+export COMP_MOD="Cray-Ex"
+export COMP_DAT="/data/scratch/o.lambertbrown/u-do888/"
+export COMP_GRID="domain_cfg_sf12.nc"
+export COMP_OUT="/data/users/o.lambertbrown/Datasets/models/CO9/u-do888/analysis/"
+

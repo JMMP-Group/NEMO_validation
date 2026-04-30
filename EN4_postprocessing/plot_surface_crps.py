@@ -27,10 +27,9 @@ analysis_str = "CRPS"
 # on each axis of the plot
 
 
-# Assuming loading two configs: co7 and the P0.0. HARD WIRING. NOT IDEAL
-fn_list = [config.dn_out+"All_mask_means_crps_daily.nc",
-           config.dn_out.replace(config.case,'co7')+"All_mask_means_crps_daily_co7.nc"]#
-
+# Comparison case defined in config.
+fn_list = [config.dn_out+"profiles/"+All_mask_means_crps_daily.nc",
+           config.comp_case["proc_data"]+"profiles/+"All_mask_means_crps_daily.nc"]#
 #%% General Plot Settings
 ## Specify the specific regions, their labels and order of appearance to plot. Region indexing to match EN4_postprocessing mean_season.py
 region_ind = [ 1, 7, 3, 2, 9, 5, 4, 6, 8]              # Region indices (in analysis) to plot
@@ -101,7 +100,7 @@ for var_str in ["Temperature", "Salinity"]:
     var_name = "profile_mean_{0}_crps".format(var_str.lower())  # profile_mean_temperature_crps
 
     # Filename for the output
-    fn_out = "FIGS/regional_{0}_{1}_{2}.pdf".format(var_name, config.case, 'co7')
+    fn_out = "FIGS/regional_{0}_{1}_{2}.pdf".format(var_name, config.case, config.comp_case["case"])
 
     # Create plot and flatten axis array
     f,a = plt.subplots(n_r, n_c, figsize = figsize, sharey = sharey)

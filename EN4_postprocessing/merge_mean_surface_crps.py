@@ -40,7 +40,7 @@ def merge_by_time(season="all"):
     with ProgressBar():
       save_path = config.dn_out + "profiles/"
       ds_index.to_netcdf(save_path + "%03s_CRPS_merged.nc"%(season))
-    print(f'File written to {config.dn_out+"%03s_CRPS_merged.nc"%(season)}')
+    print(f'File written to {save_path+"%03s_CRPS_merged.nc"%(season)}')
 
 def regional_means():
     """ mean over each region """
@@ -49,8 +49,8 @@ def regional_means():
     fn_dom_nemo = "%s%s"%(config.dn_dom, config.grid_nc)
     fn_cfg_nemo = config.fn_cfg_nemo
     fn_cfg_prof = config.fn_cfg_prof
-    fn_analysis_crps = "%s%03s_CRPS_merged.nc"%(config.dn_out, season)
-    fn_out = "%s%03s_mask_means_crps_daily.nc"%(config.dn_out, season)
+    fn_analysis_crps = "%s%03s_CRPS_merged.nc"%(config.dn_out+"profiles/", season)
+    fn_out = "%s%03s_mask_means_crps_daily.nc"%(config.dn_out+"profiles/", season)
     
     # get the CRPS data as a profile object
     crps = coast.Profile(config=fn_cfg_prof)

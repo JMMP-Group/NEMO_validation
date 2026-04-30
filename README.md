@@ -96,7 +96,7 @@ python  map_profiles.py $1 $2 > LOGS/OUT_$1_$2.log
 ```
 using arguments: $1 $2 corresponding to the above.
 
-This outputs, in `DN_OUT/profiles/`, files like: 
+This outputs, in `DN_OUT/profiles/` (be sure to make a DN_OUT/profiles directory), files like: 
 ```
 extracted_profiles_200401.nc
 interpolated_profiles_200401.nc
@@ -105,7 +105,6 @@ profile_errors_200401.nc
 surface_data_200401.nc
 mid_data_200401.nc
 bottom_data_200401.nc
-mask_means_daily_200401.nc
 
 ```
 
@@ -122,12 +121,12 @@ cd ../EN4_processing
 
 rm LOGS/OUT* LOGS/*.err LOGS/*.out
 
-#sbatch -J 201407 --time=2:00:00 lotus_ana_MOD_METEST.sh 2014 7 
-#sbatch -J 201010 --time=2:00:00 lotus_ana_MOD_METEST.sh 2010 10 
-#sbatch -J 201011 --time=2:00:00 lotus_ana_MOD_METEST.sh 2010 11 
-sbatch -J 201109 --time=3:00:00 lotus_ana_MOD_METEST.sh 2011 9
-#sbatch -J 201110 --time=2:00:00 lotus_ana_MOD_METEST.sh 2011 10 
-sbatch -J 200905 --time=3:00:00 lotus_ana_MOD_METEST.sh 2009 5
+#sbatch -J 201407 --time=2:00:00 lotus_map_profiles.sh.sh 2014 7 
+#sbatch -J 201010 --time=2:00:00 lotus_map_profiles.sh.sh 2010 10 
+#sbatch -J 201011 --time=2:00:00 lotus_map_profiles.sh.sh 2010 11 
+sbatch -J 201109 --time=3:00:00 lotus_map_profiles.sh.sh 2011 9
+#sbatch -J 201110 --time=2:00:00 lotus_map_profiles.sh.sh 2011 10 
+sbatch -J 200905 --time=3:00:00 lotus_map_profiles.sh.sh 2009 5
 ```
 
 2. `PythonEnvCfg/<MACHINE>_config.sh` must both be edited for machine choices, conda environment, paths etc.
@@ -138,43 +137,42 @@ Merge seasons (DJF, MAM, JJA, SON) from multiple years into single files.
 
 Execute with:
 ```
-iter_merge_season.sh
+iter_extract_season.sh
 ```
 which is just a simple concatenating loop over each season.
 
-Each month invokes a machine specific sbatch scripts (e.g `spice_merge_season.sbatch`) where the model and season are 
+Each month invokes a machine specific sbatch scripts (e.g `spice_extract_season.sbatch`) where the model and season are 
 passed onto a generic script
-`python merge_season.py $1 $2 #1=Model, 2=month` 
+`python extract_season.py $1 $2 #1=Model, 2=month` 
 
-Outputs are written to DN_OUT by season string, sss:
+Outputs are written to DN_OUT/profiles by season string, sss:
 ```
 sss_PRO_INDEX.nc  ## merging interpolated_profiles_*.nc (model profiles on ref levels)
 sss_PRO_DIFF.nc   ## merging profile_errors_*.nc (diff between model & obs on ref levels)
+sss_PRO_OBS.nc    ## merging interpolated_obs_*.nc (obs on ref levels)
 ```
 
 ### Create Means
 
-Then call `iter_mean_season.sh` to compute the spatial means over subregions within the NWS domain.
+Then call `regional_masking.sh` to compute the spatial means over subregions within the NWS domain.
 
 This launches machine specific script 
 
-`sbatch ${MACHINE,,}_mean_season.sbatch $MOD $month`
+`sbatch ${MOD}_regional_mask ${MACHINE,,}_regional_masking.slurm`
 that in turn launches a machine independent script:
 ```
-python mean_season.py $1 $2 > LOGS/mean_season_$1_$2.log  # 1=Model, 2=month
+python regional_masking.py $1 > LOGS/regional_masking.log  # 1=Model, 2=month
 ```
 
-to compute averages in each of the defined regions:
+This reads in sss_PRO_INDEX.nc and ss_PRO_DIFF.nc to compute averages in each of the defined regions:
 ```
 region_names = [ 'N. North Sea','S. North Sea','Eng. Channel','Outer Shelf', 'Irish Sea', 
                     'Kattegat', 'Nor. Trench', 'FSC', 'Off-shelf']
 ```
-Creating output:
+Outputs are written to DN_OUT/profiles as:
 ```
-DJF_mask_means_daily.nc
-MAM_mask_means_daily.nc
-JJA_mask_means_daily.nc
-SON_mask_means_daily.nc
+profiles_by_region_and_season.nc           ### Model profiles
+profile_bias_by_region_and_season.nc       ### Difference between model and obs
 ```
 
 ### CRPS values
@@ -187,16 +185,16 @@ Execute: `. ./iter_surface_crps.sh`
 This deploy monthly processes on ${MACHINE} (currently only tested on JASMIN's lotus)
 
 ```
-sbatch "${MACHINE,,}"_surface_crps.sh $MOD $start $month $end $GRID"
+sbatch "${MACHINE,,}"_surface_crps.sh $start $month"
 ```
 which in turn launches the python script
 
 ```
-python  surface_crps.py $1 $2 $3 $4 $5
+python  surface_crps.py $1 $2
 ```
 
 following the appropriate header commands for the batch scheduler.
-Output files take the form: `surface_crps_data_p0_201101_2012.nc`
+Output files are saved to DN_OUT/profiles and take the form: `surface_crps_data_p0_201101_2012.nc`
 
 Next merge and compute regional averages. E.g. merge_mean_surface_crps.py in EN4_postprocessing.
 
@@ -246,6 +244,11 @@ sbatch ${MACHINE,,}_merge_mean_surface_crps.sbatch $MOD
 which submits the following machine independent script
 ```
 python merge_mean_surface_crps.py $1 > LOGS/merge_mean_surface_crps_$1.log
+```
+This script will merge all CRPS data into one file and then average over each region. Outputs are written to DN_OUT/profiles:
+```
+All_CRPS_merged.nc
+All_mask_means_crps_daily.nc
 ```
 
 Finally the plots can be made with 
