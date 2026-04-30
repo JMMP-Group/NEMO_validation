@@ -27,10 +27,10 @@ class bias_bootstrapping(object):
         
         # get data
         path = self.fn_path + fn
-        self.da_0 = xr.open_dataset(path, chunks="auto")[self.type]
+        self.da_0 = xr.open_dataset(path, chunks=None)[self.type]
 
         path = self.fn_comp_path + fn
-        self.da_1 = xr.open_dataset(path, chunks="auto")[self.type]
+        self.da_1 = xr.open_dataset(path, chunks=None)[self.type]
 
     def get_bias_angle_ds(self, depth_var=True):
 
@@ -122,6 +122,8 @@ class bias_bootstrapping(object):
                 subset = subset.expand_dims(season=[season])
 
                 print (i, j)
+                print (season)
+                print (region)
                 if bootstrapped:
                     bootstrapped_hist = \
                                   self.get_bootstrapped_bias_hist(subset,
@@ -227,7 +229,8 @@ class bias_bootstrapping(object):
         return bootstrap_statistics
 
 if __name__ == "__main__":
-    ba = bias_bootstrapping("salinity")
+    ba = bias_bootstrapping("temperature")
     ba.get_bias_climatology()
+    ba.get_bias_hist(ba.fn_path, ba.da_0)
     #ba.get_bias_angle_ds()
-    ba.get_bias_hist_set()
+    #ba.get_bias_hist_set()
