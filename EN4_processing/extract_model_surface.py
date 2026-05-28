@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python
 
-from NEMO_validation._utils import landmask
+from _utils import landmask
 import coast
 import xarray as xr
 import numpy as np
@@ -16,9 +16,6 @@ import time
 class extract_surface(object):
     """ 
     Extract surface data from model
-
-    To run: e.g.
-    python surface_crps.py 2004 1
     """
 
     def __init__(self, year, month, surf=5):
@@ -32,14 +29,16 @@ class extract_surface(object):
 
         # paths
         self.fn_dom = config.dn_dom + config.grid_nc
-        self.fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, year, month)
+        self.fn_dat = "%s%s%02d*T.nc*"%(config.dn_dat, year, month)
 
         # ensure directories exist
-        print(os.popen(f"mkdir -p {config.dn_out}").read())
+        print(os.popen(f"mkdir -p {config.dn_out}gridded").read())
 
     def extract(self):
         """
-        extract NEMO surface data 
+        extract gridded NEMO surface data 
+
+        For Satellite routines? And surface CRPS
         """
         # get data
         ds = coast.Gridded(fn_data=self.fn_dat, fn_domain=self.fn_dom,
@@ -62,8 +61,8 @@ class extract_surface(object):
 
         # save
         extracted = extracted.assign_attrs(dict(case=config.case)) 
-        self.fend = "profiles/gridded_model_surface_data_%d%02d.nc"%(self.year,
-                                                                     self.month)
+        self.fend = "gridded/gridded_model_surface_data_%d%02d.nc"%(self.year,
+                                                                    self.month)
         extracted.to_netcdf(config.dn_out + self.fend)
 
 if __name__ == '__main__':

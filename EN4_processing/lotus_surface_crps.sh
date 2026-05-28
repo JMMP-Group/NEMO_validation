@@ -1,5 +1,7 @@
 #!/bin/bash
-#SBATCH --partition=short-serial
+#SBATCH --partition=standard
+#SBATCH --qos=standard
+#SBATCH --account=jmmp
 #SBATCH --mem=40000
 #SBATCH -o LOGS/%A_%a.out
 #SBATCH -e LOGS/%A_%a.err

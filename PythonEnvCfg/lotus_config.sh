@@ -8,6 +8,8 @@ export STARTYEAR=2004 #1980  # 2004
 export ENDYEAR=2014 #1980    # 2014
 
 ## Process monthly data. Required in iter_sub_METEST.sh
+#export MOD="co7"  # Model reference name
+#export COMP_MOD="P2.0"
 export MOD="P2.0"  # Model reference name
 export COMP_MOD="co7"
 
@@ -15,7 +17,7 @@ export MASS_DIR="xu-dq404"
 
 # Use to activate conda environment in $MACHINE_pre_process_en4_monthly.sh
 #export CONDA_ENV="/home/users/jelt/miniconda3/envs/coast_dev"
-export CONDA_ENV="/home/users/ryapat30/.conda/envs/coast"
+export CONDA_ENV="/home/users/ryapat30/.conda/envs/nemo_validation"
 
 # location of COAsT repo, if using a particular branch
 export COAST_REPO="/home/users/ryapat30/NOC/COAsT"

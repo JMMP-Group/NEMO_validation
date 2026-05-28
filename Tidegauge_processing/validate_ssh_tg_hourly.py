@@ -97,15 +97,16 @@ def analyse_ssh(fn_ext, fn_out, thresholds = np.arange(-.4, 2, 0.1),
     if port_id is not None:
       ds_ssh = ds_ssh.isel(id_dim=[port_id])  # port_id passed as a list so id_dim is not dropped
 
-    # Drop ports that have too few points
-    keep_indices = np.isfinite(ds_ssh.dataset.ssh_obs).sum(dim="t_dim") >= min_datapoints
-    print(keep_indices.values)
-    ds_ssh = ds_ssh.isel(id_dim=keep_indices)
-    print(f"Start with {ds_ssh.dataset.dims['id_dim']} ports")
-    print(f"Keep {keep_indices.values.sum()} ports following check on limited obs")
-    keep_indices = np.isfinite(ds_ssh.dataset.ssh_mod).sum(dim="t_dim") >= min_datapoints
-    ds_ssh = ds_ssh.isel(id_dim=keep_indices)
-    print(f"Keep {keep_indices.values.sum()} ports following check on limited model output")
+    # Drop ports that have too few points. Bugged for me due to dask not liking boolean indexing.
+    #keep_indices = np.isfinite(ds_ssh.dataset.ssh_obs).sum(dim="t_dim") >= min_datapoints
+    #print(keep_indices.values)
+    #ds_ssh = ds_ssh.isel(id_dim=keep_indices)
+    #print(f"Start with {ds_ssh.dataset.dims['id_dim']} ports")
+    #print(f"Keep {keep_indices.values.sum()} ports following check on limited obs")
+    #keep_indices = np.isfinite(ds_ssh.dataset.ssh_mod).sum(dim="t_dim") >= min_datapoints
+    #ds_ssh = ds_ssh.isel(id_dim=keep_indices)
+    #print(f"Keep {keep_indices.values.sum()} ports following check on limited model output")
+
 
     # Define Dimension Sizes
     n_port = ds_ssh.dataset.dims['id_dim']

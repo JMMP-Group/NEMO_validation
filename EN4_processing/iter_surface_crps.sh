@@ -1,6 +1,8 @@
 #!/bin/bash
 echo "Bash version ${BASH_VERSION}..."
+cd ../PythonEnvCfg/
 source config.sh
+cd ../EN4_processing
 
 rm LOGS/OUT* LOGS/*.err LOGS/*.out
 
