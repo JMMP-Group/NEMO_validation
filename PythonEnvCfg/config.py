@@ -19,11 +19,14 @@ class config:
 
         # read SHELL variables. Set in config.sh
         #self.machine = environ.get('MACHINE')
-        self.y000 = self.get_shell_var('STARTYEAR', True)
-        self.yend = self.get_shell_var('ENDYEAR', True)
+        self.y0      = self.get_shell_var('STARTYEAR', True)
+        self.y1      = self.get_shell_var('ENDYEAR', True)
         self.region      = self.get_shell_var('REGION', True)
         self.machine     = self.get_shell_var('MACHINE', True)
         self.coast_repo  = self.get_shell_var('COAST_REPO', True)
+        self.dn_era5     = self.get_shell_var('DN_ERA5', True)
+        self.dn_era_interim     = self.get_shell_var('DN_ERA_INTERIM', True)
+        self.dn_swot     = self.get_shell_var('DN_SWOT', True)
         self.din_en4     = self.get_shell_var('DIN_EN4', True)
         self.dout_en4    = self.get_shell_var('DOUT_EN4', True)
         self.fn_cfg_prof = self.get_shell_var('FN_CFG_PROF', True)
