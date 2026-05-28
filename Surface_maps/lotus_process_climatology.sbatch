@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=standard
-#SBATCH --qos=standard
-#SBATCH --mem=100GB
+#SBATCH --qos=high
+#SBATCH --mem=500G
 #SBATCH --ntasks=1
 #SBATCH --time=24:00:00
 #SBATCH --account=jmmp
