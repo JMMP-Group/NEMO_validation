@@ -591,8 +591,15 @@ class transport(object):
         ww_lons = list(ww.longitude) + [ww_lon_lims[1]]
         ww_lats = list(ww.latitude) + [float(ww_lat_mid)]
 
-        mw_lons = [mw_lon_lims[0]] + list(mw.longitude) + [mw_lon_lims[1]] 
-        mw_lats = [float(ww_lat_mid)] + list(ww.latitude.values) +\
+        print ( [mw_lon_lims[0]])
+        print (list(mw.longitude.values))
+        print ([mw_lon_lims[1]] )
+        print ([float(ww_lat_mid)])
+        print (list(mw.latitude.values))
+        print ([float(ew_lat_mid)])
+
+        mw_lons = [mw_lon_lims[0]] + list(mw.longitude.values) + [mw_lon_lims[1]] 
+        mw_lats = [float(ww_lat_mid)] + list(mw.latitude.values) + \
                   [float(ew_lat_mid)]
 
         ew_lons = [ew_lon_lims[0]] + list(ew.longitude)
