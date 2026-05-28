@@ -10,6 +10,7 @@ import matplotlib.colors as mcolors
 import coast
 from coast import general_utils
 from dask.diagnostics import ProgressBar
+from EN4_processing.regional_masking import masking
 
 matplotlib.rcParams.update({'font.size': 8})
 
@@ -18,17 +19,24 @@ class seasonal_depth_integral(object):
     Plotting collapsed measures of temperature and salinity biases per region.
     '''
 
-    def __init__(self, case_path, models):
+    def __init__(self, case_num=1):
+
+        self.case_num = case_num
         
-        self.models = models
+        self.case_paths = [config.dn_out, config.comp_case["proc_data"]]
+        self.models = [config.case, config.comp_case["case"]]
+
+        # one or two model cases - trim
+        self.case_paths = self.case_paths[:case_num]
+        self.models = self.models[:case_num]
 
         self.ds_list = []
-        for model in models:
-            fn = model + "/profiles/season_merged_mask_means_daily.nc"
-            ds = xr.open_dataset(case_path + fn)
+        for path in self.case_paths:
+            fn = path + "/profiles/profile_bias_by_region_and_season_stats.nc"
+            ds = xr.load_dataset(fn)
 
             # make region names indexable
-            ds = ds.swap_dims({"dim_mask":"region_names"})
+            #ds = ds.swap_dims({"dim_mask":"region_names"})
             
             # append model list
             self.ds_list.append(ds)
@@ -62,11 +70,12 @@ class seasonal_depth_integral(object):
             y_max = 1.2
         if scalar == "salinity": 
             x_label = "Salinity Bias ($10^{-3}$)"
-            y_max = 0.72
+            y_max = 1.22
     
         # initialise plot
         fig, axs = plt.subplots(1, figsize=(5.5,3.5))
         plt.subplots_adjust(top=0.98, right=0.98)
+
                               
         # select mean abs error for temperature or salinity  
         self.da_list = []
@@ -95,27 +104,90 @@ class seasonal_depth_integral(object):
                   + scalar + ".pdf"
         plt.savefig(save_name)
 
-    def get_bar_max_by_season(self):
+    def plot_regional_depth_integrals_bootstrapped(self, scalar="temperature",
+                                                   sample_size=1000):
+        """
+        Plot depth integrated differences between EN4 and NEMO.
+        """
+
+        # alias var to globally accessible parameter
+        self.var_str = scalar
+
+        if scalar == "temperature": 
+            x_label = "Temperature Bias ($^{\circ}$C)"
+            y_max = 1.4
+        if scalar == "salinity": 
+            x_label = "Salinity Bias ($10^{-3}$)"
+            y_max = 2.5
+    
+        # initialise plot
+        fig, axs = plt.subplots(1, figsize=(5.5,3.5))
+        plt.subplots_adjust(top=0.98, right=0.98)
+                              
+        metric = "abs_diff"
+        var = f"{metric}_{scalar}"
+        fn = f"bootstrapped_{var}_bias_with_EN4_one_model_{sample_size}.nc"
+
+        path_list = [config.dn_out+"profiles/" + fn,
+                        config.comp_case["proc_data"] + "/profiles/"+ fn]
+        path_list = path_list[:self.case_num]
+        ds_list = [xr.load_dataset(dd) for dd in path_list]
+
+        # select mean abs error for temperature or salinity  
+        self.da_list = [] 
+        for ds in ds_list:
+            # select variable and depth average
+            da = ds[f"{var}_quant_quant"]
+
+            # list for all models
+            self.da_list.append(da)
+
+        # set bars
+        self.render_bars(axs, self.da_list)
+
+        axs.set_ylabel(x_label)
+        axs.set_ylim(0,y_max) 
+    
+        # set transparent background
+        fig.patch.set_alpha(0.0)
+
+        # save
+        model_str = ''
+        for model in self.models:
+            model_str += model + '_'
+        save_name = "FIGS/" + model_str \
+             + "bootstrapped_depth_integrated_regional_errors_by_season_cut_" \
+                  + scalar + ".pdf"
+        plt.savefig(save_name)
+
+    def get_bar_max_by_season(self, da_list):
         """ get index of maximum value between each model provided """
 
         # expand dims to have model id in order to merge
-        da_0 = da_list[0].expand_dims(da_id=[0])
-        da_1 = da_list[1].expand_dims(da_id=[1])
+        da_list_n = []
+        for i, da in enumerate(da_list):
+            da_list_n.append(da.expand_dims(da_id=[i]))
 
-        # merge into dataset
-        da = xr.merge([da_0, da_1])
+        if len(da_list) > 1:
+            # merge into dataset
+            da = xr.merge(da_list_n)
 
-        # find maximum arguments
-        max_da = da.argmax("da_id").sel(
-                 region_names=regions[0]).to_dataarray().values[0]
+            # get argmax
+            da = da.argmax("da_id")
+
+            # find which model has max for the first region per season
+            max_da = da.sel(quantile=0.98,
+                     region_names=self.regions[0]).to_dataarray().values[0]
+        else:
+            max_da = [0,0,0,0]
     
         return max_da
 
 
-    def render_bars(self, ax, da_list):
+    def render_bars(self, ax, da_list, add_obs=False):
         """ render season scatter coloured by region """
 
-        regions = ['northern_north_sea',
+        self.regions = ['northern_north_sea',
                    'outer_shelf',
                    'eng_channel',
                    'nor_trench',
@@ -123,7 +195,11 @@ class seasonal_depth_integral(object):
                    'southern_north_sea',
                    'irish_sea']
 
-        x = np.arange(len(regions)) # the label locations
+        for k, da in enumerate(da_list):
+            # select regions
+            da_list[k] = da.sel(region_names=self.regions)
+
+        x = np.arange(len(self.regions)) # the label locations
         width = 0.2 / len(self.models)  # the width of the bars
          
         clist = [plt.cm.tab10.colors[i] for i in [0,1,3,2,5,6,9]]
@@ -131,32 +207,44 @@ class seasonal_depth_integral(object):
         seasons = ["DJF","MAM","JJA","SON"]
 
         # get index of max bars between models
+        #if len(da_list) > 1:
         bar_max = self.get_bar_max_by_season(da_list)
+        #else:
+        #    bar_max = da.sel(quantile=0.98,
+        #         region_names=self.regions[0]).values[0]
 
         # RDP - Too many loops, not readable...
         for k, da in enumerate(da_list):
-            # select regions
-            da = da.sel(region_names=regions)
             for j, season in enumerate(seasons):
                 # select season
                 bias = da.sel(season=season)
-                for i, region in enumerate(regions):
+                for i, region in enumerate(self.regions):
                     offset = width * j * 1.2 * len(self.models) + (k * width)
                     bias_r = bias.sel(region_names=region)
                     if k > 0: 
-                        alpha = 0.4
+                        alpha = 0.3
                     else:
-                        alpha = 1
+                        alpha = 0.7 
 
-                        # add observational standard deviation
-                        self.add_obs_std(ax, season, region,
-                                         x[i] + offset, width * 2)
+                        if add_obs:
+                            # add observational standard deviation
+                            self.add_obs_std(ax, season, region,
+                                             x[i] + offset, width * 2)
 
                     # render bars
-                    rect = ax.bar(x[i] + offset, bias_r, width,
+                    bias_r_md = bias_r.sel(quantile=0.5).data
+                    rect = ax.bar(x[i] + offset, bias_r_md, width,
                                   color=clist[i],
                                   alpha=alpha,
                                   align="edge")
+                    
+                    # render 96% confidence interval
+                    lq = bias_r.sel(quantile=0.25).data
+                    uq = bias_r.sel(quantile=0.75).data
+                    vl = ax.vlines(x[i] + (width/2) + offset, lq, uq,
+                             color=clist[i], transform=ax.transData,
+                             lw=1)
+                    vl.set(capstyle="round")
 
                     # add season labels
                     if i == 0 and k == bar_max[j]:
@@ -170,7 +258,7 @@ class seasonal_depth_integral(object):
                         y_pos = vertex[1]
 
                         # set offset for season label
-                        margin = ax.get_ylim()[1] * 0.03
+                        margin = ax.get_ylim()[1] * 0.05 * len(da_list)
                         
                         ax.text(x_pos, y_pos + margin, season, ha="center",
                                 rotation=90, transform=ax.transData)
@@ -183,7 +271,7 @@ class seasonal_depth_integral(object):
                         "Kattegat",
                         "S. North\nSea",
                         "Irish\nSea"]
-        ax.set_xticks(x + (3*width*1.2*len(self.models) + width*k)/2,
+        ax.set_xticks(x + (4*width*1.2*len(self.models) + width*k)/2,
                       region_names)
 
     def add_obs_std(self, ax, season, region, x0, width):
@@ -200,10 +288,12 @@ class seasonal_depth_integral(object):
         obs_std = obs_std * 2
 
         # set region_names as coordinate dimension
-        obs_std = obs_std.set_index(dim_mask= "region_names")
+        #print (obs_std)
+        #print (sdkjf)
+        #obs_std = obs_std.set_index(dim_mask= "region_names")
 
         # select for region and season
-        obs_std_region_season = obs_std.sel(seasons=season, dim_mask=region)
+        obs_std_region_season = obs_std.sel(seasons=season, region_names=region)
 
         # plot horizontal line
         ax.hlines(obs_std_region_season, x0, x0 + width,
@@ -262,15 +352,16 @@ class seasonal_depth_integral(object):
             std_seasons_regions.to_netcdf(config.dn_out
                      + "masked_reductions/obs_season_merged_mask_std_mean.nc")
     
-    def get_mask_regions(self, da):
+    def get_mask_regions(self, da, mask_exists=False):
         """
         Retrieve masked regions
 
         Based on the assumption that mask_xr.nc has already been generated
         """
 
-        # check for mask_xr.nc
+        # automate check for mask_xr.nc
         # TODO
+
 
         # define cfg files
         fn_cfg_nemo = config.fn_cfg_nemo
@@ -281,8 +372,10 @@ class seasonal_depth_integral(object):
         obs_profiles = coast.Profile(config=fn_cfg_prof) 
         obs_profiles.dataset = da
         
-        # get masks
-        mask_xr = xr.open_dataset(config.dn_out + "profiles/mask_xr.nc")
+        if mask_exists: # get masks
+            mask_xr = xr.open_dataset(config.dn_out + "profiles/mask_xr.nc")
+        else:
+            mask_xr = masking().create_regional_mask()
         
         # get indices associated with each mask region
         analysis = coast.ProfileAnalysis()
@@ -291,9 +384,84 @@ class seasonal_depth_integral(object):
        
         return mask_indices.mask.astype(int)
 
+    def format_to_box_plot(self, ds_var_quant, season, region):
+        """ format data to conform with matplotlib bxp method """
+        
+        box = {
+        'label' : f"{season} {region}",
+        'whislo': ds_var_quant.sel(quantile=0.02).values, # 5th percentile
+        'q1'    : ds_var_quant.sel(quantile=0.25).values, # 25th percentile
+        'med'   : ds_var_quant.sel(quantile=0.50).values, # 50th percentile
+        'q3'    : ds_var_quant.sel(quantile=0.75).values, # 75th percentile
+        'whishi': ds_var_quant.sel(quantile=0.98).values, # 95th percentile
+        "facecolor": "red"
+        }
+
+        return box
+
+    def plot_angle_box_plot(self, scalar="temperature", sample_size=1000):
+        """
+        plot boxplot of bootstrapped statistics
+        """
+
+        metric = "abs_diff"
+        var = f"{metric}_{scalar}"
+
+        # get data
+        fn = f"bootstrapped_{var}_bias_with_EN4_one_model_{sample_size}.nc"
+
+        ds_path = config.dn_out + "profiles/" + fn
+        ds_0 = xr.load_dataset(ds_path)
+
+        ds_path = config.comp_case["proc_data"] + "profiles/" + fn
+        ds_1 = xr.load_dataset(ds_path)
+
+        da_0 = ds_0[f"{var}_quant_quant"]
+        da_1 = ds_1[f"{var}_quant_quant"]
+
+        # initiate plots
+        fig, ax = plt.subplots(1, figsize=(6.5,4.5))
+        plt.subplots_adjust(hspace=0.4,bottom=0.3,top=0.95)
+
+        width=0.1
+        boxes, pos = [], []
+        #for i, (region_name, region) in enumerate(da_0.groupby("region_names")):
+        #    for j, (season, subset) in enumerate(region.groupby("season")):
+        
+        for i, region in enumerate(da_0.region_names.data):
+            for j, season in enumerate(da_0.season.data):
+                for k, da in enumerate([da_0, da_1]):
+
+                    subset = da.sel(region_names=region, season=season)
+                    boxes.append(self.format_to_box_plot(subset.squeeze(),
+                                                         season,
+                                                         region))
+                    pos.append( i +  (j * width * 2.2) + (k * width) )
+
+
+        print (pos)
+        # render
+        bp = ax.bxp(boxes, positions=pos, widths=width,
+                showfliers=False, patch_artist=True)
+        
+        clist = [plt.cm.tab10.colors[i] for i in range(9)]
+        clist_rep = np.broadcast_to(clist, (8,9,3)).reshape(72,3, order="F")
+        for i, (patch, color) in enumerate(zip(bp['boxes'],clist_rep)):
+            patch.set_facecolor(color)
+            if i % 2 == 1: # alpha based on model
+                patch.set_alpha(0.4)
+
+        # format y-axis
+        ax.set_ylim([0,1.5])
+        ax.set_ylabel(f"{scalar} bias")
+
+        # format x-axis
+        plt.xticks(rotation=60, ha='right')
+
+        png_name = f"FIGS/{type}_bias_bootstrapped_box_plot.png"
+        plt.savefig(png_name, dpi=600)
+
 if __name__ == "__main__":
-    ds_path = "/gws/nopw/j04/jmmp/CO9_AMM15_validation/"
-    sp = seasonal_depth_integral(ds_path, ["P2.0", "co7"])
-    sp.plot_regional_depth_integrals(scalar="temperature")
-    #sp.get_obs_std()
-    #sp.plot_regional_depth_integrals(scalar="salinity")
+    sp = seasonal_depth_integral(case_num=1)
+    sp.plot_regional_depth_integrals_bootstrapped(scalar="temperature")
+    sp.plot_regional_depth_integrals_bootstrapped(scalar="salinity")

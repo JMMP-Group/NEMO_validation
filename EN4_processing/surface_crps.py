@@ -12,7 +12,7 @@
 # To run: e.g.
 # python surface_crps.py 2004 1
 
-from config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python
@@ -96,13 +96,12 @@ month=int(args[2])
 # Name of the run -- used mainly for naming output files
 date = '%d%02d'%(start_year,month)
 
-# open ungridded surface data + LOAD
-surface_data = xr.load_dataset(config.dn_out+"surface_data_{0}.nc".format(date))
-# temp
+# open en4 profile located surface data + LOAD
+src_path = config.dn_out + "profiles/"
+surface_data = xr.load_dataset(src_path+"surface_data_{0}.nc".format(date))
 
 # open gridded model data + LOAD
-mod_path = "gridded_model_surface_data_%d%02d.nc"%(start_year, month)
-print (config.dn_out + mod_path)
+mod_path = "gridded/gridded_model_surface_data_%d%02d.nc"%(start_year, month)
 gridded_mod_surf = xr.load_dataset(config.dn_out + mod_path)
 
 print('CRPS analysis')
@@ -116,8 +115,8 @@ surface_crps = surface_crps_process(gridded_mod_surf, surface_data)
 surface_crps = surface_crps.assign_attrs(dict(case=config.case))
 
 # save
-surface_crps.to_netcdf(config.dn_out+"surface_crps_data_{0}.nc".format(date))
-
+save_path = config.dn_out + "profiles/"
+surface_crps.to_netcdf(save_path + "surface_crps_data_{0}.nc".format(date))
 
 print(f"""CRPS Analysis done and datasets written to file:
          {config.dn_out+"surface_crps_data_{0}.nc".format(date)}""")

@@ -20,23 +20,19 @@ def extract_season(ds, season):
 
 def _preprocess(ds_month):
     """ drop broadcasting of depth variable """
-    # TODO: this should be done in GEN_MOD_Dave_example_profile_vali...
+    # TODO: this should be done in map_profiles.py
     ds_month["depth"] = ds_month.depth.isel(id_dim=0)
     return ds_month
 
 args = sys.argv
 season = str(args[1])  # season: 'DJF', 'MAM', 'JJA', SON'
-
 # Merge over all available years: "????" are 4-digit year labels
 # interpolated profiles
 ds_index = xr.open_mfdataset(config.dn_out + 
                              "profiles/interpolated_profiles_*.nc",
                              combine='nested', concat_dim="id_dim",
                              parallel=True, preprocess=_preprocess)
-print (ds_index)
 ds_index = extract_season(ds_index, season)
-print (ds_index)
-print (kfjs)
 
 # profile bias
 ds_diff = xr.open_mfdataset(config.dn_out +

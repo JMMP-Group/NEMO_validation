@@ -14,13 +14,13 @@
 # all that needs to change between processes).
 #
 # To run: e.g.
-# python GEN_MOD_Dave_example_profile_validation.py P0.0 2004 2005 
+# python map_profiles.py P0.0 2004 2005 
 # or
-# python GEN_MOD_Dave_example_profile_validation.py P0.0 2004 2005 debug
+# python map_profiles.py P0.0 2004 2005 debug
 #
 # last field "debug" restricts the number profiles to make manageable for debugging
 
-from PythonEnv.config import config
+from PythonEnvCfg.config import config
 import sys
 
 config = config() # initialise variables in python
@@ -74,7 +74,7 @@ def reduce_resolution(profile_mod, profile_obs):
     # Find the unique triples of nearest model x,y,t indices (within the Profile obj). And the indices where they are found (in the parent Profile object)
     unique_mod_indices, unique_mod_indices_id = np.unique(np.array([[int(ds_mod.nearest_index_x[i].values),
         int(ds_mod.nearest_index_y[i].values),
-        int(ds_mod.nearest_index_t[i].values)] for i in range(ds_mod.dims['id_dim'])]), axis=0, return_index=True) # find unique rows
+        int(ds_mod.nearest_index_t[i].values)] for i in range(ds_mod.sizes['id_dim'])]), axis=0, return_index=True) # find unique rows
 
 
     # Get a list of variables in this dataset
@@ -83,7 +83,7 @@ def reduce_resolution(profile_mod, profile_obs):
 
     # Get output dimensions and create 2D id, depth arrays
     n_id = len(unique_mod_indices)
-    n_z = ds.dims['z_dim']
+    n_z = ds.sizes['z_dim']
 
     # Create output dataset and fill in new coordinates
     depth_arr = ds_mod.depth.isel(id_dim=unique_mod_indices_id).values
@@ -160,23 +160,19 @@ starttime =time.perf_counter()
 
 args = sys.argv
 
-exper = args[1]
-startyear=int(args[2])
-month=int(args[3])
-endyear=int(args[4])
-grid=args[5]
+startyear=int(args[1])
+month=int(args[2])
 try:
-	debug_flag = str(args[6])=="debug"
+	debug_flag = str(args[4])=="debug"
 except: debug_flag = False
 
 print('Modules loaded')
 
 # Start and end dates for the analysis. The script will cut down model
 # and EN4 data to be witin this range.
-start_date = np.datetime64(str(startyear)+"-01-01")
-end_date = np.datetime64(str(endyear)+"-01-01")
-#end_date = np.datetime64(str(startyear)+"-02-01")
-
+start_month = np.datetime64(str(startyear)+"-" + str(month).zfill(2))
+end_date = (start_month + np.timedelta64(1, "M")).astype("datetime64[D]")
+start_date = start_month.astype("datetime64[D]")
 
 # Reference depths (in metres)
 ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(300, 1000, 50), np.arange(1000,4000,100)))
@@ -185,15 +181,15 @@ ref_depth = np.concatenate((np.arange(1,100,2), np.arange(100,300,5), np.arange(
 run_name='%d%02d'%(startyear,month)
 
 # File paths (All)
-fn_dom = "%s%s"%(config.dn_dom, grid)
+fn_dom = "%s%s"%(config.dn_dom, config.grid_nc)
 
 
 # Say a month at a time
-fn_dat = "%s%s%02d*T.nc"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper  ## NEEDS TO MOVE TO CONFIG
+fn_dat = "%s%s%02d*T.nc*"%(config.dn_dat, startyear, month)  # NB config.dn_dat contains $MOD/exper  ## NEEDS TO MOVE TO CONFIG
 #fn_dat = "%scoast_example_nemo_subset_data.nc"%(config.dn_dat)  # NB config.dn_dat contains $MOD/exper
 print(fn_dat)
 
-dn_out = f"{config.dn_out}"
+dn_out = f"{config.dn_out}profiles/"
 
 # Make them in case they are not there.
 print(os.popen(f"mkdir -p {dn_out}").read())
@@ -235,7 +231,8 @@ print('Landmask calculated')
 # CREATE EN4 PROFILE OBJECT containing processed data. We just need to
 # create a Profile object and place the data straight into its dataset
 profile = coast.Profile(config=fn_cfg_prof)
-profile.dataset = xr.open_dataset(fn_prof, chunks={'id_dim':10000})
+profile.dataset = xr.open_dataset(fn_prof, chunks='auto')
+#profile.dataset = xr.open_dataset(fn_prof, chunks={'id_dim':10000})
 print('Profile object created')
 ## Extract time indices between start and end dates for Profile data.
 #t_ind = pd.to_datetime(profile.dataset.time.values) >= start_date
@@ -312,6 +309,18 @@ print("THIS FAR C.1 %s %s ",ALLTIME,DT)
 #profile.dataset.load()
 print('Model interpolated to obs locations')
 
+def format_time_delta(ds):
+    """ format time to conform with coast (expects ns) """
+    for vv in list(ds.keys()):
+        if ds[vv].dtype == "timedelta64[s]":
+            ds[vv] = ds[vv].astype("timedelta64[ns]")
+
+    return ds
+
+# format time to comply with COAsT
+profile.dataset = format_time_delta(profile.dataset)
+model_profiles.dataset = format_time_delta(model_profiles.dataset)
+
 ## Perform analysis
 ###################
 analysis = coast.ProfileAnalysis()
@@ -320,7 +329,8 @@ BEFORE = NOW
 NOW = time.perf_counter()
 ALLTIME = NOW-starttime
 DT = NOW-BEFORE
-print("THIS FAR C.2 %s %s ",ALLTIME,DT)
+
+print("THIS FAR C.2 {0} {1}".format(ALLTIME,DT))
 
 # Interpolate model profiles onto observation depths
 model_profiles_interp = analysis.interpolate_vertical(model_profiles, profile, interp_method="linear")
@@ -436,9 +446,6 @@ bottom_errors = analysis.difference( obs_profiles_bottom, model_profiles_bottom)
 bottom_data = xr.merge((bottom_errors.dataset, model_profiles_bottom.dataset, obs_profiles_bottom.dataset),
 			  compat="override")
 
-print(surface_errors.dataset)
-print(model_profiles_surface.dataset)
-print(obs_profiles_surface.dataset)
 BEFORE = NOW
 NOW = time.perf_counter()
 ALLTIME = NOW-starttime
@@ -447,6 +454,7 @@ print("THIS FAR F %s %s ",ALLTIME,DT)
 print('Bottom and surface data estimated')
 
 # Write datasets to file
+print ("THIS is the outpath: ", dn_out)
 model_profiles.dataset.to_netcdf(dn_out+"extracted_profiles_{0}.nc".format(run_name))
 model_profiles_interp_ref.dataset.to_netcdf(dn_out + "interpolated_profiles_{0}.nc".format(run_name))
 profile_interp_ref.dataset.to_netcdf(dn_out + "interpolated_obs_{0}.nc".format(run_name))

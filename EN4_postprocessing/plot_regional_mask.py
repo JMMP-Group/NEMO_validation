@@ -9,6 +9,7 @@ import matplotlib.colors as mcolors
 import cartopy.feature as cfeature
 import matplotlib
 from dask.diagnostics import ProgressBar
+from EN4_processing.regional_masking import masking as mask
 
 matplotlib.rcParams.update({'font.size': 8})
 plt.rcParams['figure.facecolor'] = 'black'
@@ -60,14 +61,16 @@ class masking(object):
         cbar.ax.get_yaxis().labelpad = 15
         plt.title(None)
 
-    def open_mask(self):
+    def get_mask(self, mask_exists=False):
         """ open existing mask created by regional mean by season """
 
-        path = self.cfg.dn_out + "profiles/mask_xr.nc"
-        self.mask_xr = xr.open_dataset(path)
-
+        if mask_exists: # get masks
+            self.mask_xr = xr.open_dataset(config.dn_out + "profiles/mask_xr.nc")
+        else:
+            self.mask_xr = mask().create_regional_mask()
+        
         # make regions selectable
-        self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
+        #self.mask_xr = self.mask_xr.swap_dims({"dim_mask":"region_names"})
 
     def get_model_bathymetry(self):
         """ get nemo model bathymetry """
@@ -159,7 +162,7 @@ class masking(object):
         """
 
         # get mask
-        self.open_mask()
+        self.get_mask()
 
         # get bathymetry - TODO: this information should be added to mask file
         self.get_model_bathymetry()
