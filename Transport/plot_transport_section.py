@@ -4,11 +4,9 @@ import matplotlib.patches as patches
 import matplotlib.colors as mcolors
 import matplotlib
 import numpy as np
-print (np.__version__)
 from StraitFlux import masterscript_line as master
 from StraitFlux import masterscript_cross as master_cross
 import StraitFlux
-print (StraitFlux.__file__)
 import xarray as xr
 from PythonEnvCfg.config import config
 cfg = config() # initialise variables in python
@@ -18,8 +16,6 @@ import os
 import coast
 import cartopy.crs as ccrs
 from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
-import cartopy.feature as cfeature
-import cmocean
 
 matplotlib.rcParams.update({'font.size': 8})
 
@@ -387,7 +383,6 @@ class transport(object):
         #                    vmin=vmin, vmax=vmax, cmap=plt.cm.RdBu)
         plt.savefig("ellet_cross_200610.png")
     
-    #plot_ellet_model_transport_cross_section()
     
     def get_climate_variables(self):
         """
@@ -408,9 +403,6 @@ class transport(object):
                               coords={"time": NAO_time})
     
         return NAO_xr
-    
-    
-    #plot_ellet_transport()
     
     def plot_ellet_hovmoller_transport(self):
         """
@@ -437,6 +429,10 @@ class transport(object):
         plt.show()
 
     def plot_ellet_hist_by_section(self):
+        """ 
+        Plot histogram of transport for each wedge of the Rockall trough
+        transect - comparing model against CTD and Mooring data.
+        """
 
         # initialise figure
         fig = plt.figure(figsize=(3.2,5.5))
@@ -451,17 +447,15 @@ class transport(object):
         gs1.update(top=0.55, bottom=0.07, left=0.18, wspace=0.6, hspace=0.08,
                    right=0.79)
 
+        # initialise subplots
         proj=ccrs.PlateCarree()
         axs0 = fig.add_subplot(gs0[0], projection=proj)
         axs1 = []
         for i in range(3):
             axs1.append(fig.add_subplot(gs1[i]))
 
-
+        # render map of oceanagraphic section
         self.render_ellet_transect_geog(fig, axs0)
-        ## initialise plot
-        #fig, taxs = plt.subplots(3, figsize=(6.5,4))
-        #plt.subplots_adjust(top=0.98, right=0.88)
         
         # access model data
         m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
@@ -477,6 +471,10 @@ class transport(object):
         mooring = mooring.resample(TIME="ME").mean()
 
         def render_split(ax, ds):
+            """
+            render model data
+            """
+
             bins = np.linspace(-10,10,21)
             ww = ds.where((ds.longitude > -13.0) & (ds.longitude < -12.5))
             ew = ds.where((ds.longitude > -9.6) & (ds.longitude < -9.2))
@@ -489,13 +487,16 @@ class transport(object):
 
             return l[-1]
 
+        # render models
         l1 = render_split(axs1, m0)
         l2 = render_split(axs1, m1)
 
+        # subset observations by wedge
         ww = obs.where((obs.longitude > -13.0) & (obs.longitude < -12.5))
         ew = obs.where((obs.longitude > -9.6) & (obs.longitude < -9.2))
         mw = obs.where((obs.longitude > -12.5) & (obs.longitude < -9.6))
 
+        # plot CTD time-mean
         axs1[0].axvline(ww.volume_transport.sum("id_dim").mean() / 1e6, 
                 c="r", lw=0.8, ls=":")
         axs1[1].axvline(mw.volume_transport.sum("id_dim").mean() / 1e6, 
@@ -537,7 +538,6 @@ class transport(object):
         fn = cfg.case + "_" + cfg.comp_case["case"] + \
                     "_Rockall_transport_hist.pdf"
         plt.savefig("Figs/" + fn, dpi=600)
-        #plt.show()
 
     def render_ellet_transect_geog(self, fig, axs):
         """ plot geographical extent of Rockall Trough transect """
@@ -549,14 +549,12 @@ class transport(object):
           standard_parallels=(43,64),
           central_longitude=mid_lon) 
 
+        # set projections
         proj=ccrs.PlateCarree()
         plt_proj=ccrs.PlateCarree()
         proj_dict = {"projection": plt_proj}
-#        fig, axs = plt.subplots(1, figsize=(6.5,4.0), subplot_kw=proj_dict)
-#        plt.subplots_adjust(left=0.05, right=0.88, top=0.95, bottom=0.05)
 
-        #axs.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
-
+        # format axes
         axs.set_xticks([-25, -20, -12.5, -10, -7.5, 0, 5, 10],
                   crs=ccrs.PlateCarree())
         axs.set_yticks([55, 57.5, 60], crs=ccrs.PlateCarree())
@@ -565,15 +563,18 @@ class transport(object):
         axs.xaxis.set_major_formatter(lon_formatter)
         axs.yaxis.set_major_formatter(lat_formatter)
 
+        # set x,y limits
         xlim = (-14, -8)
         ylim = (55, 60)
         inset_xlim = (-25,10)
         inset_ylim = (43,64)
 
+        # set colour bar range
         shallow_lev = np.linspace(0,280,15)
         deep_lev = np.linspace(300, 3000,10)
         lev = np.concatenate((shallow_lev, deep_lev))
 
+        # assign colour map to ranges 
         colors_deep = plt.cm.YlGnBu(np.linspace(0.5, 1, 256))
         colors_shallow = plt.cm.YlGnBu(np.linspace(0, 0.5, 256))
         colors_land = plt.cm.Greys(0.5)
@@ -581,9 +582,10 @@ class transport(object):
         bathy_map = mcolors.LinearSegmentedColormap.from_list(
             'bathy_map', all_colors)
         
+        # define colour bar norm
         divnorm = mcolors.TwoSlopeNorm(vmin=0, vcenter=300, vmax=3000)
         
-        # gebco
+        # get gebco data
         url = "http://thredds.aoos.org/thredds/dodsC/GEBCO2014_NORTHERN_HEM.nc"
         bathy = xr.open_dataarray(url).squeeze()
         bathy_inset = bathy.sel(lon=slice(inset_xlim[0],inset_xlim[1]),
@@ -593,40 +595,43 @@ class transport(object):
         axs.set_xlim(xlim)
         axs.set_ylim(ylim)
 
+        # render topography
         p = axs.contourf(bathy.lon, bathy.lat, -bathy,
                    transform=plt_proj, cmap=bathy_map, levels=lev,
                    extend="max", norm=divnorm)
         
-        # inset
+        # initailise inset
         axins = axs.inset_axes([0.05, 0.6, 0.4, 0.4],
                           xlim=inset_xlim, ylim=inset_ylim,
                           projection=plt_proj, transform=axs.transAxes)
-        #axins.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
 
+        # render inset topography
         p = axins.contourf(bathy_inset.lon, bathy_inset.lat, -bathy_inset,
                    transform=plt_proj, cmap=bathy_map, levels=lev,
                    extend="max", norm=divnorm)
 
-        # add land mask
+        # mask where land
         landmask = xr.where(bathy < 0, np.nan, 1)
-        print (landmask)
         axs.contourf(landmask.lon, landmask.lat, landmask, 
                    colors=[plt.cm.Greys(0.4)],
                    transform=plt_proj)
+
+        # mask where land - inset
         landmask = xr.where(bathy_inset < 0, np.nan, 1)
         axins.contourf(landmask.lon, landmask.lat, landmask, 
                    colors=[plt.cm.Greys(0.4)],
                    transform=plt_proj)
 
-        # Create a Rectangle patch
+        # Create a Rectangle patch for inset
         rect = patches.Rectangle((xlim[0], ylim[0]), 
                 xlim[1] - xlim[0],
                 ylim[1] - ylim[0],
                 linewidth=1, edgecolor='r', facecolor='none', transform=proj)
         
-        # Add the patch to the Axes
+        # Add the rectangle to inset
         axins.add_patch(rect)
 
+        # add colour bar
         pos = axs.get_position()
         cbar_ax = fig.add_axes([0.81, pos.y0, 
                                 0.02, pos.y1 - pos.y0])
@@ -636,9 +641,10 @@ class transport(object):
                   rotation=90, transform=cbar.ax.transAxes,
                      va='center', ha='right')
 
+        # get transect data
         obs = xr.open_dataset(cfg.dn_out + "transport/obs_for_ellet_line.nc")
 
-        # segment obs
+        # define segments for obs
         ww_lon_lims = [-13.0, -12.5]
         mw_lon_lims = [-12.5, -9.6]
         ew_lon_lims = [-9.6, -9.2]
@@ -655,20 +661,24 @@ class transport(object):
         ew_lat_mid = ( mw.isel(id_dim=-1).latitude +
                        ew.isel(id_dim=0).latitude) / 2 
 
+        # ensure continuous line 
         ww_lons = list(ww.longitude) + [ww_lon_lims[1]]
         ww_lats = list(ww.latitude) + [float(ww_lat_mid)]
 
-        mw_lons = [mw_lon_lims[0]] + list(mw.longitude.values) + [mw_lon_lims[1]] 
+        mw_lons = [mw_lon_lims[0]] + list(mw.longitude.values) + \
+                  [mw_lon_lims[1]] 
         mw_lats = [float(ww_lat_mid)] + list(mw.latitude.values) + \
                   [float(ew_lat_mid)]
 
         ew_lons = [ew_lon_lims[0]] + list(ew.longitude)
         ew_lats = [float(ew_lat_mid)] + list(ew.latitude)
 
+        # render segments
         axs.plot(ww_lons, ww_lats, transform=plt_proj, c="b", lw=3, ls="-")
         axs.plot(mw_lons, mw_lats, transform=plt_proj, c="w", lw=3, ls="-")
         axs.plot(ew_lons, ew_lats, transform=plt_proj, c="r", lw=3, ls="-")
 
+        # label segments
         axs.text(np.array(ww_lons).mean(), np.array(ww_lats).max(), "WW",
                           transform=proj, va="bottom", ha="center", c="b")
         axs.text(np.array(mw_lons).mean(), np.array(mw_lats).max(), "MB",
@@ -676,8 +686,12 @@ class transport(object):
         axs.text(np.array(ew_lons).mean(), np.array(ew_lats).max(), "EW",
                           transform=proj, va="bottom", ha="center", c="r")
 
-
     def plot_ellet_climatology_by_section(self):
+        """ 
+        Plot an annual climatology for each wedge of the Rockall trough
+        transect - comparing model against CTD and Mooring data.
+        """
+
 
         # initialise plot
         fig, axs = plt.subplots(3, figsize=(6.5,4))
