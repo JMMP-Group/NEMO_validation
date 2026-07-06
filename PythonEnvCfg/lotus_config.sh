@@ -24,7 +24,10 @@ export COAST_REPO="/home/users/ryapat30/NOC/COAsT"
 # COAsT configuration files
 export DN_CFG="/home/users/ryapat30/NOC/COAsT/config/"
 export FN_CFG_PROF=$DN_CFG"example_en4_profiles.json"
-export FN_CFG_NEMO=$DN_CFG"example_nemo_grid_t.json"
+export FN_CFG_NEMO_T=$DN_CFG"example_nemo_grid_t.json"
+export FN_CFG_NEMO_U=$DN_CFG"example_nemo_grid_u.json"
+export FN_CFG_NEMO_V=$DN_CFG"example_nemo_grid_v.json"
+export FN_CFG_NEMO_F=$DN_CFG"example_nemo_grid_f.json"
 
 # location of raw EN4 data
 #export DIN_EN4="/home/users/jelt/EN4/"
@@ -56,6 +59,9 @@ else
    # options?: "domain_cfg_MEs_01-003_opt_v1.nc" #  "GEG_SF12.nc"
    # options?: "GEG_SF12.nc" CO7_EXACT_CFG_FILE.nc
 fi
+
+# ellet line mooring data
+export DN_ELLET="/gws/ssde/j25b/jmmp/CO9_AMM15_validation/ElletLine/"
 
 # directory for analysis output
 #export DN_OUT="/home/users/jelt/tmp/"$REGION"/" 

@@ -2,3 +2,5 @@
 */FIGS/*
 *__pycache__*
 *.egg-info/
+*.nc
+*.png
