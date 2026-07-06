@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import matplotlib.patches as patches
 import matplotlib.colors as mcolors
 import matplotlib
 import numpy as np
@@ -436,9 +438,30 @@ class transport(object):
 
     def plot_ellet_hist_by_section(self):
 
-        # initialise plot
-        fig, axs = plt.subplots(3, figsize=(6.5,4))
-        plt.subplots_adjust(top=0.98, right=0.88)
+        # initialise figure
+        fig = plt.figure(figsize=(3.2,5.5))
+
+        # initialise gridspec
+        gs0 = gridspec.GridSpec(ncols=1, nrows=1)
+        gs1 = gridspec.GridSpec(ncols=1, nrows=3)
+
+        ## set frame bounds
+        gs0.update(top=0.96, bottom=0.66, left=0.18, wspace=0.6, hspace=0.12,
+                   right=0.79)
+        gs1.update(top=0.55, bottom=0.07, left=0.18, wspace=0.6, hspace=0.08,
+                   right=0.79)
+
+        proj=ccrs.PlateCarree()
+        axs0 = fig.add_subplot(gs0[0], projection=proj)
+        axs1 = []
+        for i in range(3):
+            axs1.append(fig.add_subplot(gs1[i]))
+
+
+        self.render_ellet_transect_geog(fig, axs0)
+        ## initialise plot
+        #fig, taxs = plt.subplots(3, figsize=(6.5,4))
+        #plt.subplots_adjust(top=0.98, right=0.88)
         
         # access model data
         m0 = xr.open_mfdataset(cfg.dn_out + "transport/Rockall_transport*.nc")
@@ -453,84 +476,113 @@ class transport(object):
         # mooring monthly mean
         mooring = mooring.resample(TIME="ME").mean()
 
-        def render_split(axs, ds):
+        def render_split(ax, ds):
+            bins = np.linspace(-10,10,21)
             ww = ds.where((ds.longitude > -13.0) & (ds.longitude < -12.5))
             ew = ds.where((ds.longitude > -9.6) & (ds.longitude < -9.2))
             mw = ds.where((ds.longitude > -12.5) & (ds.longitude < -9.6))
 
-            axs[0].hist(ww.transport.sum("pts"), density=True, alpha=0.4)
-            axs[1].hist(mw.transport.sum("pts"), density=True, alpha=0.4)
-            l = axs[2].hist(ew.transport.sum("pts"), density=True, alpha=0.4)
+            ax[0].hist(ww.transport.sum("pts"), bins, density=True, alpha=0.4)
+            ax[1].hist(mw.transport.sum("pts"), bins, density=True, alpha=0.4)
+            l = ax[2].hist(ew.transport.sum("pts"), bins, density=True,
+                     alpha=0.4)
 
             return l[-1]
 
-        l1 = render_split(axs, m0)
-        l2 = render_split(axs, m1)
+        l1 = render_split(axs1, m0)
+        l2 = render_split(axs1, m1)
 
         ww = obs.where((obs.longitude > -13.0) & (obs.longitude < -12.5))
         ew = obs.where((obs.longitude > -9.6) & (obs.longitude < -9.2))
         mw = obs.where((obs.longitude > -12.5) & (obs.longitude < -9.6))
 
-        axs[0].axvline(ww.volume_transport.sum("id_dim").mean() / 1e6, c="k")
-        axs[1].axvline(mw.volume_transport.sum("id_dim").mean() / 1e6, c="k")
-        l0 = axs[2].axvline(ew.volume_transport.sum("id_dim").mean() / 1e6,
-                      c="k")
+        axs1[0].axvline(ww.volume_transport.sum("id_dim").mean() / 1e6, 
+                c="r", lw=0.8, ls=":")
+        axs1[1].axvline(mw.volume_transport.sum("id_dim").mean() / 1e6, 
+                c="r", lw=0.8, ls=":")
+        l0 = axs1[2].axvline(ew.volume_transport.sum("id_dim").mean() / 1e6,
+                c="r", lw=0.8, ls=":")
 
         # plot moorings
-        axs[0].hist(mooring.Q_WW, density=True, alpha=0.4, histtype="step")
-        axs[1].hist(mooring.Q_MB, density=True, alpha=0.4, histtype="step")
-        l3 = axs[2].hist(mooring.Q_EW, density=True, alpha=0.4, histtype="step")
+        bins = np.linspace(-10,10,21)
+        axs1[0].hist(mooring.Q_WW, bins, density=True, alpha=1,
+                     histtype="step", color="k")
+        axs1[1].hist(mooring.Q_MB, bins, density=True, alpha=1,
+                     histtype="step", color="k")
+        l3 = axs1[2].hist(mooring.Q_EW, bins, density=True, alpha=1,
+                          histtype="step", color="k")
 
         # legend
-        fig.legend([l0,l1,l2,l3[-1][0]], 
-                ["CTD", cfg.case, cfg.comp_case["case"], "Moorings"],
-                    loc='upper left', bbox_to_anchor=(0.89,0.98),
-                            fontsize=6, borderaxespad=0)
+        axs1[0].legend([l0,l3[-1][0], l1, l2], 
+                ["CTD", "Moorings", cfg.case, cfg.comp_case["case"]],
+                    loc='lower center', bbox_to_anchor=(0.5,1.03),
+                            fontsize=6, borderaxespad=0, ncols=2)
 
         # format axes
-        for ax in axs[:2]:
+        for ax in axs1[:2]:
             ax.set_xticklabels([])
-        for ax in axs:
+        for ax in axs1:
             ax.set_xlim(-11,11)
-        axs[2].set_xlabel("Volume Transport (Sv)")
+        axs1[2].set_xlabel("Volume Transport (Sv)")
 
         # set axes titles
-        axs[0].set_ylabel("Western Wedge\nPDF",
+        axs1[0].set_ylabel("Western Wedge\nPDF",
                           multialignment="center")
-        axs[1].set_ylabel("Mid-Basin\nPDF",
+        axs1[1].set_ylabel("Mid-Basin\nPDF",
                           multialignment="center")
-        axs[2].set_ylabel("Eastern Wedge\nPDF",
+        axs1[2].set_ylabel("Eastern Wedge\nPDF",
                           multialignment="center")
 
         # save figure
         fn = cfg.case + "_" + cfg.comp_case["case"] + \
-                    "_Rockall_transport_hist.png"
+                    "_Rockall_transport_hist.pdf"
         plt.savefig("Figs/" + fn, dpi=600)
+        #plt.show()
 
-    def plot_ellet_transect_geog(self):
+    def render_ellet_transect_geog(self, fig, axs):
         """ plot geographical extent of Rockall Trough transect """
 
         # initialise plot
+        mid_lat = 53.5
+        mid_lon = -2.6
+        proj=ccrs.EquidistantConic(central_latitude=mid_lat,
+          standard_parallels=(43,64),
+          central_longitude=mid_lon) 
+
         proj=ccrs.PlateCarree()
         plt_proj=ccrs.PlateCarree()
         proj_dict = {"projection": plt_proj}
-        fig, axs = plt.subplots(1, figsize=(6.5,4.0), subplot_kw=proj_dict)
-        plt.subplots_adjust(left=0.10, right=0.86, top=0.95, bottom=0.22)
+#        fig, axs = plt.subplots(1, figsize=(6.5,4.0), subplot_kw=proj_dict)
+#        plt.subplots_adjust(left=0.05, right=0.88, top=0.95, bottom=0.05)
 
         #axs.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
 
-        axs.set_xticks([-25, -20, -15, -10, -5, 0, 5, 10],
+        axs.set_xticks([-25, -20, -12.5, -10, -7.5, 0, 5, 10],
                   crs=ccrs.PlateCarree())
-        axs.set_yticks([45, 50, 55, 60], crs=ccrs.PlateCarree())
+        axs.set_yticks([55, 57.5, 60], crs=ccrs.PlateCarree())
         lon_formatter = LongitudeFormatter(zero_direction_label=True)
         lat_formatter = LatitudeFormatter()
+        axs.xaxis.set_major_formatter(lon_formatter)
+        axs.yaxis.set_major_formatter(lat_formatter)
 
-        xlim = (-17, -5)
-        ylim = (53, 60)
+        xlim = (-14, -8)
+        ylim = (55, 60)
         inset_xlim = (-25,10)
         inset_ylim = (43,64)
-        lev = np.linspace(-1000,1000,51)
 
+        shallow_lev = np.linspace(0,280,15)
+        deep_lev = np.linspace(300, 3000,10)
+        lev = np.concatenate((shallow_lev, deep_lev))
+
+        colors_deep = plt.cm.YlGnBu(np.linspace(0.5, 1, 256))
+        colors_shallow = plt.cm.YlGnBu(np.linspace(0, 0.5, 256))
+        colors_land = plt.cm.Greys(0.5)
+        all_colors = np.vstack((colors_shallow, colors_deep))
+        bathy_map = mcolors.LinearSegmentedColormap.from_list(
+            'bathy_map', all_colors)
+        
+        divnorm = mcolors.TwoSlopeNorm(vmin=0, vcenter=300, vmax=3000)
+        
         # gebco
         url = "http://thredds.aoos.org/thredds/dodsC/GEBCO2014_NORTHERN_HEM.nc"
         bathy = xr.open_dataarray(url).squeeze()
@@ -541,25 +593,46 @@ class transport(object):
         axs.set_xlim(xlim)
         axs.set_ylim(ylim)
 
-        p = axs.contourf(bathy.lon, bathy.lat, bathy,
-                   transform=plt_proj, cmap=cmocean.cm.topo, levels=lev,
-                   extend="both")
+        p = axs.contourf(bathy.lon, bathy.lat, -bathy,
+                   transform=plt_proj, cmap=bathy_map, levels=lev,
+                   extend="max", norm=divnorm)
         
         # inset
-        axins = axs.inset_axes([0.8, 0.6, 0.3, 0.3],
+        axins = axs.inset_axes([0.05, 0.6, 0.4, 0.4],
                           xlim=inset_xlim, ylim=inset_ylim,
-                          projection=plt_proj, transform=fig.transFigure)
+                          projection=plt_proj, transform=axs.transAxes)
         #axins.add_feature(cfeature.LAND, zorder=100, edgecolor='k')
 
-        p = axins.contourf(bathy_inset.lon, bathy_inset.lat, bathy_inset,
-                   transform=plt_proj, cmap=cmocean.cm.topo, levels=lev,
-                   extend="both")
+        p = axins.contourf(bathy_inset.lon, bathy_inset.lat, -bathy_inset,
+                   transform=plt_proj, cmap=bathy_map, levels=lev,
+                   extend="max", norm=divnorm)
+
+        # add land mask
+        landmask = xr.where(bathy < 0, np.nan, 1)
+        print (landmask)
+        axs.contourf(landmask.lon, landmask.lat, landmask, 
+                   colors=[plt.cm.Greys(0.4)],
+                   transform=plt_proj)
+        landmask = xr.where(bathy_inset < 0, np.nan, 1)
+        axins.contourf(landmask.lon, landmask.lat, landmask, 
+                   colors=[plt.cm.Greys(0.4)],
+                   transform=plt_proj)
+
+        # Create a Rectangle patch
+        rect = patches.Rectangle((xlim[0], ylim[0]), 
+                xlim[1] - xlim[0],
+                ylim[1] - ylim[0],
+                linewidth=1, edgecolor='r', facecolor='none', transform=proj)
+        
+        # Add the patch to the Axes
+        axins.add_patch(rect)
 
         pos = axs.get_position()
-        cbar_ax = fig.add_axes([0.88, pos.y0, 
+        cbar_ax = fig.add_axes([0.81, pos.y0, 
                                 0.02, pos.y1 - pos.y0])
         cbar = fig.colorbar(p, cax=cbar_ax, orientation='vertical')
-        cbar.ax.text(0.10, 0.5, r"Depth (m)", fontsize=8,
+        cbar.ax.invert_yaxis()
+        cbar.ax.text(9, 0.5, r"Depth (m)", fontsize=8,
                   rotation=90, transform=cbar.ax.transAxes,
                      va='center', ha='right')
 
@@ -569,12 +642,6 @@ class transport(object):
         ww_lon_lims = [-13.0, -12.5]
         mw_lon_lims = [-12.5, -9.6]
         ew_lon_lims = [-9.6, -9.2]
-        #obs = obs.swap_dims({"id_dim":"longitude"})
-        #ww = obs.sel(longitude=slice(ww_lons[0],ww_lons[1]))
-        #ew = obs.sel(longitude=slice(ew_lons[0],ew_lons[1]))
-        #print (ew.longitude.max())
-        ##mw = obs.sel(longitude=slice(mw_lons[0],mw_lons[1]))
-        #mw = obs.sel(longitude=slice(mw_lons[0],ew.longitude.min().values))
         ww = obs.where((obs.longitude > ww_lon_lims[0]) &
                        (obs.longitude <= ww_lon_lims[1]), drop=True)
         ew = obs.where((obs.longitude >= ew_lon_lims[0]) &
@@ -591,30 +658,24 @@ class transport(object):
         ww_lons = list(ww.longitude) + [ww_lon_lims[1]]
         ww_lats = list(ww.latitude) + [float(ww_lat_mid)]
 
-        print ( [mw_lon_lims[0]])
-        print (list(mw.longitude.values))
-        print ([mw_lon_lims[1]] )
-        print ([float(ww_lat_mid)])
-        print (list(mw.latitude.values))
-        print ([float(ew_lat_mid)])
-
         mw_lons = [mw_lon_lims[0]] + list(mw.longitude.values) + [mw_lon_lims[1]] 
         mw_lats = [float(ww_lat_mid)] + list(mw.latitude.values) + \
                   [float(ew_lat_mid)]
 
         ew_lons = [ew_lon_lims[0]] + list(ew.longitude)
-        ew_lats = [float(ew_lat_mid)] + list(ww.latitude)
+        ew_lats = [float(ew_lat_mid)] + list(ew.latitude)
 
+        axs.plot(ww_lons, ww_lats, transform=plt_proj, c="b", lw=3, ls="-")
+        axs.plot(mw_lons, mw_lats, transform=plt_proj, c="w", lw=3, ls="-")
+        axs.plot(ew_lons, ew_lats, transform=plt_proj, c="r", lw=3, ls="-")
 
-        #axs.plot(ww.longitude, ww.latitude, transform=plt_proj, c="r")
-        #axs.plot(ew.longitude, ew.latitude, transform=plt_proj, c="g")
-        #axs.plot(mw.longitude, mw.latitude, transform=plt_proj, c="purple")
+        axs.text(np.array(ww_lons).mean(), np.array(ww_lats).max(), "WW",
+                          transform=proj, va="bottom", ha="center", c="b")
+        axs.text(np.array(mw_lons).mean(), np.array(mw_lats).max(), "MB",
+                          transform=proj, va="bottom", ha="center", c="w")
+        axs.text(np.array(ew_lons).mean(), np.array(ew_lats).max(), "EW",
+                          transform=proj, va="bottom", ha="center", c="r")
 
-        axs.plot(ww_lons, ww_lats, transform=plt_proj, c="r")
-        axs.plot(mw_lons, mw_lats, transform=plt_proj, c="g")
-        axs.plot(ew_lons, ew_lats, transform=plt_proj, c="purple")
-
-        plt.show()
 
     def plot_ellet_climatology_by_section(self):
 
@@ -733,8 +794,8 @@ class transport(object):
         
 if __name__ == "__main__":
     trans = transport()
-    #trans.plot_ellet_hist_by_section()
-    trans.plot_ellet_transect_geog()
+    trans.plot_ellet_hist_by_section()
+    #trans.plot_ellet_transect_geog()
     #trans._get_monthly_mean(path_in=cfg.comp_case["raw_data"],
     #                        path_out=cfg.comp_case["proc_data"])
     #trans._get_monthly_mean(path_in=cfg.dn_dat,

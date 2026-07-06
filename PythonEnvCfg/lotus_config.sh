@@ -61,7 +61,7 @@ else
 fi
 
 # ellet line mooring data
-export DN_ELLET="/gws/ssde/j04/jmmp/CO9_AMM15_validation/ElletLine/"
+export DN_ELLET="/gws/ssde/j25b/jmmp/CO9_AMM15_validation/ElletLine/"
 
 # directory for analysis output
 #export DN_OUT="/home/users/jelt/tmp/"$REGION"/" 
