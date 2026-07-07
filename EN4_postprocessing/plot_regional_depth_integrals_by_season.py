@@ -10,7 +10,9 @@ import matplotlib.colors as mcolors
 import coast
 from coast import general_utils
 from dask.diagnostics import ProgressBar
-from EN4_processing.regional_masking import masking
+from EN4_processing.regional_masking import masking as r_mask
+from EN4_postprocessing.plot_regional_mask import masking
+import cartopy.crs as ccrs
 
 matplotlib.rcParams.update({'font.size': 8})
 
@@ -40,6 +42,22 @@ class seasonal_depth_integral(object):
             
             # append model list
             self.ds_list.append(ds)
+
+        self.regions = ['northern_north_sea',
+                   'outer_shelf',
+                   'eng_channel',
+                   'nor_trench',
+                   'kattegat',
+                   'southern_north_sea',
+                   'irish_sea']
+        self.clist = [plt.cm.tab10.colors[i] for i in [0,1,3,2,5,6,9]]
+        self.region_names = ["N. North\nSea",
+                        "Outer\nShelf",
+                        "Eng.\nChannel",
+                        "Nor.\nTrench", 
+                        "Kattegat",
+                        "S. North\nSea",
+                        "Irish\nSea"]
     
     def depth_mean(self, da):
 
@@ -104,7 +122,8 @@ class seasonal_depth_integral(object):
                   + scalar + ".pdf"
         plt.savefig(save_name)
 
-    def plot_regional_depth_integrals_bootstrapped(self, scalar="temperature",
+    def plot_regional_depth_integrals_bootstrapped_single_var(self,
+                                                   scalar="temperature",
                                                    sample_size=1000):
         """
         Plot depth integrated differences between EN4 and NEMO.
@@ -160,6 +179,150 @@ class seasonal_depth_integral(object):
                   + scalar + ".pdf"
         plt.savefig(save_name)
 
+    def plot_regional_depth_integrals_bootstrapped_temp_salt(self):
+        """
+        Plot depth integrated differences between EN4 and NEMO for temperature
+        and salinity.
+        """
+
+        # initialise plot
+        #fig, axs = plt.subplots(2, figsize=(6.5,3.5))
+        #plt.subplots_adjust(top=0.98, right=0.98)
+
+        # initialise figure
+        fig = plt.figure(figsize=(6.5,3.5))
+
+        # initialise gridspec
+        gs0 = gridspec.GridSpec(ncols=1, nrows=1)
+        gs1 = gridspec.GridSpec(ncols=1, nrows=2)
+    
+        # set frame bounds
+        gs0.update(top=0.9, bottom=0.1, left=0.04, right=0.35)
+        gs1.update(top=0.98, bottom=0.1, left=0.44, right=0.99, 
+                   hspace=0.1)
+
+        # TODO check if mask exists
+        mask_exists=False
+        if mask_exists: # get masks
+            mask_xr = xr.open_dataset(config.dn_out + "profiles/mask_xr.nc")
+        else:
+            mask_xr = r_mask().create_regional_mask()
+
+        # initialise projection
+        mid_lat = np.mean([44,mask_xr.latitude.max().values])
+        mid_lon = np.mean([mask_xr.longitude.min().values,
+                           mask_xr.longitude.max().values])
+        mid_lon = -2.6
+        proj_a=ccrs.EquidistantConic(central_latitude=mid_lat,
+          standard_parallels=(44,mask_xr.latitude.max().values),
+          central_longitude=mid_lon)
+
+        # assign axes to lists
+        axs = []
+        axs.append(fig.add_subplot(gs0[0], projection=proj_a))
+        for i in range(2):
+            axs.append(fig.add_subplot(gs1[i]))
+
+        # render mask
+        self.render_regional_mask(axs[0])
+
+        # render bars
+        legend_list = [True, False]
+        for i, var in enumerate(["temperature","salinity"]):
+            self.render_regional_depth_integrals_bootstrapped(axs[i+1], 
+                                                  scalar=var,
+                                                  add_legend=legend_list[i])
+
+        # remove x-label from bar
+        axs[1].set_xticklabels([])
+
+        # set transparent background
+        fig.patch.set_alpha(0.0)
+
+        # save
+        model_str = ''
+        for model in self.models:
+            model_str += model + '_'
+        save_name = "FIGS/" + model_str \
+             + "bootstrapped_depth_integrated_regional_errors_by_season_cut_" \
+                  + "temperature_and_salinity.pdf"
+        plt.savefig(save_name)
+
+    def render_regional_mask(self, ax):
+        """
+        Plot projected regional mask on existing ax.
+
+        prm is masking class set in parent function
+        """
+
+        # initalise masking class
+        prm = masking()
+
+        # overwrite default regions in prm
+        prm.regions = self.regions
+        prm.clist = self.clist
+        prm.region_names = self.region_names
+
+        # get mask
+        prm.get_mask()
+
+        # get bathymetry - TODO: this information should be added to mask file
+        prm.get_model_bathymetry()
+
+        # projection setup
+        proj=ccrs.PlateCarree()
+
+        # initialise plot
+        #fig, ax = plt.subplots(1, figsize=(5.5,3.5), subplot_kw=proj_dict)
+
+        # render masks
+        prm.render_regional_mask(ax, proj)
+
+        # set axes labels
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+
+    def render_regional_depth_integrals_bootstrapped(self, ax,
+                                                     scalar="temperature",
+                                                     sample_size=1000,
+                                                     add_legend=False):
+        """
+        Render depth integrated differences between EN4 and NEMO on
+        existing ax for a single variable.
+        """
+
+        self.var_str = scalar
+        if scalar == "temperature": 
+            x_label = "Temperature Bias ($^{\circ}$C)"
+            y_max = 1.4
+        if scalar == "salinity": 
+            x_label = "Salinity Bias ($10^{-3}$)"
+            y_max = 1.0
+    
+        metric = "abs_diff"
+        var = f"{metric}_{scalar}"
+        fn_in = f"bootstrapped_{var}_bias_with_EN4_one_model_{sample_size}.nc"
+
+        path_list = [config.dn_out+"profiles/" + fn_in,
+                        config.comp_case["proc_data"] + "/profiles/"+ fn_in]
+        path_list = path_list[:self.case_num]
+        ds_list = [xr.load_dataset(dd) for dd in path_list]
+
+        # select mean abs error for temperature or salinity  
+        self.da_list = [] 
+        for ds in ds_list:
+            # select variable and depth average
+            da = ds[f"{var}_quant_quant"]
+
+            # list for all models
+            self.da_list.append(da)
+
+        # set bars
+        self.render_bars(ax, self.da_list, add_legend=add_legend)
+
+        ax.set_ylabel(x_label)
+        ax.set_ylim(0,y_max) 
+    
     def get_bar_max_by_season(self, da_list):
         """ get index of maximum value between each model provided """
 
@@ -184,16 +347,9 @@ class seasonal_depth_integral(object):
         return max_da
 
 
-    def render_bars(self, ax, da_list, add_obs=False):
+    def render_bars(self, ax, da_list, add_obs=False, add_legend=False):
         """ render season scatter coloured by region """
 
-        self.regions = ['northern_north_sea',
-                   'outer_shelf',
-                   'eng_channel',
-                   'nor_trench',
-                   'kattegat',
-                   'southern_north_sea',
-                   'irish_sea']
 
         for k, da in enumerate(da_list):
             # select regions
@@ -202,8 +358,7 @@ class seasonal_depth_integral(object):
         x = np.arange(len(self.regions)) # the label locations
         width = 0.2 / len(self.models)  # the width of the bars
          
-        clist = [plt.cm.tab10.colors[i] for i in [0,1,3,2,5,6,9]]
-        cmap = mcolors.ListedColormap(clist)
+        cmap = mcolors.ListedColormap(self.clist)
         seasons = ["DJF","MAM","JJA","SON"]
 
         # get index of max bars between models
@@ -214,6 +369,7 @@ class seasonal_depth_integral(object):
         #         region_names=self.regions[0]).values[0]
 
         # RDP - Too many loops, not readable...
+        legend_data = []
         for k, da in enumerate(da_list):
             for j, season in enumerate(seasons):
                 # select season
@@ -234,15 +390,19 @@ class seasonal_depth_integral(object):
                     # render bars
                     bias_r_md = bias_r.sel(quantile=0.5).data
                     rect = ax.bar(x[i] + offset, bias_r_md, width,
-                                  color=clist[i],
+                                  color=self.clist[i],
                                   alpha=alpha,
                                   align="edge")
+
+                    # get data for legend
+                    if (j==0) and (i==0):
+                        legend_data.append(rect) 
                     
                     # render 96% confidence interval
                     lq = bias_r.sel(quantile=0.25).data
                     uq = bias_r.sel(quantile=0.75).data
                     vl = ax.vlines(x[i] + (width/2) + offset, lq, uq,
-                             color=clist[i], transform=ax.transData,
+                             color=self.clist[i], transform=ax.transData,
                              lw=1)
                     vl.set(capstyle="round")
 
@@ -261,18 +421,20 @@ class seasonal_depth_integral(object):
                         margin = ax.get_ylim()[1] * 0.05 * len(da_list)
                         
                         ax.text(x_pos, y_pos + margin, season, ha="center",
-                                rotation=90, transform=ax.transData)
+                                rotation=90, transform=ax.transData, size=6)
 
         # set x tick labels
-        region_names = ["N. North\nSea",
-                        "Outer\nShelf",
-                        "Eng.\nChannel",
-                        "Nor.\nTrench", 
-                        "Kattegat",
-                        "S. North\nSea",
-                        "Irish\nSea"]
+        for i, name in enumerate(self.region_names):
+            if name == "Kattegat":
+                self.region_names[i] = "Katte."
         ax.set_xticks(x + (4*width*1.2*len(self.models) + width*k)/2,
-                      region_names)
+                      self.region_names)
+
+        if add_legend:
+            ax.legend(legend_data, [config.case, config.comp_case["case"]],
+                    loc='upper left', bbox_to_anchor=(0.02,0.96),
+                            fontsize=6, borderaxespad=0, ncols=1)
+
 
     def add_obs_std(self, ax, season, region, x0, width):
         """
@@ -324,7 +486,7 @@ class seasonal_depth_integral(object):
         season_data = []
         for season, ds in obs_profiles_all.groupby("time.season"):
             # split by region
-            mask_indices = self.get_mask_regions(ds)
+            mask_indices = self.get_mask_indicies(ds)
             mask_data = ds.isel(id_dim=mask_indices)
 
             # standard devation for each depth
@@ -352,9 +514,9 @@ class seasonal_depth_integral(object):
             std_seasons_regions.to_netcdf(config.dn_out
                      + "masked_reductions/obs_season_merged_mask_std_mean.nc")
     
-    def get_mask_regions(self, da, mask_exists=False):
+    def get_mask_indices(self, da, mask_exists=False):
         """
-        Retrieve masked regions
+        Retrieve masked indicies
 
         Based on the assumption that mask_xr.nc has already been generated
         """
@@ -375,7 +537,7 @@ class seasonal_depth_integral(object):
         if mask_exists: # get masks
             mask_xr = xr.open_dataset(config.dn_out + "profiles/mask_xr.nc")
         else:
-            mask_xr = masking().create_regional_mask()
+            mask_xr = r_mask().create_regional_mask()
         
         # get indices associated with each mask region
         analysis = coast.ProfileAnalysis()
@@ -462,6 +624,5 @@ class seasonal_depth_integral(object):
         plt.savefig(png_name, dpi=600)
 
 if __name__ == "__main__":
-    sp = seasonal_depth_integral(case_num=1)
-    sp.plot_regional_depth_integrals_bootstrapped(scalar="temperature")
-    sp.plot_regional_depth_integrals_bootstrapped(scalar="salinity")
+    sp = seasonal_depth_integral(case_num=2)
+    sp.plot_regional_depth_integrals_bootstrapped_temp_salt()

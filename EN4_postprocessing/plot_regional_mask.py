@@ -24,12 +24,18 @@ class masking(object):
         self.cfg = config() # initialise variables in python
 
         #%% File settings
-        self.fn_cfg_nemo = self.cfg.fn_cfg_nemo
+        self.fn_cfg_nemo = self.cfg.fn_cfg_nemo_t
         self.fn_dom_nemo = self.cfg.dn_dom + self.cfg.grid_nc
 
         # open nemo lat/lon grid to define regions (as function of bathymetry)
         self.nemo = coast.Gridded(fn_domain=self.fn_dom_nemo,
                                   config=self.fn_cfg_nemo)
+
+        self.regions = ["northern_north_sea", "outer_shelf", "eng_channel",
+                  "kattegat", "southern_north_sea", "off_shelf", "irish_sea"]
+        self.region_names = ["N. North Sea", "Outer shelf","Eng. channel",
+                        "Kattegat", "S. North Sea", "Off shelf", "Irish Sea" ]
+        self.clist = [plt.cm.tab10.colors[i] for i in [0,1,3,5,6,8,9]]
 
     def quick_region_plot(self, mask: xr.Dataset):
         """
@@ -87,52 +93,55 @@ class masking(object):
         render projected mask to subplot panel
         """
     
-        subset = ["northern_north_sea", "outer_shelf", "eng_channel",
-                  "kattegat", "southern_north_sea", "off_shelf", "irish_sea"]
 
         # subset regions
-        ds = self.mask_xr.sel(region_names=subset)
+        ds = self.mask_xr.sel(region_names=self.regions)
 
         n_mask = ds.sizes["region_names"]
         offset = 10  # nonzero offset to make scaled-boolean-masks [0, >offset]
-        clist = [plt.cm.tab10.colors[i] for i in [0,1,3,5,6,8,9]]
-        cmap = mcolors.ListedColormap(clist)
-        for j in range(n_mask):
-       	    tt = (j + 0.5) * ds.mask.isel(region_names=j).squeeze()
+        cmap = mcolors.ListedColormap(self.clist)
+        for j, region in enumerate(self.regions):
+            if (region in ["nor_trench", "fsc"]) and \
+              ("off_shelf" not in self.regions):
+                continue
+       	    tt = (j + 0.5) * ds.mask.sel(region_names=region).squeeze()
        	    mt = tt.where(tt > 0)
             ff = ax.contourf(ds.longitude, ds.latitude, mt,
                                        levels=range(0, n_mask+1), cmap=cmap,
                                        transform=proj)
 
         # add colour bar
-        cbar = plt.colorbar(ff, pad=0.1)
-        cbar.ax.get_yaxis().set_ticks([])
-        region_names = ["N. North Sea", "Outer shelf","Eng. channel",
-                        "Kattegat", "S. North Sea", "Off shelf", "Irish Sea" ]
+        cbar = plt.colorbar(ff, pad=0.02, location="bottom",
+                            orientation="horizontal")
+        cbar.ax.get_xaxis().set_ticks([])
         for j in range(0, n_mask, 1):
-            cbar.ax.text(1.5, (j + 0.5),
-                         region_names[j],
+            print (self.region_names[j].replace("\n"," "))
+            cbar.ax.text(j+0.3, -0.3,
+                         self.region_names[j].replace("\n"," "),
                          ha="left",
-                         va="center",
+                         va="top",
+                         rotation=-35,
                          color="k",
                          )
-        cbar.ax.get_yaxis().labelpad = 15
 
-        clist = [plt.cm.tab10.colors[i] for i in [2,4]]
-        # add Faroe Shetland Channel
-        plt.contour(self.mask_xr.longitude, self.mask_xr.latitude, 
-                    self.mask_xr.mask.sel(region_names="fsc"),
-                    colors=[clist[1]], transform=proj, linewidths=0.8)
-        plt.annotate("FSC", (-5.5, 60.65), transform=proj, c=clist[1],
-                     rotation=48, fontweight="bold")
+        if "fsc" in self.regions:
+            c = plt.cm.tab10.colors[4]
+            # add Faroe Shetland Channel
+            ax.contour(self.mask_xr.longitude, self.mask_xr.latitude, 
+                        self.mask_xr.mask.sel(region_names="fsc"),
+                        colors=[c], transform=proj, linewidths=0.8)
+            ax.annotate("FSC", (-5.5, 60.65), transform=proj, c=clist[1],
+                         rotation=48, fontweight="bold")
 
-        # add Norwegian Trench
-        plt.contour(self.mask_xr.longitude, self.mask_xr.latitude,
-                    self.mask_xr.mask.sel(region_names="nor_trench"),
-                    colors=[clist[0]], transform=proj, linewidths=0.8)
-        plt.annotate("Nor. Trench", (3.7, 57.8), ha="center", va="center",
-                      rotation=-26, transform=proj, c=clist[0],
-                      fontweight="bold")
+        if ("nor_trench" in self.regions) and ("off_shelf" in self.regions):
+            # add Norwegian Trench
+            c = plt.cm.tab10.colors[2]
+            ax.contour(self.mask_xr.longitude, self.mask_xr.latitude,
+                        self.mask_xr.mask.sel(region_names="nor_trench"),
+                        colors=[c], transform=proj, linewidths=0.8)
+            ax.annotate("Nor. Trench", (3.7, 57.8), ha="center", va="center",
+                          rotation=-26, transform=proj, c=c,
+                          fontweight="bold", fontsize=6)
 
         # add land mask
         landmask = xr.where(self.nemo.dataset.bottom_level == 0, 1, np.nan)
@@ -140,8 +149,11 @@ class masking(object):
                    colors=[plt.cm.Greys(0.2)],
                    transform=proj)
         
-        # set extent
-        lon0 = ds.longitude.isel(x_dim=0, y_dim=0).values
+        # set extent - lon0 set according to presence of off shelf
+        if "off_shelf" in self.regions: 
+            lon0 = ds.longitude.isel(x_dim=0, y_dim=0).values
+        else:
+            lon0 = -12
         lon1 = 9.8
         ax.set_extent([lon0, lon1, 46, 62], ccrs.PlateCarree())
 
@@ -152,8 +164,10 @@ class masking(object):
                          color='k', alpha=0.5)
         gl.xpadding = 2
         gl.ypadding = 2
-        gl.xlabel_style = {'size': 8}
-        gl.ylabel_style = {'size': 8}
+        gl.xlabel_style = {'size': 6}
+        gl.ylabel_style = {'size': 6}
+        gl.right_labels = False
+        gl.bottom_labels = False
         plt.draw()
         
     def plot_regional_mask(self):

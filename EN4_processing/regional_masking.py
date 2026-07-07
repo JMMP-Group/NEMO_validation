@@ -15,7 +15,7 @@ class masking(object):
         self.cfg = config() # initialise variables in python
 
         #%% File settings
-        self.fn_cfg_nemo = self.cfg.fn_cfg_nemo
+        self.fn_cfg_nemo = self.cfg.fn_cfg_nemo_t
         self.fn_dom_nemo = self.cfg.dn_dom + self.cfg.grid_nc
 
         # open nemo lat/lon grid to define regions (as function of bathymetry)
