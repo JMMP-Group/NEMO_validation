@@ -40,10 +40,20 @@ class config:
         self.dn_dat     = self.get_shell_var('DN_DAT', True)
         self.dn_out     = self.get_shell_var('DN_OUT', True)
         self.case     = self.get_shell_var('MOD', True)
+        self.case_label     = self.get_shell_var('MOD_LABEL', True)
         self.comp_case = {"case": self.get_shell_var("COMP_MOD", True),
+                          "case_label": self.get_shell_var("COMP_MOD_LABEL", True),
                          "raw_data":  self.get_shell_var("COMP_DAT", True),
                          "proc_data":  self.get_shell_var("COMP_OUT", True),
                          "grid":  self.get_shell_var("COMP_GRID", True)}
+        #self.grid_nc     = self.get_shell_var('COMP_GRID', True)
+        #self.dn_dat     = self.get_shell_var('COMP_DAT', True)
+        #self.dn_out     = self.get_shell_var('COMP_OUT', True)
+        #self.case     = self.get_shell_var('COMP_MOD', True)
+        #self.comp_case = {"case": self.get_shell_var("MOD", True),
+        #                 "raw_data":  self.get_shell_var("DN_DAT", True),
+        #                 "proc_data":  self.get_shell_var("DN_OUT", True),
+        #                 "grid":  self.get_shell_var("GRID", True)}
 
 
     def get_shell_var(self, var:str, debug=False):

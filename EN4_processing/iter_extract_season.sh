@@ -8,8 +8,10 @@ conda activate $CONDA_ENV
 mkdir -p LOGS
 rm LOGS/*err LOGS/*out LOGS/*log
 
-for season in DJF MAM JJA SON;
- do
-   echo "sbatch -J "${MOD}${season} ${MACHINE,,}"_extract_season.sbatch $season"
-   sbatch -J ${MOD}${season} ${MACHINE,,}_extract_season.sbatch $season
- done
+#for season in DJF MAM JJA SON ALL;
+# do
+#   echo "sbatch -J "${MOD}${season} ${MACHINE,,}"_extract_season.sbatch $season"
+#   sbatch -J ${MOD}${season} ${MACHINE,,}_extract_season.sbatch $season
+# done
+
+sbatch -J ${MOD}${season} ${MACHINE,,}_extract_season.sbatch ALL

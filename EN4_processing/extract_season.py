@@ -31,22 +31,34 @@ season = str(args[1])  # season: 'DJF', 'MAM', 'JJA', SON'
 ds_index = xr.open_mfdataset(config.dn_out + 
                              "profiles/interpolated_profiles_*.nc",
                              combine='nested', concat_dim="id_dim",
-                             parallel=True, preprocess=_preprocess)
-ds_index = extract_season(ds_index, season)
+                             parallel=True, preprocess=_preprocess,
+                             decode_timedelta=False, decode_times=True)
+                             #mask_and_scale=False)
 
 # profile bias
 ds_diff = xr.open_mfdataset(config.dn_out +
                             'profiles/profile_errors_*.nc',
                             combine='nested', concat_dim="id_dim",
-                            parallel=True, preprocess=_preprocess)
-ds_diff = extract_season(ds_diff, season)
+                            parallel=True, preprocess=_preprocess,
+                            decode_timedelta=False)
 
 # observational profiles
 ds_obs = xr.open_mfdataset(config.dn_out +
                            'profiles/interpolated_obs_*.nc',
                            combine='nested', concat_dim="id_dim",
-                           parallel=True, preprocess=_preprocess)
-ds_obs = extract_season(ds_diff, season)
+                           parallel=True, preprocess=_preprocess,
+                           decode_timedelta=False)
+
+# extract season for each
+if season != "ALL":
+    ds_index = extract_season(ds_index, season)
+    ds_diff = extract_season(ds_diff, season)
+    ds_obs = extract_season(ds_diff, season)
+
+# drop obs time encoding - inconsistent in original file
+del ds_index.obs_time.encoding["dtype"]
+del ds_index.obs_time.encoding["units"]
+del ds_index.obs_time.encoding["calendar"]
 
 # save
 with ProgressBar():
@@ -56,3 +68,4 @@ with ProgressBar():
 
 print(f'File written to {config.dn_out+"profiles/"+"%03s_PRO_INDEX.nc"%(season)}')
 print(f'File written to {config.dn_out+"profiles/"+"%03s_PRO_DIFF.nc"%(season)}')
+print(f'File written to {config.dn_out+"profiles/"+"%03s_PRO_OBS.nc"%(season)}')

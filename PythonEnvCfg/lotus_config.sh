@@ -12,6 +12,8 @@ export ENDYEAR=2014 #1980    # 2014
 #export COMP_MOD="P2.0"
 export MOD="P2.0"  # Model reference name
 export COMP_MOD="co7"
+export MOD_LABEL="CO9"  # Model reference name
+export COMP_MOD_LABEL="CO7"
 
 export MASS_DIR="xu-dq404"
 

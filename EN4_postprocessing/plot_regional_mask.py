@@ -88,12 +88,11 @@ class masking(object):
         
         return self.lon, self.lat, self.bath
 
-    def render_regional_mask(self, ax, proj):
+    def render_regional_mask(self, ax, proj, c_bar=True):
         """
         render projected mask to subplot panel
         """
     
-
         # subset regions
         ds = self.mask_xr.sel(region_names=self.regions)
 
@@ -102,7 +101,7 @@ class masking(object):
         cmap = mcolors.ListedColormap(self.clist)
         for j, region in enumerate(self.regions):
             if (region in ["nor_trench", "fsc"]) and \
-              ("off_shelf" not in self.regions):
+              ("off_shelf" in self.regions):
                 continue
        	    tt = (j + 0.5) * ds.mask.sel(region_names=region).squeeze()
        	    mt = tt.where(tt > 0)
@@ -110,23 +109,22 @@ class masking(object):
                                        levels=range(0, n_mask+1), cmap=cmap,
                                        transform=proj)
 
-        # add colour bar
-        cbar = plt.colorbar(ff, pad=0.02, location="bottom",
-                            orientation="horizontal")
-        cbar.ax.get_xaxis().set_ticks([])
-        for j in range(0, n_mask, 1):
-            print (self.region_names[j].replace("\n"," "))
-            cbar.ax.text(j+0.3, -0.3,
-                         self.region_names[j].replace("\n"," "),
-                         ha="left",
-                         va="top",
-                         rotation=-35,
-                         color="k",
-                         )
+        if c_bar: # add colour bar
+            cbar = plt.colorbar(ff, pad=0.02, location="bottom",
+                                orientation="horizontal")
+            cbar.ax.get_xaxis().set_ticks([])
+            for j in range(0, n_mask, 1):
+                print (self.region_names[j].replace("\n"," "))
+                cbar.ax.text(j+0.3, -0.3,
+                             self.region_names[j].replace("\n"," "),
+                             ha="left",
+                             va="top",
+                             rotation=-35,
+                             color="k",
+                             )
 
-        if "fsc" in self.regions:
+        if "fsc" in self.regions: # add Faroe Shetland Channel
             c = plt.cm.tab10.colors[4]
-            # add Faroe Shetland Channel
             ax.contour(self.mask_xr.longitude, self.mask_xr.latitude, 
                         self.mask_xr.mask.sel(region_names="fsc"),
                         colors=[c], transform=proj, linewidths=0.8)
@@ -146,7 +144,7 @@ class masking(object):
         # add land mask
         landmask = xr.where(self.nemo.dataset.bottom_level == 0, 1, np.nan)
         ax.contourf(landmask.longitude, landmask.latitude, landmask, 
-                   colors=[plt.cm.Greys(0.2)],
+                   colors=[plt.cm.Greys(0.2),'k'],
                    transform=proj)
         
         # set extent - lon0 set according to presence of off shelf

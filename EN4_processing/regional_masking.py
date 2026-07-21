@@ -92,14 +92,10 @@ class masking(object):
     def partition_profiles_by_region(self, season=None):
         """ partition processed profiles by region """
 
-        if season:
-            fn_index = self.cfg.dn_out + self.fn_read.format(season)
-            # get model profiles on EN4 grid
-            model_profile = coast.Profile(config=self.cfg.fn_cfg_prof)
-            model_profile.dataset = xr.open_dataset(fn_index, chunks="auto")
-        else:
-            # TODO add non seasonal handleing
-            print ("non-seasonal arguments yet to be implemented")
+        fn_index = self.cfg.dn_out + self.fn_read.format(season)
+        # get model profiles on EN4 grid
+        model_profile = coast.Profile(config=self.cfg.fn_cfg_prof)
+        model_profile.dataset = xr.open_dataset(fn_index, chunks="auto")
 
         # create mask
         self.create_regional_mask()
@@ -179,7 +175,8 @@ class masking(object):
 
         self.create_regional_mask()
 
-        seasons = ["DJF","MAM","JJA","SON"]
+        # TODO the ALL category results in duplication of data - needs attention
+        seasons = ["DJF","MAM","JJA","SON","ALL"]
         model_profile_seasons, mask_stats_seasons = [], []
         for season in seasons:
             print (f"Partitioning {season} by region")

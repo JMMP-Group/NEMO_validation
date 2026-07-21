@@ -188,6 +188,7 @@ class seasonal_depth_integral(object):
         # initialise plot
         #fig, axs = plt.subplots(2, figsize=(6.5,3.5))
         #plt.subplots_adjust(top=0.98, right=0.98)
+        self.retrieve_record_stats()
 
         # initialise figure
         fig = plt.figure(figsize=(6.5,3.5))
@@ -197,7 +198,7 @@ class seasonal_depth_integral(object):
         gs1 = gridspec.GridSpec(ncols=1, nrows=2)
     
         # set frame bounds
-        gs0.update(top=0.9, bottom=0.1, left=0.04, right=0.35)
+        gs0.update(top=0.90, bottom=0.1, left=0.04, right=0.35)
         gs1.update(top=0.98, bottom=0.1, left=0.44, right=0.99, 
                    hspace=0.1)
 
@@ -224,7 +225,7 @@ class seasonal_depth_integral(object):
             axs.append(fig.add_subplot(gs1[i]))
 
         # render mask
-        self.render_regional_mask(axs[0])
+        self.render_regional_mask(axs[0], c_bar=True)
 
         # render bars
         legend_list = [True, False]
@@ -236,8 +237,40 @@ class seasonal_depth_integral(object):
         # remove x-label from bar
         axs[1].set_xticklabels([])
 
+        # add number of records to map
+        proj=ccrs.PlateCarree()
+        axins = axs[0].inset_axes([0.65, 0.02, 0.3, 0.2],
+                         transform=axs[0].transAxes)
+                          #xlim=inset_xlim, ylim=inset_ylim,
+        n_records = self.retrieve_record_stats()
+        x = np.arange(len(self.regions)) # the label locations
+        for i, region in enumerate(self.regions):
+
+            axins.bar(x[i], n_records[region], width=1.0, edgecolor=None,
+                       linewidth=0,
+                       facecolor=self.clist[i])
+        axins.set_xticks([])
+        axins.set_yticks([0,1e4])
+        axins.set_yticklabels([0, 1], size=6)
+        axins.spines[['right', 'top']].set_visible(False)
+        axins.margins(x=0)
+        axins.patch.set_alpha(0.0)
+        axs[0].text(0.95, 0.22, "# of obs.\n" + r"(10$^4$)",
+                    ha="right", va="top", size=6,
+                    transform=axs[0].transAxes)
+
+
+
         # set transparent background
         fig.patch.set_alpha(0.0)
+
+        # add panel labels
+        axs[0].text(0.02, 0.98, "(a)", ha="left", va="top", size=6,
+                    transform=axs[0].transAxes)
+        axs[1].text(0.98, 0.96, "(b)", ha="right", va="top", size=6,
+                    transform=axs[1].transAxes)
+        axs[2].text(0.98, 0.96, "(c)", ha="right", va="top", size=6,
+                    transform=axs[2].transAxes)
 
         # save
         model_str = ''
@@ -248,7 +281,22 @@ class seasonal_depth_integral(object):
                   + "temperature_and_salinity.pdf"
         plt.savefig(save_name)
 
-    def render_regional_mask(self, ax):
+    def retrieve_record_stats(self):
+        """
+        Get numbers of records for each region
+        """
+
+        path = config.dn_out + "profiles/profile_bias_by_region_and_season.nc"
+        profiles = xr.open_dataset(path)
+        n_records = {}
+        for region in self.regions:
+            region_prof = profiles.sel(region_names=region)
+            nrec = region_prof.bathymetry.dropna("id_dim").sizes["id_dim"]
+            n_records[region] = nrec
+
+        return n_records
+
+    def render_regional_mask(self, ax, c_bar=False):
         """
         Plot projected regional mask on existing ax.
 
@@ -276,7 +324,7 @@ class seasonal_depth_integral(object):
         #fig, ax = plt.subplots(1, figsize=(5.5,3.5), subplot_kw=proj_dict)
 
         # render masks
-        prm.render_regional_mask(ax, proj)
+        prm.render_regional_mask(ax, proj, c_bar=c_bar)
 
         # set axes labels
         ax.set_xlabel("Longitude")
