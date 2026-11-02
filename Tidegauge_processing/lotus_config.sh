@@ -14,6 +14,7 @@ export RUN_NAME="P1.5b"
 export RUN_NAME="P1.5"
 export RUN_NAME="P1.5c"
 export RUN_NAME="CO9P2"
+export RUN_NAME="co7_new"
 
 ## 2014 P0.0
 #export MASS="xu-cb676"
@@ -28,6 +29,9 @@ elif [ $RUN_NAME = "P1.5" ]; then
 
 elif [ $RUN_NAME = "CO9P2" ]; then 
  export FN_NEMO_DATA="/gws/ssde/j25b/jmmp/MASS/xu-dq404/shelftmb/YYYYMM*_shelftmb_grid_T.nc"
+
+elif [ $RUN_NAME = "co7_new" ]; then 
+ export FN_NEMO_DATA="/gws/ssde/j25b/jmmp/MASS/rosie_mi-ao113_2004/shelftmb/YYYYMM*_shelftmb_grid_T.nc"
 
 else
 	export FN_NEMO_DATA=""
