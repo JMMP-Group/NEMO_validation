@@ -41,9 +41,9 @@ then plots outputs into figure directory: DN_OUT
 
 
 Might need to make some directories if they are not there. E.g.:
-mkdir /gws/nopw/j04/jmmp/CO9_AMM15_validation/P1.5c/
-mkdir /gws/nopw/j04/jmmp/CO9_AMM15_validation/P1.5c/tg_analysis/
-mkdir /gws/nopw/j04/jmmp/CO9_AMM15_validation/P1.5c/tg_analysis/FIGS/
+mkdir /gws/ssde/j25b/jmmp/CO9_AMM15_validation/CO9P2
+mkdir /gws/ssde/j25b/jmmp/CO9_AMM15_validation/CO9P2/tg_analysis
+mkdir /gws/ssde/j25b/jmmp/CO9_AMM15_validation/CO9P2/tg_analysis/FIGS
 
 Other files:
 ============
