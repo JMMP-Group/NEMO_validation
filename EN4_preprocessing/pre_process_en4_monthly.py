@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from config import config, bounds
+from PythonEnvCfg.config import config, bounds
 import sys
 import os
 
