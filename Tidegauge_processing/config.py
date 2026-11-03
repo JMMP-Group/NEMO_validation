@@ -18,9 +18,10 @@ class config:
     def __init__(self):
         # read SHELL variables. Set in config.sh
         #self.machine = environ.get('MACHINE')
-        self.coast_repo = self.get_shell_var('COAST_REPO', True)
-        self.run_name = self.get_shell_var('RUN_NAME', True)
-        self.mass     = self.get_shell_var('MASS', True)
+        self.coast_repo   = self.get_shell_var('COAST_REPO', True)
+        self.run_name     = self.get_shell_var('RUN_NAME', True)
+        self.run_name_ref = self.get_shell_var('RUN_NAME_REF', True)
+        self.mass         = self.get_shell_var('MASS', True)
         self.fn_nemo_data = self.get_shell_var('FN_NEMO_DATA', True)
         self.fn_nemo_domain  = self.get_shell_var('FN_NEMO_DOMAIN', True)
         self.fn_nemo_cfg  = self.get_shell_var('FN_NEMO_CFG', True)
@@ -29,8 +30,8 @@ class config:
         self.dn_out = self.get_shell_var('DN_OUT', True)
         self.fn_extr_out         = self.get_shell_var('FN_EXTR_OUT', True)
         self.fn_analyse_out      = self.get_shell_var('FN_ANALYSE_OUT', True)
+        self.fn_analyse_out_ref  = self.get_shell_var('FN_ANALYSE_OUT_REF', True)
         self.fn_ssh_hourly_stats = self.get_shell_var('FN_SSH_HOURLY_STATS', True)
-
     def get_shell_var(self, var:str, debug=False):
         try:
             if debug: print(f"{var}: {environ.get(var.upper())}")

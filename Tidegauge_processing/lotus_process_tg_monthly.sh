@@ -5,7 +5,7 @@
 #SBATCH -e LOGS/%A_%a.err
 #SBATCH --time=60:00
 #SBATCH --ntasks=1
-#SBATCH --account=jmmp
+#SBATCH --account=class
 #SBATCH --qos=standard
 module add jaspy
 micromamba activate $CONDA_ENV

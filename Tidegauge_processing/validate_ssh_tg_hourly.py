@@ -992,6 +992,16 @@ class plot_stats_ssh_hourly_compare_cfgs():
         stats1 = xr.open_dataset(fn_ssh_hourly_stats1)
         stats2 = xr.open_dataset(fn_ssh_hourly_stats2)
        
+        stats1 = stats1.set_index(id_dim=["longitude","latitude"])
+        stats2 = stats2.set_index(id_dim=["longitude","latitude"])
+        stats1 = stats1.swap_dims({"t_dim":"time"})
+        stats2 = stats2.swap_dims({"t_dim":"time"})
+        stats1 = stats1.drop_duplicates("id_dim")
+        stats2 = stats2.drop_duplicates("id_dim")
+        stats1, stats2 = xr.align(stats1, stats2, join="inner")
+        stats1 = stats1.swap_dims({"time":"t_dim"})
+        stats2 = stats2.swap_dims({"time":"t_dim"})
+
         lonmax = np.max((stats1.longitude + 180)%360 - 180)  # centre around lon=0
         lonmin = np.min((stats1.longitude + 180)%360 - 180)  # centre around lon=0
         latmax = np.max(stats1.latitude)

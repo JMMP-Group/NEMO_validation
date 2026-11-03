@@ -15,6 +15,7 @@ export RUN_NAME="P1.5"
 export RUN_NAME="P1.5c"
 export RUN_NAME="CO9P2"
 export RUN_NAME="co7_new"
+export RUN_NAME_REF="co7_new"
 
 # 10 years P0.0
 if [ $RUN_NAME = "P0.0" ]; then
@@ -52,4 +53,5 @@ export DN_OUT="/gws/ssde/j25b/jmmp/CO9_AMM15_validation/"$RUN_NAME"/tg_analysis/
 ## Use validate_ssh_tg_hourly.py
 export FN_EXTR_OUT="/gws/ssde/j25b/jmmp/CO9_AMM15_validation/"$RUN_NAME"/tg_analysis/ssh_hourly_extract_"$RUN_NAME".nc"
 export FN_ANALYSE_OUT="/gws/ssde/j25b/jmmp/CO9_AMM15_validation/"$RUN_NAME"/tg_analysis/ssh_hourly_analyse_"$RUN_NAME".nc"
+export FN_ANALYSE_OUT_REF="/gws/ssde/j25b/jmmp/CO9_AMM15_validation/"$RUN_NAME_REF"/tg_analysis/ssh_hourly_analyse_"$RUN_NAME_REF".nc"
 export FN_SSH_HOURLY_STATS="/gws/ssde/j25b/jmmp/CO9_AMM15_validation/"$RUN_NAME"/tg_analysis/ssh_hourly_analyse_"$RUN_NAME".nc"

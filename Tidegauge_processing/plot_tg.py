@@ -66,6 +66,7 @@ if(1):  # THIS PRODUCES CORR BUT GETS STUCK WITH HARMONICS PLOTS - NO DATA.
   plot_single_cfg( config.fn_analyse_out, config.dn_out, config.run_name, file_type='.png')
 
   # plot the differences against a reference run: "diff = run_name - ref_run_name"
-  ref_run_name = "co7_new"
-  fn_analyse_out_ref = config.fn_analyse_out.replace(config.run_name, ref_run_name)
-  plot_stats_ssh_hourly_compare_cfgs( config.fn_analyse_out, fn_analyse_out_ref, config.dn_out, config.run_name, ref_run_name, file_type='.png')
+  #ref_run_name = "co7_new"
+  #fn_analyse_out_ref = config.fn_analyse_out.replace(config.run_name, ref_run_name)
+  if config.run_name != config.run_name_ref:
+    plot_stats_ssh_hourly_compare_cfgs( config.fn_analyse_out, config.fn_analyse_out_ref, config.dn_out, config.run_name, config.run_name_ref, file_type='.png')
