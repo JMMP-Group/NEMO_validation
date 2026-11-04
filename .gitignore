@@ -1,6 +1,7 @@
 */LOGS/*
 */FIGS/*
 *__pycache__*
+__pycache__/
 *.egg-info/
 *.nc
 *.png

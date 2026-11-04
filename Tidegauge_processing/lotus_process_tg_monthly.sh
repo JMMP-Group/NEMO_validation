@@ -1,12 +1,15 @@
 #!/bin/bash
-#SBATCH --partition=short-serial
+#SBATCH --partition=standard
 #SBATCH --mem=40000
 #SBATCH -o LOGS/%A_%a.out
 #SBATCH -e LOGS/%A_%a.err
 #SBATCH --time=60:00
 #SBATCH --ntasks=1
+#SBATCH --account=class
+#SBATCH --qos=standard
 module add jaspy
-source activate $CONDA_ENV
+micromamba activate $CONDA_ENV
+#source activate $CONDA_ENV
 
 echo $1  # port number
 # pass integer port number
