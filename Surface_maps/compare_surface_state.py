@@ -1,6 +1,9 @@
+import time
+t0 = time.time()
 from PythonEnvCfg.config import config, bounds
 cfg = config() # initialise variables in python
 
+import cmocean
 import coast
 import xarray as xr
 import os
@@ -11,7 +14,6 @@ from scipy.interpolate import griddata
 import numpy as np
 import xeofs as xe
 import glob
-import time
 from dask.diagnostics import ProgressBar
 import matplotlib
 import cartopy.crs as ccrs
@@ -93,7 +95,7 @@ class satellite(object):
            self.var_str = "vgos"
 
         data_request["variables"] = [self.var_str]
-        # Load xarray dataset
+        # Load xarray dataarray
         self.ds = copernicusmarine.open_dataset(
             dataset_id = data_request["fn"],
             minimum_longitude = data_request["longitude"][0],
@@ -104,6 +106,10 @@ class satellite(object):
             end_datetime = data_request["time"][1],
             variables = data_request["variables"]
         )[self.var_str]
+
+        if var =="sst":
+            # units Kelvin to Celsius
+            self.ds = self.ds - 273.15
 
         return self.ds
 
@@ -170,6 +176,10 @@ class satellite(object):
 
     def save_ds(self, fn_name):
         """ save satellite data """
+
+        # set encoding
+        self.ds.time.encoding["units"] = "seconds since 1900-01-01 00:00:00"
+        self.ds.time.encoding["dtype"] = "float64"
 
         fn = f"{cfg.dn_out}/satellite/{fn_name}"
         self.ds.to_netcdf(fn)
@@ -316,11 +326,22 @@ class model_surface(object):
         t1 = time.time()
         print ((t1-t0)/60)
 
+        # set encoding
+        self.ds.time.encoding["units"] = "seconds since 1900-01-01 00:00:00"
+        self.ds.time.encoding["dtype"] = "float64"
+
+        # write data
         if save:
             if freq == None:
                 freq="25hourm"
-            self.ds.to_netcdf(self.fn_proc +
+            self.ds.to_netcdf(self.fn_proc + "satellite/" +
                              f"{cfg.y0}_{cfg.y1}_{freq}_{var_nam}.nc")
+
+    def open_time_mean_var(self, freq="1MS", grid="T", var_nam="sossheig"):
+        """ open previously saved time mean variable """
+
+        self.ds = xr.open_dataarray(self.fn_proc + "satellite/" +
+                                    f"{cfg.y0}_{cfg.y1}_{freq}_{var_nam}.nc")
 
     def interpolate_sp_to_model(self, tgt, src):
         """ interpolate lat-lon to horizontal grid """
@@ -399,7 +420,8 @@ class model_surface(object):
                 return ds
             path_list = []
             for y in range(int(cfg.y0),int(cfg.y1)):
-                paths = glob.glob(f"{cfg.dn_era_interim}ei.moda.an.sfc.regn128sc.{y}*.grib")
+                paths = glob.glob(
+                    f"{cfg.dn_era_interim}ei.moda.an.sfc.regn128sc.{y}*.grib")
                 path_list += paths
             #path = cfg.dn_era_interim+ "ei.moda.an.sfc.regn128sc.*100.grib"
             #           for y in range(int(cfg.y0),int(cfg.y1))]
@@ -473,6 +495,130 @@ class satellite_plot(object):
 
         return -lim, lim
 
+    def plot_seasonal_climatology(self, freq="1MS", var="sst"):
+        """
+        plot seasonal mean compared against satellite data 
+        relies on sat data being procesed
+        """
+
+        if var == "sst":
+            var_nam = "votemper"
+
+        # get satellite data 
+        path = f"{cfg.dn_out}/satellite/"
+        fn = f"CMEMS_L4_satellite_{var}_{freq}_gridded_to_{cfg.case}.nc"
+        sat = xr.open_dataarray(path + fn, chunks={})
+
+        fn = f"{cfg.y0}_{cfg.y1}_{freq}_{var_nam}.nc"
+        # get model data
+        mod0 = xr.open_dataarray(path + fn, chunks={})
+
+        # get comparison model data
+        path = cfg.comp_case["proc_data"] + "/satellite/"
+        mod1 = xr.open_dataarray(path + fn, chunks={})
+        
+        # seasonal means
+        print (sat)
+        print (mod0)
+        print (mod1)
+        sat_clim = sat.groupby("time.season").mean(dim="time")
+        mod0_clim = mod0.groupby("time.season").mean(dim="time")
+        mod1_clim = mod1.groupby("time.season").mean(dim="time")
+
+        mod0_anom = mod0_clim - sat_clim
+        mod1_anom = mod1_clim - sat_clim
+
+        # get domain cfg
+        domcfg = xr.open_dataset(cfg.dn_dom + cfg.grid_nc,
+                                 chunks="auto").squeeze()
+
+        # set projection
+        mid_lat = np.mean([44,domcfg.nav_lat.max().values])
+        mid_lon = -2.6
+        proj=ccrs.EquidistantConic(central_latitude=mid_lat,
+          standard_parallels=(44,domcfg.nav_lat.max().values),
+          central_longitude=mid_lon) 
+        plt_proj=ccrs.PlateCarree()
+        proj_dict = {"projection": proj}
+
+        # initialise figure
+        fig, axs = plt.subplots(2, 4, figsize=(6.5,4.3), subplot_kw=proj_dict)
+        plt.subplots_adjust(left=0.07, right=0.97, top=0.95, bottom=0.26,
+                            hspace=0.08, wspace=0.08)
+
+        vmin, vmax = -1, 1
+        seasons = ["DJF","MAM","JJA","SON"]
+        for i, label in enumerate(seasons):
+            mod0_season = mod0_anom.sel(season=label).load()
+            print (label)
+            axs[0, i].pcolormesh(domcfg.nav_lon,
+                                 domcfg.nav_lat,
+                                 mod0_season.squeeze(),
+                                 cmap=plt.cm.RdBu_r,
+                                 vmin=vmin,
+                                 vmax=vmax,
+                                 transform=plt_proj)
+            mod0_season_mean = np.round(mod0_season.mean(["x","y"]).values, 3)
+            mod0_season_std = np.round(mod0_season.std(["x","y"]).values, 3)
+            axs[0,i].set_title(
+  label + r", $\overline{E} =$ " + f"{mod0_season_mean} ± {mod0_season_std}",
+                               fontsize=6, pad=3.0)
+
+            mod1_season = mod1_anom.sel(season=label).load()
+            print (label)
+            p = axs[1, i].pcolormesh(domcfg.nav_lon,
+                                 domcfg.nav_lat,
+                                 mod1_season.squeeze(),
+                                 cmap=plt.cm.RdBu_r,
+                                 vmin=vmin,
+                                 vmax=vmax,
+                                 transform=plt_proj)
+            mod1_season_mean = np.round(mod1_season.mean(["x","y"]).values, 3)
+            mod1_season_std = np.round(mod1_season.std(["x","y"]).values, 3)
+            axs[1,i].set_title(
+ label + r", $\overline{E} =$ " + f"{mod1_season_mean} ± {mod1_season_std}",
+                               fontsize=6, pad=3.0)
+
+
+        for ax in axs[0]:
+            ax.text(0.95,0.05, cfg.case_label, ha="right", va="bottom",
+                          transform=ax.transAxes, fontsize=6)
+        for ax in axs[1]:
+            ax.text(0.95,0.05, cfg.comp_case["case_label"],
+                    ha="right", va="bottom",
+                    transform=ax.transAxes, fontsize=6)
+        letters = ["(a)","(b)","(c)","(d)","(e)","(f)","(g)","(h)"]
+        for i, ax in enumerate(axs.flatten()):
+            ax.text(0.95,0.95, letters[i], ha="right", va="top",
+                          transform=ax.transAxes, fontsize=6)
+
+        # colorbar
+        cbar_ax = fig.add_axes([0.2, 0.14, 
+                                0.6, 0.02])
+
+        cbar = fig.colorbar(p, cax=cbar_ax, orientation='horizontal')
+        cbar.ax.text(0.5, -4.5, r"Surface Temperature Bias ($^{\circ}$C)",
+                     rotation=0, transform=cbar.ax.transAxes,
+                     va='center', ha='center', ma='center')
+
+        for i, ax in enumerate(axs.flatten()):
+
+            if i in [0,1,2,3]:
+                b_label=False
+            else:
+                b_label=True
+
+            if i in [1,2,3,5,6,7]:
+                l_label=False
+            else:
+                l_label=True
+
+            self.add_land_and_gridlines(ax, domcfg, plt_proj, t_label=False,
+                                        r_label=False, b_label=b_label,
+                                        l_label=l_label)
+        plt.savefig(f"FIGS/seasonal_climatology_{freq}_{var}.png", dpi=1200)
+
+
     def plot_eof_validation(self, mod0, mod1, sat, var):
         """ plot eof breakdown of model versus obs """
 
@@ -522,11 +668,11 @@ class satellite_plot(object):
         sat_comp = xr.open_dataarray(
                            f"{path}{sat}_{var}_eof{eof_type}_components.nc")
 
-        #path = cfg.comp_case["proc_data"] + "/satellite/"
+        path = cfg.comp_case["proc_data"] + "/satellite/"
         mod1_scores = xr.open_dataarray(
-                           f"{path}{mod0}_{var}_eof{eof_type}_scores.nc")
+                           f"{path}{mod1}_{var}_eof{eof_type}_scores.nc")
         mod1_comp = xr.open_dataarray(
-                           f"{path}{mod0}_{var}_eof{eof_type}_components.nc")
+                           f"{path}{mod1}_{var}_eof{eof_type}_components.nc")
 
         # get p-value
         mod0_pval = xr.corr(mod0_scores, sat_scores, dim="time")
@@ -882,7 +1028,7 @@ class satellite_plot(object):
                                 0.02, 0.6])
 
         cbar = fig.colorbar(p, cax=cbar_ax, orientation='vertical')
-        cbar.ax.text(4.5, 0.5, r"Kinetic Energy (m$^2$ s$^{-1}$)",
+        cbar.ax.text(4.5, 0.5, r"Kinetic Energy (m$^2$ s$^{-2}$)",
                      rotation=90, transform=cbar.ax.transAxes,
                      va='center', ha='left')
 
@@ -904,14 +1050,157 @@ class satellite_plot(object):
 
         plt.savefig(f"FIGS/CO9_CO7_CMEMS_Satellite_KE.png", dpi=600)
 
+    def plot_KE_model_comp(self, vmin=0, vmax=0.06):
+        """
+        plot KE for two models
+        a 3x3 panel plot with:
+           - col 0 : MKE for all cases
+           - col 1 : EKE for all cases
+
+           - row 1 : mod 0
+           - row 2 : mod 1
+           - row 3 : diff
+        """
+
+        # get domain cfg
+        domcfg = xr.open_dataset(cfg.dn_dom + cfg.grid_nc,
+                                 chunks="auto").squeeze()
+
+        # set projection
+        mid_lat = np.mean([44,domcfg.nav_lat.max().values])
+        mid_lon = -2.6
+        proj=ccrs.EquidistantConic(central_latitude=mid_lat,
+          standard_parallels=(44,domcfg.nav_lat.max().values),
+          central_longitude=mid_lon) 
+        plt_proj=ccrs.PlateCarree()
+        proj_dict = {"projection": proj}
+
+        # initialise figure
+        fig, axs = plt.subplots(2, 3, figsize=(5.5,4.3), subplot_kw=proj_dict)
+        plt.subplots_adjust(left=0.07, right=0.97, top=0.95, bottom=0.26,
+                            hspace=0.08, wspace=0.08)
+
+        # get primary model data
+        path = f"{cfg.dn_out}/satellite/"
+        p_mod_d = xr.open_dataset(path + "2004_2014_25hourm_KE.nc",
+                                  chunks="auto")
+        p_mod_m = xr.open_dataset(path + "2004_2014_monthly_KE.nc",
+                                  chunks="auto")
+
+        # get comparison model data
+        path = cfg.comp_case["proc_data"] + "/satellite/"
+        c_mod_d = xr.open_dataset(path + "2004_2014_25hourm_KE.nc",
+                                  chunks="auto")
+        c_mod_m = xr.open_dataset(path + "2004_2014_monthly_KE.nc",
+                                  chunks="auto")
+
+
+        # plot
+        def render_ke(ax, ds, KE_type):
+        
+            p = ax.pcolormesh(domcfg.nav_lon, domcfg.nav_lat, ds[KE_type],
+                          vmin=vmin, vmax=vmax, transform=plt_proj,
+                          cmap=plt.cm.Oranges)
+
+            return p
+
+        # ke
+        render_ke(axs[0,0], p_mod_m, "MKE")
+        render_ke(axs[1,0], p_mod_d, "EKE")
+
+        render_ke(axs[0,1], c_mod_m, "MKE")
+        p = render_ke(axs[1,1], c_mod_d, "EKE")
+
+        # diff
+        MKE_diff = p_mod_m.MKE - c_mod_m.MKE
+        EKE_diff = p_mod_m.EKE - c_mod_m.EKE
+        axs[0,2].pcolormesh(domcfg.nav_lon, domcfg.nav_lat, MKE_diff,
+                          vmin=-0.02, vmax=0.02, transform=plt_proj,
+                          cmap=plt.cm.RdBu_r)
+        p_diff = axs[1,2].pcolormesh(domcfg.nav_lon, domcfg.nav_lat, EKE_diff,
+                          vmin=-0.02, vmax=0.02, transform=plt_proj,
+                          cmap=plt.cm.RdBu_r)
+
+        for ax in axs[:,1:].flatten():
+            ax.set_yticklabels([])
+        for ax in axs[:-1].flatten():
+            ax.set_xticklabels([])
+        for ax in axs[:,0]:
+            ax.set_ylabel("Latitude")
+        for ax in axs[-1]:
+            ax.set_xlabel("Longitude")
+
+        #for ax in axs.flatten():
+        #    ax.set_aspect("equal")
+
+        axs[0,0].text(0.5, 1.05, "CO9",
+                     rotation=0, transform=axs[0,0].transAxes,
+                     va="bottom", ha="center")
+        axs[0,1].text(0.5, 1.05, "CO7",
+                     rotation=0, transform=axs[0,1].transAxes,
+                     va="bottom", ha="center")
+        axs[0,2].text(0.5, 1.05, "CO9 - CO7",
+                     rotation=0, transform=axs[0,2].transAxes,
+                     va="bottom", ha="center")
+
+        for i in range(3):
+            axs[0,i].text(0.95,0.05, "MKE", ha="right", va="bottom",
+                          transform=axs[0,i].transAxes, fontsize=6)
+            axs[1,i].text(0.95,0.05, "EKE", ha="right", va="bottom",
+                          transform=axs[1,i].transAxes, fontsize=6)
+
+        # colorbar
+        pos0 = axs[-1,0].get_position()
+        pos1 = axs[-1,1].get_position()
+        pos2 = axs[-1,2].get_position()
+
+        cbar_ax = fig.add_axes([(pos0.x1 + pos0.x0)/2, 0.14, 
+                                (pos1.x1 + pos1.x0)/2 - (pos0.x1 + pos0.x0)/2,
+                                0.02])
+
+        cbar = fig.colorbar(p, cax=cbar_ax, orientation='horizontal')
+        cbar.ax.text(0.5, -4.5, "Kinetic Energy\n" + r"(m$^2$ s$^{-2}$)",
+                     rotation=0, transform=cbar.ax.transAxes,
+                     va='center', ha='center', ma='center')
+
+        cbar_ax = fig.add_axes([pos2.x0, 0.14, 
+                                pos2.x1 - pos2.x0, 0.02])
+
+        cbar = fig.colorbar(p_diff, cax=cbar_ax, orientation='horizontal')
+        cbar.ax.text(0.5, -4.5, "Kinetic Energy\nDifference " + r"(m$^2$ s$^{-2}$)",
+                     rotation=0, transform=cbar.ax.transAxes,
+                     va='center', ha='center', ma='center')
+
+        for i, ax in enumerate(axs.flatten()):
+
+            if i in [0,1,2]:
+                b_label=False
+            else:
+                b_label=True
+
+            if i in [1,2,4,5]:
+                l_label=False
+            else:
+                l_label=True
+
+            self.add_land_and_gridlines(ax, domcfg, plt_proj, t_label=False,
+                                        r_label=False, b_label=b_label,
+                                        l_label=l_label)
+
+        plt.savefig(f"FIGS/CO9_CO7_KE_map.png", dpi=1200)
+
     def add_land_and_gridlines(self, ax, domcfg, plt_proj,
                                l_label=True, r_label=True,
                                t_label=True, b_label=True):
         # add land mask
         landmask = xr.where(domcfg.bottom_level == 0, 1, np.nan)
-        print (landmask)
         ax.contourf(domcfg.nav_lon, domcfg.nav_lat, landmask, 
                    colors=[plt.cm.Greys(0.2)],
+                   transform=plt_proj)
+
+        landmask = xr.where(domcfg.bottom_level == 0, 1, 0)
+        ax.contour(domcfg.nav_lon, domcfg.nav_lat, landmask, 
+                   colors="k", levels=[0.5], linewidths=0.2,
                    transform=plt_proj)
 
         # format gridlines
@@ -1016,7 +1305,7 @@ class satellite_plot(object):
         #plt.show()
         plt.savefig(f"FIGS/AVISO_SWOT_CMEMS_Satellite_KE.png", dpi=600)
 
-    def PDF_KE(self):
+    def PDF_KE(self, satellite=True):
         """ probability density function of KE """
 
         fig, axs = plt.subplots(2,1, figsize=(6.5,3))
@@ -1031,8 +1320,9 @@ class satellite_plot(object):
         # get satellite data
         #sat_d = xr.open_dataset(path + "2004_2014_1D_satellite_KE.nc",
         #                          chunks="auto")
-        sat_m = xr.open_dataset(path + "2004_2014_1MS_satellite_KE.nc",
-                                  chunks="auto")
+        if satellite:
+            sat_m = xr.open_dataset(path + "2004_2014_1MS_satellite_KE.nc",
+                                      chunks="auto")
 
         # get comparison model data
         path = cfg.comp_case["proc_data"] + "/satellite/"
@@ -1041,26 +1331,98 @@ class satellite_plot(object):
         c_mod_m = xr.open_dataset(path + "2004_2014_monthly_KE.nc",
                                   chunks="auto")
 
-        bins = np.logspace(-4,-2,10)
+        bins = np.logspace(-4,-2,20)
         p_mod_m["MKE"] = xr.where(p_mod_m.MKE > 1e-6, p_mod_m.MKE, np.nan)
         c_mod_m["MKE"] = xr.where(c_mod_m.MKE > 1e-6, c_mod_m.MKE, np.nan)
-        sat_m["MKE"] = xr.where(sat_m.MKE > 1e-6, sat_m.MKE, np.nan)
         p_mod_m["EKE"] = xr.where(p_mod_m.EKE > 1e-6, p_mod_m.EKE, np.nan)
         c_mod_m["EKE"] = xr.where(c_mod_m.EKE > 1e-6, c_mod_m.EKE, np.nan)
-        sat_m["EKE"] = xr.where(sat_m.EKE > 1e-6, sat_m.EKE, np.nan)
 
-        axs[0].hist(p_mod_m.MKE.stack(z=["x","y"]), bins, density=True, alpha=0.4)
-        axs[0].hist(c_mod_m.MKE.stack(z=["x","y"]), bins, density=True, alpha=0.4)
-        axs[0].hist(sat_m.MKE.stack(z=["x","y"]), bins, density=True, alpha=0.4)
+        axs[0].hist(p_mod_m.MKE.stack(z=["x","y"]), bins, density=True,
+                    alpha=0.4)
+        axs[0].hist(c_mod_m.MKE.stack(z=["x","y"]), bins, density=True,
+                    alpha=0.4)
 
-        axs[1].hist(p_mod_m.EKE.stack(z=["x","y"]), bins, density=True, alpha=0.4)
-        axs[1].hist(c_mod_m.EKE.stack(z=["x","y"]), bins, density=True, alpha=0.4)
-        axs[1].hist(sat_m.EKE.stack(z=["x","y"]), bins, density=True, alpha=0.4)
+        axs[1].hist(p_mod_m.EKE.stack(z=["x","y"]), bins, density=True,
+                    alpha=0.4)
+        axs[1].hist(c_mod_m.EKE.stack(z=["x","y"]), bins, density=True,
+                    alpha=0.4)
+        if satellite:
+            sat_m["MKE"] = xr.where(sat_m.MKE > 1e-6, sat_m.MKE, np.nan)
+            sat_m["EKE"] = xr.where(sat_m.EKE > 1e-6, sat_m.EKE, np.nan)
+            axs[0].hist(sat_m.MKE.stack(z=["x","y"]), bins, density=True,
+                        alpha=0.4)
+            axs[1].hist(sat_m.EKE.stack(z=["x","y"]), 
+                        bins, density=True, alpha=0.4)
 
         for ax in axs:
             ax.set_xscale("log")
 
         plt.show()
+
+    def scatter_KE(self):
+        """ scatter for EKE and MKE for two models """ 
+
+        fig, axs = plt.subplots(1,2, figsize=(5.5,2.5))
+        plt.subplots_adjust(left=0.1, bottom=0.15, right=0.88, top=0.98,
+                            wspace=0.35)
+
+        # get primary model data
+        path = f"{cfg.dn_out}/satellite/"
+        p_mod_d = xr.open_dataset(path + "2004_2014_25hourm_KE.nc",
+                                  chunks="auto")
+
+        # get comparison model data
+        path = cfg.comp_case["proc_data"] + "/satellite/"
+        c_mod_d = xr.open_dataset(path + "2004_2014_25hourm_KE.nc",
+                                  chunks="auto")
+
+        # flatten
+        p_mod_d = p_mod_d.stack(pos=["x","y"])
+        c_mod_d = c_mod_d.stack(pos=["x","y"])
+
+        # plot
+        xmin, xmax = 0.00001, 0.05
+        ymin, ymax = 0.00001, 0.05
+        xedges = np.logspace(np.log10(xmin), np.log10(xmax), 1000)
+        yedges = np.logspace(np.log10(ymin), np.log10(ymax), 1000)
+        cmap=plt.cm.inferno
+        axs[0].hist2d(c_mod_d.MKE, p_mod_d.MKE, bins=[xedges,yedges], cmap=cmap,
+                      vmin=0, vmax=30)
+        xmin, xmax = 0.001, 0.05
+        ymin, ymax = 0.001, 0.05
+        xedges = np.logspace(np.log10(xmin), np.log10(xmax), 1000)
+        yedges = np.logspace(np.log10(ymin), np.log10(ymax), 1000)
+        p = axs[1].hist2d(c_mod_d.EKE, p_mod_d.EKE, bins=[xedges,yedges],
+                      cmap=cmap,
+                      vmin=0, vmax=30)
+        for ax in axs:
+            ax.plot([0,0.6],[0,0.6], lw=0.5, c="w")
+
+        for ax in axs:
+            ax.set_aspect("equal")
+            #ax.set_xlim(0.00001,0.6)
+            #ax.set_ylim(0.00001,0.6)
+            ax.set_xscale("log")
+            ax.set_yscale("log")
+
+        case_label = cfg.case_label
+        comp_case_label = cfg.comp_case["case_label"]
+        axs[0].set_ylabel(f"{case_label} MKE (m$^2$ s$^{-2}$)")
+        axs[1].set_ylabel(f"{case_label} EKE (m$^2$ s$^{-2}$)")
+        axs[0].set_xlabel(f"{comp_case_label} MKE (m$^2$ s$^{-2}$)")
+        axs[1].set_xlabel(f"{comp_case_label} EKE (m$^2$ s$^{-2}$)")
+
+        # colorbar
+        pos = axs[1].get_position()
+        cbar_ax = fig.add_axes([0.90, pos.y0,
+                                0.02, pos.y1 - pos.y0])
+        cbar = fig.colorbar(p[3], cax=cbar_ax, orientation='vertical')
+        cbar.ax.text(4.0, 0.5, "count", fontsize=8,
+                     rotation=90, transform=cbar.ax.transAxes,
+                     va='center', ha='center')
+        
+        plt.savefig(f"FIGS/{case_label}_{comp_case_label}_KE_correlation.png",
+                    dpi=1200)
 
 def get_eof(ds, dn_out, fn, t_mode=False):
     """ calculate eof of surface data """
@@ -1208,7 +1570,8 @@ if __name__ == "__main__":
         # get model and remove surface loading 
         fn_raw = cfg.comp_case["raw_data"]
         fn_proc = cfg.comp_case["proc_data"]
-        mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter")
+        mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
+                            src_z_coord="deptht")
         mod.cfg_fn = cfg.dn_dom + cfg.comp_case["grid"]
         mod.get_time_mean_var(var_nam=var_nam)
         mod.map_lat_lon_names("nav_lon", "nav_lat")
@@ -1241,19 +1604,24 @@ if __name__ == "__main__":
         splot = satellite_plot()
         splot.plot_eof_validation("CO9","co7", "CMEMS_L4_satellite", "sst")
 
-    def save_var_primary_model(var_nam, grid):
+    def save_var_primary_model(var_nam, grid, freq="1MS"):
         fn_raw = cfg.dn_dat
         fn_proc = cfg.dn_out
+        t0 = time.time()
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
-                                             src_z_coord="depth" + grid.lower())
-        mod.get_time_mean_var(var_nam=var_nam, freq=None, grid=grid, save=True)
+                                             src_z_coord="depth" + grid.lower(),
+                                             src_x_coord=f"x_grid_{grid}",
+                                             src_y_coord=f"y_grid_{grid}")
+        t1 = time.time()
+        print ((t1-t0)/60)
+        mod.get_time_mean_var(var_nam=var_nam, freq=freq, grid=grid, save=True)
 
-    def save_var_comparison_model(var_nam, grid):
+    def save_var_comparison_model(var_nam, grid, freq="1MS"):
         fn_raw = cfg.comp_case["raw_data"]
         fn_proc = cfg.comp_case["proc_data"]
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time_counter",
                             src_z_coord="depth" + grid.lower())
-        mod.get_time_mean_var(var_nam=var_nam, freq=None, grid=grid, save=True)
+        mod.get_time_mean_var(var_nam=var_nam, freq=freq, grid=grid, save=True)
 
     def get_KE(fn_raw, fn_proc, freq="monthly"):
         mod = model_surface(fn_raw, fn_proc, src_t_coord="time")
@@ -1270,31 +1638,38 @@ if __name__ == "__main__":
         sat = satellite(mod_cfg_fn)
         sat.get_KE(save=True, time_step="1D", src="CMEMS")
         #sat.get_KE(save=True, time_step="1MS", src="CMEMS")
+
         
 
     #get_satellite_KE()
-    #sp = satellite_plot()
-    #sp.PDF_KE()
+    sp = satellite_plot()
+    sp.plot_seasonal_climatology()
+    #sp.scatter_KE()
+    #sp.plot_KE_model_comp()
     #sp.plot_KE_master()
     #get_KE(cfg.comp_case["raw_data"], cfg.comp_case["proc_data"], freq="25hourm")
     #get_KE(cfg.dn_dat, cfg.dn_out, freq="25hourm")
     #get_KE(cfg.comp_case["raw_data"], cfg.comp_case["proc_data"])
     #get_KE(cfg.dn_dat, cfg.dn_out)
-    #save_var_primary_model("vomecrty", "V")
     #save_var_primary_model("vozocrtx", "U")
-    #save_var_comparison_model("vomecrty", "V")
     #save_var_comparison_model("vozocrtx", "U")
     
-    plot_eof()
+    #plot_eof()
     #calculate_primary_model_eof("vomecrx")
-    #calculate_comparison_model_eof("votemper")
+#    calculate_comparison_model_eof("votemper")
     #calculate_comparison_model_eof("vosaline")
     #calculate_satellite_eof()
     #get_co9_gridded_satellite_data_inc_swot(time_step="1MS")
     #get_co9_gridded_satellite_data_inc_swot(time_step="1D")
-    #get_co9_gridded_satellite_data(var="uvel", time_step="1MS")
+    #get_co9_gridded_satellite_data(var="sst", time_step="1MS")
     #get_co9_gridded_satellite_data(var="vvel", time_step="1MS")
     #get_co9_gridded_satellite_data(var="uvel", time_step="1D")
     #get_co9_gridded_satellite_data(var="vvel", time_step="1D")
-    #grid_co9_raw_satellite_data(var="vvel", time_step="1D")
-    #get_co9_raw_satellite_data(var="vvel", time_step="1D")
+
+    # RDP 29 Oct 2026 for creating seasonal clim
+    #save_var_primary_model("votemper", "T")
+    #save_var_comparison_model("votemper", "T")
+    # get mean data
+    #get_co9_raw_satellite_data(var="sst", time_step="1MS")
+    # interpolate mean data
+    #grid_co9_raw_satellite_data(var="sst", time_step="1MS")
